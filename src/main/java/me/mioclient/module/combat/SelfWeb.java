@@ -1,16 +1,25 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.MathConstants;
+
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FireworksHelper;
-import me.mioclient.FreecamHelper;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
+import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -25,59 +34,61 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import me.mioclient.manager.RotationManager;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/SelfWeb.class */
 public class SelfWeb extends Module {
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> autoDisable;
-    public Setting<Boolean> onlyHole;
-    public Setting<Boolean> smart;
-    public Setting<Float> enemyRange;
-    public Setting<Boolean> aggressive;
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true));
+    public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", true));
+    public Setting<Boolean> onlyHole = add(new BooleanSetting("OnlyHole", false));
+    public Setting<Boolean> smart = add(new BooleanSetting("Smart", false).setVisible());
+    public Setting<Float> enemyRange = add(new NumberSetting<>("EnemyRange", 3.0f, 1.0f, 6.0f, v -> this.smart.isShown()).setSuffix("m"));
+    public Setting<Boolean> aggressive = add(new BooleanSetting("Aggressive", false).requiresSettings(this.smart));
 
     public SelfWeb() {
         super("SelfWeb", "Places a cobweb at your feet.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
     @Listen
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
-        Entity entity1864 = getEntity1864(this.enemyRange);
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
+        Entity entity1864 = getNearestEnemyPlayer(this.enemyRange);
         if (!this.smart.getValue().booleanValue()) {
-            do1863(holeSnapEvent);
+            placeSelfWeb(holeSnapEvent);
         } else if (entity1864 != null) {
-            do1863(holeSnapEvent);
+            placeSelfWeb(holeSnapEvent);
         }
     }
 
-    public void do1863(HoleSnapEvent holeSnapEvent) {
+    public void placeSelfWeb(RotationTickEvent holeSnapEvent) {
         if (minecraftClient.player.hasVehicle()) {
             return;
         }
-        if (BaritoneHelper_3.holeSnapSearchHelper4_5.is2728() || !this.onlyHole.getValue().booleanValue()) {
+        if (ClientServices.holeSnapOverlayHelper.isInHole() || !this.onlyHole.getValue().booleanValue()) {
             BlockPos ofFloored = BlockPos.ofFloored(minecraftClient.player.getPos());
             BlockState blockState = minecraftClient.world.getBlockState(ofFloored);
             if (blockState.isReplaceable() && !blockState.isLiquid() && minecraftClient.player.isOnGround()) {
-                int i = FireworksHelper.get447(Items.COBWEB);
+                int i = InventoryUtils.findInHotbar(Items.COBWEB);
                 int i2 = minecraftClient.player.getInventory().selectedSlot;
                 if (i == -1) {
-                    MixinMessageIndicatorHelper.do345(Text.literal(getName()).append(" is out of blocks!"), MixinMessageIndicatorHelper.getMessageSignatureData337(-2), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode);
+                    ChatUtils.sendPrefixedMessage(Text.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                     disable();
                     return;
                 }
-                Direction direction3028 = PhaseESPSearchHelper4_2.getDirection3028(ofFloored);
+                Direction direction3028 = BlockPlacer.findSupportSide(ofFloored);
                 if (direction3028 == null) {
                     return;
                 }
-                FireworksHelper.do456(i);
+                InventoryUtils.selectSlot(i);
                 Box boundingBox = minecraftClient.player.getBoundingBox();
                 minecraftClient.player.setBoundingBox(new Box(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
-                PhaseESPSearchHelper4_2.is3037(ofFloored, direction3028, false, Hand.MAIN_HAND);
+                BlockPlacer.placeBlockPacket(ofFloored, direction3028, false, Hand.MAIN_HAND);
                 minecraftClient.player.setBoundingBox(boundingBox);
-                FireworksHelper.do456(i2);
+                InventoryUtils.selectSlot(i2);
                 if (this.rotate.getValue().booleanValue()) {
-                    BaritoneHelper_3.searchHelper4_8.do2477(new float[]{holeSnapEvent.get751(), FreecamHelper.num2}, 5);
+                    ClientServices.RotationManager.requestRotations(new float[]{holeSnapEvent.getYaw(), MathConstants.num2}, 5);
                 }
                 if (this.autoDisable.getValue().booleanValue()) {
                     disable();
@@ -86,10 +97,10 @@ public class SelfWeb extends Module {
         }
     }
 
-    public Entity getEntity1864(Setting<Float> setting) {
+    public Entity getNearestEnemyPlayer(Setting<Float> setting) {
         Stream<Entity> filter = StreamSupport.stream(minecraftClient.world.getEntities().spliterator(), false).filter(entity -> {
-            if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= ((Float) setting.getValue()).floatValue() && is1865(entity) && (entity instanceof PlayerEntity)) {
-                if (!BaritoneHelper_3.searchHelper4_14.is519(entity.getName().getString()) && entity.isAlive()) {
+            if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= ((Float) setting.getValue()).floatValue() && isAbovePlayer(entity) && (entity instanceof PlayerEntity)) {
+                if (!ClientServices.socialManager.isFriend(entity.getName().getString()) && entity.isAlive()) {
                     return true;
                 }
             }
@@ -100,7 +111,7 @@ public class SelfWeb extends Module {
         return (Entity) filter.min(Comparator.comparing(clientPlayerEntity::squaredDistanceTo)).orElse(null);
     }
 
-    public boolean is1865(Entity entity) {
+    public boolean isAbovePlayer(Entity entity) {
         return this.aggressive.getValue().booleanValue() ? entity.getY() >= minecraftClient.player.getY() : entity.getY() > minecraftClient.player.getY();
     }
 }

@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.movement.NoSlow;
 import me.mioclient.module.render.Xray;
 import net.minecraft.block.Block;
@@ -18,27 +21,43 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({Block.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinBlock.class */
 public class MixinBlock {
-    private static NoSlow noslow = (NoSlow) BaritoneHelper_3.baritoneHelper_4.getModule117(NoSlow.class);
+    private static NoSlow noslow;
+
+    private static NoSlow getNoslow() {
+
+        if (noslow == null && ClientServices.moduleInjector != null) {
+
+            try { noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class); } catch (Exception e) {}
+
+        }
+
+        return noslow;
+
+    }
 
     @Inject(method = {"shouldDrawSide"}, at = {@At("HEAD")}, cancellable = true)
     private static void onShouldDrawHook(BlockState blockState, BlockView blockView, BlockPos blockPos, Direction direction, BlockPos blockPos2, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (Xray.getXray3073().isToggled()) {
+        if (Xray.getInstance().isToggled()) {
             callbackInfoReturnable.cancel();
-            callbackInfoReturnable.setReturnValue(Boolean.valueOf(Xray.getXray3073().is3071(blockPos, blockState.getBlock())));
+            callbackInfoReturnable.setReturnValue(Boolean.valueOf(Xray.getInstance().shouldRenderBlock(blockPos, blockState.getBlock())));
         }
     }
 
     @Inject(method = {"getSlipperiness"}, at = {@At("HEAD")}, cancellable = true)
     private void getSlipperinessHook(CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (noslow.isToggled()) {
+        NoSlow noslow_lcl = getNoslow();
+
+        if (noslow_lcl == null) return;
+
+        if (noslow_lcl.isToggled()) {
             Block block = (Block)(Object) this;
-            if (noslow.ice.getValue().booleanValue() && (block == Blocks.ICE || block == Blocks.PACKED_ICE || block == Blocks.BLUE_ICE)) {
+            if (noslow_lcl.ice.getValue().booleanValue() && (block == Blocks.ICE || block == Blocks.PACKED_ICE || block == Blocks.BLUE_ICE)) {
                 callbackInfoReturnable.setReturnValue(Float.valueOf(0.6f));
             }
-            if (noslow.slime.getValue().booleanValue() && block == Blocks.SLIME_BLOCK) {
+            if (noslow_lcl.slime.getValue().booleanValue() && block == Blocks.SLIME_BLOCK) {
                 callbackInfoReturnable.setReturnValue(Float.valueOf(0.6f));
             }
-            if (noslow.honey.getValue().booleanValue() && block == Blocks.HONEY_BLOCK) {
+            if (noslow_lcl.honey.getValue().booleanValue() && block == Blocks.HONEY_BLOCK) {
                 callbackInfoReturnable.setReturnValue(Float.valueOf(0.6f));
             }
         }

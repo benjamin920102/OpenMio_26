@@ -1,25 +1,36 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.math.MathUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.math.MathUtils;
+
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.PingSpoofHelper;
+import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.BreakBlockEvent;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.FinishUsingEvent;
+import me.mioclient.event.events.interaction.BreakBlockEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.player.FinishUsingEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.component.DataComponentTypes;
@@ -28,20 +39,22 @@ import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket;
 import net.minecraft.text.Text;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Announcer.class */
 public class Announcer extends Module {
-    public Setting<Boolean> clientSide;
-    public Setting<Boolean> compact;
-    public Setting<Boolean> joins;
-    public Setting<Boolean> friends;
-    public Setting<Boolean> enemies;
-    public Setting<Boolean> others;
-    public Setting<Boolean> move;
-    public Setting<Boolean> break_;
-    public Setting<Boolean> eat;
-    public Setting<Double> delay;
+    public Setting<Boolean> clientSide = add(new BooleanSetting("ClientSide", false).setVisible());
+    public Setting<Boolean> compact = add(new BooleanSetting("Compact", false).requiresSettings(this.clientSide));
+    public Setting<Boolean> joins = add(new BooleanSetting("Joins", false).setVisible());
+    public Setting<Boolean> friends = add(new BooleanSetting("Friends", true).requiresSettings(this.joins));
+    public Setting<Boolean> enemies = add(new BooleanSetting("Enemies", true).requiresSettings(this.joins));
+    public Setting<Boolean> others = add(new BooleanSetting("Others", true).requiresSettings(this.joins));
+    public Setting<Boolean> move = add(new BooleanSetting("Move", true));
+    public Setting<Boolean> break_ = add(new BooleanSetting("Break", true));
+    public Setting<Boolean> eat = add(new BooleanSetting("Eat", true));
+    public Setting<Double> delay = add(new NumberSetting<>("Delay", 10.0, 1.0, 30.0).setSuffix("s"));
     public final Stopwatch stopwatch;
     public double val;
     public int num;
@@ -49,7 +62,6 @@ public class Announcer extends Module {
 
     public Announcer() {
         super("Announcer", "Lets the others know what you're doing.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         setDrawn(false);
     }
@@ -62,45 +74,45 @@ public class Announcer extends Module {
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        if (sendImmediatelyEvent.getPacket904() instanceof ChatMessageC2SPacket) {
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        if (sendImmediatelyEvent.getPacket() instanceof ChatMessageC2SPacket) {
             this.stopwatch.reset();
         }
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (this.joins.getValue().booleanValue()) {
-            if (this.stopwatch.is418(this.delay.getValue().doubleValue(), TimeUnit.SECONDS)) {
-                PlayerListS2CPacket packet904 = (channelRead0Event.getPacket904()) instanceof PlayerListS2CPacket ? (PlayerListS2CPacket) (channelRead0Event.getPacket904()) : null;
+            if (this.stopwatch.hasElapsed(this.delay.getValue().doubleValue(), TimeUnit.SECONDS)) {
+                PlayerListS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof PlayerListS2CPacket ? (PlayerListS2CPacket) (channelRead0Event.getPacket()) : null;
                 if (packet904 instanceof PlayerListS2CPacket) {
                     for (PlayerListS2CPacket.Entry entry : packet904.getPlayerAdditionEntries()) {
                         if (entry.listed()) {
                             String name = entry.profile().getName();
                             if (!name.equals(minecraftClient.player.getName().getString())) {
-                                boolean is519 = BaritoneHelper_3.searchHelper4_14.is519(name);
-                                boolean is521 = BaritoneHelper_3.searchHelper4_14.is521(name);
-                                if (this.friends.getValue().booleanValue() || !is519) {
-                                    if (this.enemies.getValue().booleanValue() || !is521) {
-                                        if (this.others.getValue().booleanValue() || is519 || is521) {
+                                boolean isFriend = ClientServices.socialManager.isFriend(name);
+                                boolean isEnemy = ClientServices.socialManager.isEnemy(name);
+                                if (this.friends.getValue().booleanValue() || !isFriend) {
+                                    if (this.enemies.getValue().booleanValue() || !isEnemy) {
+                                        if (this.others.getValue().booleanValue() || isFriend || isEnemy) {
                                             if (this.clientSide.getValue().booleanValue() && this.compact.getValue().booleanValue()) {
-                                                String string2921 = new ArgumentTypeHelper().getArgumentTypeHelper2919(name).getString2921("\u0001 joined");
-                                                if (is519) {
-                                                    string2921 = new ArgumentTypeHelper().getArgumentTypeHelper2919(string2921).getString2921("\u0001 [friend]");
-                                                } else if (is521) {
-                                                    string2921 = new ArgumentTypeHelper().getArgumentTypeHelper2919(string2921).getString2921("\u0001 [enemy]");
+                                                String string2921 = new StringTemplate().arg(name).format("\u0001 joined");
+                                                if (isFriend) {
+                                                    string2921 = new StringTemplate().arg(string2921).format("\u0001 [friend]");
+                                                } else if (isEnemy) {
+                                                    string2921 = new StringTemplate().arg(string2921).format("\u0001 [enemy]");
                                                 }
                                                 String str = string2921;
                                                 minecraftClient.executeSync(() -> {
-                                                    do1927(str, MixinMessageIndicatorHelper.getMessageSignatureData337(-254721));
+                                                    sendChatMessage(str, ChatUtils.createSignature(-254721));
                                                 });
                                             } else {
-                                                if (is519) {
-                                                    name = new ArgumentTypeHelper().getArgumentTypeHelper2919(name).getString2921("My friend \u0001");
+                                                if (isFriend) {
+                                                    name = new StringTemplate().arg(name).format("My friend \u0001");
                                                 }
                                                 String str2 = name;
                                                 minecraftClient.executeSync(() -> {
-                                                    do1927(new ArgumentTypeHelper().getArgumentTypeHelper2919(str2).getString2921("\u0001 has joined the game!"), MixinMessageIndicatorHelper.getMessageSignatureData337(-254721));
+                                                    sendChatMessage(new StringTemplate().arg(str2).format("\u0001 has joined the game!"), ChatUtils.createSignature(-254721));
                                                 });
                                             }
                                             this.stopwatch.reset();
@@ -111,30 +123,30 @@ public class Announcer extends Module {
                         }
                     }
                 }
-                PlayerRemoveS2CPacket packet9042 = (channelRead0Event.getPacket904()) instanceof PlayerRemoveS2CPacket ? (PlayerRemoveS2CPacket) (channelRead0Event.getPacket904()) : null;
+                PlayerRemoveS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof PlayerRemoveS2CPacket ? (PlayerRemoveS2CPacket) (channelRead0Event.getPacket()) : null;
                 if (packet9042 instanceof PlayerRemoveS2CPacket) {
                     for (UUID uuid : packet9042.profileIds()) {
                         for (PlayerListEntry playerListEntry : minecraftClient.player.networkHandler.getListedPlayerListEntries()) {
                             if (playerListEntry.getProfile().getId().equals(uuid)) {
                                 String name2 = playerListEntry.getProfile().getName();
                                 if (this.clientSide.getValue().booleanValue() && this.compact.getValue().booleanValue()) {
-                                    String string29212 = new ArgumentTypeHelper().getArgumentTypeHelper2919(name2).getString2921("\u0001 left");
-                                    if (BaritoneHelper_3.searchHelper4_14.is519(string29212)) {
-                                        string29212 = new ArgumentTypeHelper().getArgumentTypeHelper2919(string29212).getString2921("\u0001 [friend]");
-                                    } else if (BaritoneHelper_3.searchHelper4_14.is521(string29212)) {
-                                        string29212 = new ArgumentTypeHelper().getArgumentTypeHelper2919(string29212).getString2921("\u0001 [enemy]");
+                                    String string29212 = new StringTemplate().arg(name2).format("\u0001 left");
+                                    if (ClientServices.socialManager.isFriend(string29212)) {
+                                        string29212 = new StringTemplate().arg(string29212).format("\u0001 [friend]");
+                                    } else if (ClientServices.socialManager.isEnemy(string29212)) {
+                                        string29212 = new StringTemplate().arg(string29212).format("\u0001 [enemy]");
                                     }
                                     String str3 = string29212;
                                     minecraftClient.executeSync(() -> {
-                                        do1927(str3, MixinMessageIndicatorHelper.getMessageSignatureData337(-254722));
+                                        sendChatMessage(str3, ChatUtils.createSignature(-254722));
                                     });
                                 } else {
-                                    if (BaritoneHelper_3.searchHelper4_14.is519(name2)) {
-                                        name2 = new ArgumentTypeHelper().getArgumentTypeHelper2919(name2).getString2921("My friend \u0001");
+                                    if (ClientServices.socialManager.isFriend(name2)) {
+                                        name2 = new StringTemplate().arg(name2).format("My friend \u0001");
                                     }
                                     String str4 = name2;
                                     minecraftClient.executeSync(() -> {
-                                        do1927(new ArgumentTypeHelper().getArgumentTypeHelper2919(str4).getString2921("\u0001 has left the game!"), MixinMessageIndicatorHelper.getMessageSignatureData337(-254722));
+                                        sendChatMessage(new StringTemplate().arg(str4).format("\u0001 has left the game!"), ChatUtils.createSignature(-254722));
                                     });
                                 }
                                 this.stopwatch.reset();
@@ -147,19 +159,19 @@ public class Announcer extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (is1469()) {
+    public void onTick(TickEvent tickEvent) {
+        if (isNotInGame()) {
             return;
         }
-        this.val += (BaritoneHelper_3.feetPlaceSearchHelper4.get2636() / Double.longBitsToDouble(4615288898129284301L)) / Double.longBitsToDouble(4626322717216342016L);
+        this.val += (ClientServices.feetPlaceHelper.getInstantSpeed() / Double.longBitsToDouble(4615288898129284301L)) / Double.longBitsToDouble(4626322717216342016L);
         if (this.val >= Double.longBitsToDouble(4652007308841189376L)) {
             this.val = 0.0d;
         }
         if (!this.move.getValue().booleanValue() || this.val < Double.longBitsToDouble(4607182418800017408L)) {
             return;
         }
-        if (this.stopwatch.is419((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
-            do1926(getString1923().replace("{blocks}", new DecimalFormat("0.00").format(this.val)));
+        if (this.stopwatch.hasElapsedMs((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
+            sendModuleMessage(getRandomMoveMessage().replace("{blocks}", new DecimalFormat("0.00").format(this.val)));
             this.val = 0.0d;
             this.stopwatch.reset();
         }
@@ -167,16 +179,16 @@ public class Announcer extends Module {
 
     @Listen
     public void onFinishUsing(FinishUsingEvent finishUsingEvent) {
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
-        int i = PingSpoofHelper.get371(1, 6);
+        int i = MathUtils.randomInt(1, 6);
         if (this.eat.getValue().booleanValue()) {
-            if (finishUsingEvent.getItemStack2549().contains(DataComponentTypes.FOOD)) {
+            if (finishUsingEvent.getItemStack().contains(DataComponentTypes.FOOD)) {
                 this.num++;
                 if (this.num >= i) {
-                    if (this.stopwatch.is419((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
-                        do1926(getString1925().replace("{amount}", new ArgumentTypeHelper().getArgumentTypeHelper2906(this.num).getString2921("\u0001")).replace("{name}", new ArgumentTypeHelper().getArgumentTypeHelper2919(finishUsingEvent.getItemStack2549().getItem().getName().getString()).getString2921("\u0001")));
+                    if (this.stopwatch.hasElapsedMs((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
+                        sendModuleMessage(getRandomEatMessage().replace("{amount}", new StringTemplate().arg(this.num).format("\u0001")).replace("{name}", new StringTemplate().arg(finishUsingEvent.getItemStack().getItem().getName().getString()).format("\u0001")));
                         this.num = 0;
                         this.stopwatch.reset();
                     }
@@ -187,43 +199,43 @@ public class Announcer extends Module {
 
     @Listen
     public void onBreakBlock(BreakBlockEvent breakBlockEvent) {
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
-        int i = PingSpoofHelper.get371(1, 6);
+        int i = MathUtils.randomInt(1, 6);
         this.num2++;
-        if (this.break_.getValue().booleanValue() && this.num2 >= i && this.stopwatch.is419((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
-            String[] strArr = {new ArgumentTypeHelper().getArgumentTypeHelper2919(PhaseESPSearchHelper4_2.getBlock3044(breakBlockEvent.getBlockPos386()).getName().getString()).getString2921("\u0001"), "Air", "Bedrock", "Barrier"};
-            do1926(getString1924().replace("{amount}", new ArgumentTypeHelper().getArgumentTypeHelper2906(this.num2).getString2921("\u0001")).replace("{name}", strArr[new Random().nextInt(strArr.length)]));
+        if (this.break_.getValue().booleanValue() && this.num2 >= i && this.stopwatch.hasElapsedMs((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
+            String[] strArr = {new StringTemplate().arg(BlockPlacer.getBlockAt(breakBlockEvent.getBlockPos()).getName().getString()).format("\u0001"), "Air", "Bedrock", "Barrier"};
+            sendModuleMessage(getRandomBreakMessage().replace("{amount}", new StringTemplate().arg(this.num2).format("\u0001")).replace("{name}", strArr[new Random().nextInt(strArr.length)]));
             this.num2 = 0;
             this.stopwatch.reset();
         }
     }
 
-    public String getString1923() {
-        String[] strArr = {"I just flew over {blocks} blocks thanks to mioclient.me!", "Я только что пролетел над {blocks} блоками с помощью mioclient.me!", "mioclient.me sayesinde {blocks} blok uçtum!", "我刚刚用 mioclient.me 走了 {blocks} 米!", "Dank mioclient.me bin ich gerade über {blocks} Blöcke geflogen!", "Jag hoppade precis över {blocks} blocks tack vare mioclient.me!", "Właśnie przeleciałem ponad {blocks} bloki dzięki mioclient.me!", "Es tikko nolidoju {blocks} blokus, paldies mioclient.me!", "Я щойно пролетів понад {blocks} блоками завдяки mioclient.me!", "I just fwew ovew {blocks} bwoccs thanks to miocwient.me! :3", "Ho appena camminato per {blocks} blocchi grazie a mioclient.me!", "עכשיו עפתי {blocks} הודות ל mioclient.me!", "Právě jsem proletěl {blocks} bloků díky mioclient.me!", "Lensin juuri yli {blocks} blokkia mioclient.me:n ansiosta!", "Ravnokar sem preletel {blocks} blokov v zahvali mioclient.me!", "أنا هلق طاير فوق {blocks} بلوكس بفضل mioclient.me!"};
+    public String getRandomMoveMessage() {
+        String[] strArr = {"I just flew over {blocks} blocks thanks to me.mioclient.me!", "Ð¯ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ñ‡Ñ‚Ð¾ Ð¿Ñ€Ð¾Ð»ÐµÑ‚ÐµÐ» Ð½Ð°Ð´ {blocks} Ð±Ð»Ð¾ÐºÐ°Ð¼Ð¸ Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ me.mioclient.me!", "me.mioclient.me sayesinde {blocks} blok uÃ§tum!", "æˆ‘åˆšåˆšç”¨ me.mioclient.me èµ°äº† {blocks} ç±³!", "Dank me.mioclient.me bin ich gerade Ã¼ber {blocks} BlÃ¶cke geflogen!", "Jag hoppade precis Ã¶ver {blocks} blocks tack vare me.mioclient.me!", "WÅ‚aÅ›nie przeleciaÅ‚em ponad {blocks} bloki dziÄ™ki me.mioclient.me!", "Es tikko nolidoju {blocks} blokus, paldies me.mioclient.me!", "Ð¯ Ñ‰Ð¾Ð¹Ð½Ð¾ Ð¿Ñ€Ð¾Ð»ÐµÑ‚Ñ–Ð² Ð¿Ð¾Ð½Ð°Ð´ {blocks} Ð±Ð»Ð¾ÐºÐ°Ð¼Ð¸ Ð·Ð°Ð²Ð´ÑÐºÐ¸ me.mioclient.me!", "I just fwew ovew {blocks} bwoccs thanks to miocwient.me! :3", "Ho appena camminato per {blocks} blocchi grazie a me.mioclient.me!", "×¢×›×©×™×• ×¢×¤×ª×™ {blocks} ×”×•×“×•×ª ×œ me.mioclient.me!", "PrÃ¡vÄ› jsem proletÄ›l {blocks} blokÅ¯ dÃ­ky me.mioclient.me!", "Lensin juuri yli {blocks} blokkia me.mioclient.me:n ansiosta!", "Ravnokar sem preletel {blocks} blokov v zahvali me.mioclient.me!", "Ø£Ù†Ø§ Ù‡Ù„Ù‚ Ø·Ø§ÙŠØ± ÙÙˆÙ‚ {blocks} Ø¨Ù„ÙˆÙƒØ³ Ø¨ÙØ¶Ù„ me.mioclient.me!"};
         return strArr[new Random().nextInt(strArr.length)];
     }
 
-    public String getString1924() {
-        String[] strArr = {"I just destroyed {amount} {name} with the power of mioclient.me!", "Я только что разрушил {amount} {name} с помощью mioclient.me!", "Az önce {amount} tane {name} kırdım. TeŞekkürler mioclient.me!", "我刚刚用 mioclient.me 破坏了 {amount} {name}!", "Ich habe gerade {amount} {name} mit der Kraft von mioclient.me zerstört!", "Jag förstörde precis {amount} {name} tack vare mioclient.me!", "Właśnie zniszczyłem {amount} {name} za pomocą mioclient.me", "Es tikko salauzu {amount} {name} ar spēku mioclient.me!", "Я щойно знищив {amount} {name} за допомогою mioclient.me!", "I just destwoyed {amount} {name} with the powew of miocwient.me! :3", "Ho appena distrutto {amount} {name} grazie al potere di mioclient.me!", "בדיוק חצבתי {amount} {name} בעזרת הכוח של mioclient.me!", "Právě jsem zničil {amount} {name} díky mioclient.me!", "Rikoin juuri {amount} {name}ia mioclient.me:n ansiosta!", "Ravnokar sem uničil {amount} {name} z močjo mioclient.me", "أنا هلق دمّرت {amount} {name} بقوة mioclient.me!"};
+    public String getRandomBreakMessage() {
+        String[] strArr = {"I just destroyed {amount} {name} with the power of me.mioclient.me!", "Ð¯ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ñ‡Ñ‚Ð¾ Ñ€Ð°Ð·Ñ€ÑƒÑˆÐ¸Ð» {amount} {name} Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ me.mioclient.me!", "Az Ã¶nce {amount} tane {name} kÄ±rdÄ±m. TeÅžekkÃ¼rler me.mioclient.me!", "æˆ‘åˆšåˆšç”¨ me.mioclient.me ç ´åäº† {amount} {name}!", "Ich habe gerade {amount} {name} mit der Kraft von me.mioclient.me zerstÃ¶rt!", "Jag fÃ¶rstÃ¶rde precis {amount} {name} tack vare me.mioclient.me!", "WÅ‚aÅ›nie zniszczyÅ‚em {amount} {name} za pomocÄ… me.mioclient.me", "Es tikko salauzu {amount} {name} ar spÄ“ku me.mioclient.me!", "Ð¯ Ñ‰Ð¾Ð¹Ð½Ð¾ Ð·Ð½Ð¸Ñ‰Ð¸Ð² {amount} {name} Ð·Ð° Ð´Ð¾Ð¿Ð¾Ð¼Ð¾Ð³Ð¾ÑŽ me.mioclient.me!", "I just destwoyed {amount} {name} with the powew of miocwient.me! :3", "Ho appena distrutto {amount} {name} grazie al potere di me.mioclient.me!", "×‘×“×™×•×§ ×—×¦×‘×ª×™ {amount} {name} ×‘×¢×–×¨×ª ×”×›×•×— ×©×œ me.mioclient.me!", "PrÃ¡vÄ› jsem zniÄil {amount} {name} dÃ­ky me.mioclient.me!", "Rikoin juuri {amount} {name}ia me.mioclient.me:n ansiosta!", "Ravnokar sem uniÄil {amount} {name} z moÄjo me.mioclient.me", "Ø£Ù†Ø§ Ù‡Ù„Ù‚ Ø¯Ù…Ù‘Ø±Øª {amount} {name} Ø¨Ù‚ÙˆØ© me.mioclient.me!"};
         return strArr[new Random().nextInt(strArr.length)];
     }
 
-    public String getString1925() {
-        String[] strArr = {"I just ate {amount} {name} thanks to mioclient.me!", "Я только что съел {amount} {name} с помощью mioclient.me!", "Tam olarak {amount} tane {name} yedim. TeŞekkürler mioclient.me", "我刚用 mioclient.me 吃了 {amount} 个 {name}!", "Ich habe gerade {amount} {name} dank mioclient.me gegessen!", "Jag åt precis {amount} {name} tack vare mioclient.me", "Właśnie zjadłem {amount} {name} dzięki mioclient.me", "Es tikko apēdu {amount} {name} ar mioclient.me spēku!", "Я щойно з’їв {amount} {name} завдяки mioclient.me!", "I just ate {amount} {name} thanks to miocwient.me! ^-^", "Ho appena mangiato {amount} {name} grazie a mioclient.me!", "כרגע אכלתי {amount} {name} הודות לmioclient.me!", "Právě jsem snědl {amount} {name} díky mioclient.me", "Söin juuri {amount} {name}a mioclient.me:n ansiosta!", "Ravnokar sem pojedel {amount} {name} v zahvali mioclient.me", "أنا هلق أكلت {amount} {name} بفضل miocliet.me!"};
+    public String getRandomEatMessage() {
+        String[] strArr = {"I just ate {amount} {name} thanks to me.mioclient.me!", "Ð¯ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ñ‡Ñ‚Ð¾ ÑÑŠÐµÐ» {amount} {name} Ñ Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒÑŽ me.mioclient.me!", "Tam olarak {amount} tane {name} yedim. TeÅžekkÃ¼rler me.mioclient.me", "æˆ‘åˆšç”¨ me.mioclient.me åƒäº† {amount} ä¸ª {name}!", "Ich habe gerade {amount} {name} dank me.mioclient.me gegessen!", "Jag Ã¥t precis {amount} {name} tack vare me.mioclient.me", "WÅ‚aÅ›nie zjadÅ‚em {amount} {name} dziÄ™ki me.mioclient.me", "Es tikko apÄ“du {amount} {name} ar me.mioclient.me spÄ“ku!", "Ð¯ Ñ‰Ð¾Ð¹Ð½Ð¾ Ð·â€™Ñ—Ð² {amount} {name} Ð·Ð°Ð²Ð´ÑÐºÐ¸ me.mioclient.me!", "I just ate {amount} {name} thanks to miocwient.me! ^-^", "Ho appena mangiato {amount} {name} grazie a me.mioclient.me!", "×›×¨×’×¢ ××›×œ×ª×™ {amount} {name} ×”×•×“×•×ª ×œmioclient.me!", "PrÃ¡vÄ› jsem snÄ›dl {amount} {name} dÃ­ky me.mioclient.me", "SÃ¶in juuri {amount} {name}a me.mioclient.me:n ansiosta!", "Ravnokar sem pojedel {amount} {name} v zahvali me.mioclient.me", "Ø£Ù†Ø§ Ù‡Ù„Ù‚ Ø£ÙƒÙ„Øª {amount} {name} Ø¨ÙØ¶Ù„ miocliet.me!"};
         return strArr[new Random().nextInt(strArr.length)];
     }
 
-    public void do1926(String str) {
-        do1927(str, MixinMessageIndicatorHelper.getMessageSignatureData339(this));
+    public void sendModuleMessage(String str) {
+        sendChatMessage(str, ChatUtils.signatureOfModule(this));
     }
 
-    public void do1927(String str, MessageSignatureData messageSignatureData) {
+    public void sendChatMessage(String str, MessageSignatureData messageSignatureData) {
         if (!this.clientSide.getValue().booleanValue()) {
             minecraftClient.player.networkHandler.sendChatMessage(str);
         } else {
-            MixinMessageIndicatorHelper.do344(Text.literal(str).styled(style -> {
+            ChatUtils.sendMessage(Text.literal(str).styled(style -> {
                 return style.withColor(new Color(161, 161, 161).hashCode());
             }), messageSignatureData);
         }

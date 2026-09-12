@@ -1,27 +1,34 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.combat.BlockerOffsetMode;
+
+import me.mioclient.api.ClientServices;
+
 import java.util.ArrayList;
 import java.util.List;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BlockerPredicateMode;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.mode.combat.BlockerOffsetMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Delay;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
+import me.mioclient.module.Module;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Blocker.class */
 public class Blocker extends Delay {
-    public Setting<BlockerPredicateMode> offsets;
-    public Setting<Boolean> corners;
-    public Setting<Float> blockDamage;
+    public Setting<BlockerOffsetMode> offsets = add(new EnumSetting<>("Offsets", BlockerOffsetMode.SURROUND));
+    public Setting<Boolean> corners = add(new BooleanSetting("Corners", false, v -> this.offsets.getValue() != BlockerOffsetMode.CEV));
+    public Setting<Float> blockDamage = add(new NumberSetting<>("BlockDamage", 0.8f, 0.1f, 1.0f));
 
     public Blocker() {
         super("Blocker", "Blocks certain offsets to prevent crystal damage.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.setting9.do2334(false);
+        this.setting9.setDefaultValue(false);
     }
 
     @Override // me.mioclient.module.Module
@@ -30,17 +37,17 @@ public class Blocker extends Delay {
     }
 
     @Override // me.mioclient.module.Delay
-    public List<BlockPos> getList876() {
+    public List<BlockPos> getPlacePositions() {
         ArrayList<BlockPos> arrayList = new ArrayList();
-        for (Vec3i vec3i : this.offsets.getValue().getVec3iArray2842()) {
+        for (Vec3i vec3i : this.offsets.getValue().getOffsets()) {
             BlockPos add = BlockPos.ofFloored(minecraftClient.player.getPos()).add(vec3i);
-            if (BaritoneHelper_3.breakHighlightSearchHelper4.get1516(add) >= this.blockDamage.getValue().floatValue()) {
+            if (ClientServices.breakHighlightHelper.getBreakProgress(add) >= this.blockDamage.getValue().floatValue()) {
                 arrayList.add(add);
             }
         }
         ArrayList arrayList2 = new ArrayList();
         for (BlockPos blockPos : arrayList) {
-            Vec3i[] vec3iArray2842 = BlockerPredicateMode.SURROUND.getVec3iArray2842();
+            Vec3i[] vec3iArray2842 = BlockerOffsetMode.SURROUND.getOffsets();
             int length = vec3iArray2842.length;
             int i = 0;
             while (true) {

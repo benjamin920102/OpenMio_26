@@ -1,36 +1,45 @@
 package me.mioclient.module.render;
 
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+
 import java.awt.Color;
 import java.util.Calendar;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.world.biome.Biome;
+import me.mioclient.ducks.DuckSimpleOption;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience.class */
 public class Ambience extends Module {
-    public Setting<MixinEntityRendererMode> brightness;
-    public Setting<Color> color;
-    public Setting<Integer> lightLevel;
-    public Setting<Boolean> worldTime;
-    public Setting<Boolean> sync;
-    public Setting<Float> time;
-    public Setting<Boolean> worldWeather;
-    public Setting<AmbiencePredicateMode> weather;
-    public Setting<Boolean> force;
-    public Setting<Float> amount;
+    public Setting<MixinEntityRendererMode> brightness = add(new EnumSetting<>("Brightness", MixinEntityRendererMode.GAMMA));
+    public Setting<Color> color = add(new ColorSetting("Color", new Color(-1, true), v -> this.brightness.getValue() == Ambience.MixinEntityRendererMode.SCREEN));
+    public Setting<Integer> lightLevel = add(new NumberSetting<>("LightLevel", 1, 1, 15, v -> this.brightness.getValue() == Ambience.MixinEntityRendererMode.SKY));
+    public Setting<Boolean> worldTime = add(new BooleanSetting("WorldTime", false).setVisible());
+    public Setting<Boolean> sync = add(new BooleanSetting("Sync", false).requiresSettings(this.worldTime));
+    public Setting<Float> time = add(new NumberSetting<>("Time", 0.0f, 0.0f, 24.0f, v -> this.worldTime.isShown() && !this.sync.getValue().booleanValue()).setSuffix("h"));
+    public Setting<Boolean> worldWeather = add(new BooleanSetting("WorldWeather", false).setVisible());
+    public Setting<AmbiencePredicateMode> weather = add(new EnumSetting<>("Weather", AmbiencePredicateMode.CLEAR).requiresSettings(this.worldWeather));
+    public Setting<Boolean> force = add(new BooleanSetting("Force", false));
+    public Setting<Float> amount = add(new NumberSetting<>("Amount", 1.0f, 0.0f, 1.0f));
     public double val;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience$AmbiencePredicateMode.class */
-    public enum AmbiencePredicateMode implements EnumSettingHelper {
+    public enum AmbiencePredicateMode implements NamedValue {
         CLEAR("Clear", Biome.Precipitation.NONE),
         SNOW("Snow", Biome.Precipitation.SNOW),
         RAIN("Rain", Biome.Precipitation.RAIN),
@@ -44,7 +53,7 @@ public class Ambience extends Module {
             this.precipitation = precipitation;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -56,7 +65,7 @@ public class Ambience extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience$MixinEntityRendererMode.class */
-    public enum MixinEntityRendererMode implements EnumSettingHelper {
+    public enum MixinEntityRendererMode implements NamedValue {
         SCREEN("Screen"),
         GAMMA("Gamma"),
         SKY("Sky"),
@@ -69,7 +78,7 @@ public class Ambience extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -77,15 +86,14 @@ public class Ambience extends Module {
 
     public Ambience() {
         super("Ambience", "Changes several ambient things.", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.lightLevel.do2339(() -> {
+        this.lightLevel.setChangeCallback(() -> {
             if (this.brightness.getValue() != MixinEntityRendererMode.SKY || minecraftClient.world == null) {
                 return;
             }
             minecraftClient.worldRenderer.reload();
         });
-        this.brightness.do2339(() -> {
-            if (is1469()) {
+        this.brightness.setChangeCallback(() -> {
+            if (isNotInGame()) {
                 return;
             }
             if (minecraftClient.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
@@ -94,7 +102,7 @@ public class Ambience extends Module {
                 }
             }
             if (this.brightness.getValue() != MixinEntityRendererMode.GAMMA) {
-                ((me.mioclient.ZoomHelper_3) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
+                ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
             }
         });
         setDrawn(false);
@@ -107,10 +115,10 @@ public class Ambience extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (!is1469()) {
+        if (!isNotInGame()) {
             minecraftClient.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
         }
-        ((me.mioclient.ZoomHelper_3) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
+        ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
     }
 
     @Override // me.mioclient.module.Module
@@ -124,17 +132,17 @@ public class Ambience extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (is1469()) {
+    public void onTick(TickEvent tickEvent) {
+        if (isNotInGame()) {
             return;
         }
         if (this.worldTime.getValue().booleanValue()) {
-            long j = get2923();
+            long j = getWorldTime();
             minecraftClient.world.setTime(j);
             minecraftClient.world.setTimeOfDay(j);
         }
         if (this.brightness.getValue() == MixinEntityRendererMode.GAMMA) {
-            ((me.mioclient.ZoomHelper_3) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
+            ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
         } else if (this.brightness.getValue() == MixinEntityRendererMode.POTION) {
             if (minecraftClient.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
                 return;
@@ -143,7 +151,7 @@ public class Ambience extends Module {
         }
     }
 
-    public long get2923() {
+    public long getWorldTime() {
         if (!this.sync.getValue().booleanValue()) {
             return (long) ((this.time.getValue().floatValue() * Float.intBitsToFloat(1148846080)) + Float.intBitsToFloat(1183621120));
         }
@@ -151,7 +159,7 @@ public class Ambience extends Module {
         return (long) (((calendar.get(11) + (calendar.get(12) / Float.intBitsToFloat(1114636288))) * Float.intBitsToFloat(1148846080)) + Float.intBitsToFloat(1183621120));
     }
 
-    public boolean is2924() {
+    public boolean isWeatherForced() {
         return isToggled() && this.worldWeather.getValue().booleanValue() && this.force.getValue().booleanValue();
     }
 }

@@ -1,8 +1,12 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.PresetHelperFeature;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.api.ClientServices;
+import me.mioclient.command.PanicCommand;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.command.PanicCommand;
 import me.mioclient.module.client.HUD;
 import me.mioclient.module.client.UI;
 import net.minecraft.client.gui.DrawContext;
@@ -18,9 +22,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /* compiled from: 0.java */
 @Mixin({TitleScreen.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinTitleScreen.class */
-public class MixinTitleScreen extends Screen implements SearchHelper_4 {
-    private static HUD h = (HUD) BaritoneHelper_3.baritoneHelper_4.getModule117(HUD.class);
-    private static UI c = (UI) BaritoneHelper_3.baritoneHelper_4.getModule117(UI.class);
+public class MixinTitleScreen extends Screen implements ClientAccessor {
+    private static HUD h;
+    private static UI c;
+
+    private static HUD getH() {
+        if (h == null && ClientServices.moduleInjector != null) {
+            try { h = (HUD) ClientServices.moduleInjector.getModule(HUD.class); } catch (Exception e) {}
+        }
+        return h;
+    }
+
+    private static UI getC() {
+        if (c == null && ClientServices.moduleInjector != null) {
+            try { c = (UI) ClientServices.moduleInjector.getModule(UI.class); } catch (Exception e) {}
+        }
+        return c;
+    }
 
     protected MixinTitleScreen(Text text) {
         super(text);
@@ -28,18 +46,22 @@ public class MixinTitleScreen extends Screen implements SearchHelper_4 {
 
     @Inject(method = {"render"}, at = {@At("TAIL")})
     private void renderHook(DrawContext drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
-        if (PresetHelperFeature.flag) {
+        if (PanicCommand.flag) {
             return;
         }
-        drawContext.drawTextWithShadow(minecraftClient.textRenderer, "Mio " + String.valueOf(Formatting.WHITE) + "v2 " + String.valueOf(Formatting.GRAY) + "(patch " + "02/03/2025 22:47".substring(0, 10) + ")", 2, 2, h.setting8.getValue().getColor1911(h, 0.0f).getRGB());
+        HUD hud = getH();
+        if (hud == null) return;
+        drawContext.drawTextWithShadow(minecraftClient.textRenderer, "Mio " + String.valueOf(Formatting.WHITE) + "v2 " + String.valueOf(Formatting.GRAY) + "(patch " + "02/03/2025 22:47".substring(0, 10) + ")", 2, 2, hud.setting8.getValue().computeColor(hud, 0.0f).getRGB());
     }
 
     public boolean keyPressed(int i, int i2, int i3) {
-        if (c.getKeybind().is1947() || c.getKeybind().get1945() != i) {
+        UI ui = getC();
+        if (ui == null) return true;
+        if (ui.getKeybind().isMouseKeybind() || ui.getKeybind().getKey() != i) {
             return true;
         }
-        c.enable();
-        BaritoneHelper_3.getMixinTitleScreenSearchHelper42216().do2835();
+        ui.enable();
+        ClientServices.getClickGui().openWithParent();
         return true;
     }
 }

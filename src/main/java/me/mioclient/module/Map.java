@@ -1,22 +1,33 @@
 package me.mioclient.module;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.module.exploit.newchunks.NewChunkEntry;
+import me.mioclient.render.hud.ResizableHudElement;
+import me.mioclient.render.shape.Shape2DRenderer;
+import me.mioclient.util.math.ColorUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.exploit.newchunks.NewChunkEntry;
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.RenderUtil;
+import me.mioclient.render.shape.Shape2DRenderer;
+import me.mioclient.util.math.ColorUtils;
+
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.util.Iterator;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ColorSetting;
-import me.mioclient.CrosshairHelper;
-import me.mioclient.EnumSetting;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.MixinMessageIndicatorHelper_2;
-import me.mioclient.NewChunksHelperSearchHelper4;
-import me.mioclient.NumberSetting;
-import me.mioclient.SearchHelper4_17;
-import me.mioclient.SearchHelper_2;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.manager.ScissorStackManager;
 import me.mioclient.api.Setting;
-import me.mioclient.feature.Size;
+import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.module.exploit.NewChunks;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Formatting;
@@ -28,7 +39,7 @@ import net.minecraft.util.math.Vec3d;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/Map.class */
-public class Map extends me.mioclient.ModuleList {
+public class Map extends me.mioclient.module.HudModule {
     public Setting<Mode> setting;
     public Setting<Float> setting2;
     public Setting<Float> setting3;
@@ -37,13 +48,13 @@ public class Map extends me.mioclient.ModuleList {
     public Setting<Color> setting6;
     public static final float val2 = Float.intBitsToFloat(1090519040);
     public static final float val = Float.intBitsToFloat(1098907648);
-    public static final NewChunks newChunks = (NewChunks) BaritoneHelper_3.baritoneHelper_4.getModule117(NewChunks.class);
+    public static final NewChunks newChunks = (NewChunks) ClientServices.moduleInjector.getModule(NewChunks.class);
     public static final Identifier identifier = Identifier.of("mio", "textures/nav.png");
 
     /* JADX INFO: Access modifiers changed from: private */
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/Map$Mode.class */
-    public enum Mode implements EnumSettingHelper {
+    public enum Mode implements NamedValue {
         NONE("None"),
         ARROW("Arrow"),
         DOT("Dot");
@@ -54,7 +65,7 @@ public class Map extends me.mioclient.ModuleList {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -68,69 +79,69 @@ public class Map extends me.mioclient.ModuleList {
         this.setting4 = add(new ColorSetting("Pointer", Color.white));
         this.setting5 = add(new ColorSetting("Background", new Color(10, 10, 10, 50)));
         this.setting6 = add(new ColorSetting("Outline", new Color(10, 10, 10, 100)));
-        this.setting4.do2329("PointerColor");
-        this.setting4.getSetting2341();
-        setDescription(new ArgumentTypeHelper().getArgumentTypeHelper2919(String.valueOf(Formatting.YELLOW)).getString2921("\u0001Primarily used for NewChunks"));
-        Size size = new Size(this);
-        size.do2637(this);
-        do3019(size);
+        this.setting4.setConfigName("PointerColor");
+        this.setting4.setDisabled();
+        setDescription(new StringTemplate().arg(String.valueOf(Formatting.YELLOW)).format("\u0001Primarily used for NewChunks"));
+        ResizableHudElement size = new ResizableHudElement(this);
+        size.enableScaling(this);
+        setElement(size);
     }
 
-    @Override // me.mioclient.ModuleList
-    public void do364(DrawContext drawContext) {
-        float[] floatArray2950 = this.moduleListSearchHelper4.getFloatArray2950();
+    @Override // me.mioclient.module.HudModule
+    public void renderContent(DrawContext drawContext) {
+        float[] floatArray2950 = this.moduleListSearchHelper4.getMeasuredSize();
         if (floatArray2950 == null) {
             return;
         }
         float f = RenderSystem.getShaderColor()[3];
         RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
-        CrosshairHelper.do1597();
+        Shape2DRenderer.resetShadowOffset();
         RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), f);
-        SearchHelper_2.searchHelper_2.do546(drawContext.getMatrices(), Float.intBitsToFloat(-1082130432), Float.intBitsToFloat(-1082130432), this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue(), this.setting5.getValue());
-        SearchHelper_2.searchHelper_2.do539(drawContext.getMatrices(), Float.intBitsToFloat(-1073741824), Float.intBitsToFloat(-1073741824), this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue(), this.setting6.getValue());
+        RenderUtil.INSTANCE.drawFilledRectColor(drawContext.getMatrices(), Float.intBitsToFloat(-1082130432), Float.intBitsToFloat(-1082130432), this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue(), this.setting5.getValue());
+        RenderUtil.INSTANCE.drawRectOutline(drawContext.getMatrices(), Float.intBitsToFloat(-1073741824), Float.intBitsToFloat(-1073741824), this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue(), this.setting6.getValue());
         float floatValue = this.setting2.getValue().floatValue() / Float.intBitsToFloat(1073741824);
         float floatValue2 = this.setting3.getValue().floatValue() / Float.intBitsToFloat(1073741824);
         drawContext.getMatrices().push();
         drawContext.getMatrices().translate(floatValue, floatValue2, 0.0f);
-        Iterator<BlockPos> it = newChunks.getList1504().iterator();
+        Iterator<BlockPos> it = newChunks.getDungeonPositions().iterator();
         while (it.hasNext()) {
             ChunkPos chunkPos = new ChunkPos(it.next());
-            if (is2053(chunkPos)) {
-                do2054(drawContext, chunkPos, MixinMessageIndicatorHelper_2.getColor817(newChunks.fill5.getValue(), Float.intBitsToFloat(1053609165)));
+            if (isChunkInRange(chunkPos)) {
+                drawChunkRect(drawContext, chunkPos, ColorUtils.withAlphaPercent(newChunks.fill5.getValue(), Float.intBitsToFloat(1053609165)));
             }
         }
-        for (NewChunksHelperSearchHelper4 newChunksHelperSearchHelper4 : newChunks.getList1503()) {
-            if (is2053(newChunksHelperSearchHelper4.getChunkPos2467())) {
-                if (newChunksHelperSearchHelper4.getNewChunksHelperMode2468().getColorArray671(newChunks) != null) {
-                    Color color817 = MixinMessageIndicatorHelper_2.getColor817(newChunksHelperSearchHelper4.getNewChunksHelperMode2468().getColorArray671(newChunks)[0], Float.intBitsToFloat(1048576000));
-                    do2054(drawContext, newChunksHelperSearchHelper4.getChunkPos2467(), color817);
+        for (NewChunkEntry newChunksHelperSearchHelper4 : newChunks.getVisibleEntries()) {
+            if (isChunkInRange(newChunksHelperSearchHelper4.getChunkPosition())) {
+                if (newChunksHelperSearchHelper4.getEntryMode().getColors(newChunks) != null) {
+                    Color color817 = ColorUtils.withAlphaPercent(newChunksHelperSearchHelper4.getEntryMode().getColors(newChunks)[0], Float.intBitsToFloat(1048576000));
+                    drawChunkRect(drawContext, newChunksHelperSearchHelper4.getChunkPosition(), color817);
                 }
             }
         }
         drawContext.getMatrices().pop();
-        SearchHelper4_17.do1106((int) this.moduleListSearchHelper4.get123(), (int) this.moduleListSearchHelper4.get124(), (int) floatArray2950[0], (int) floatArray2950[1]);
-        CrosshairHelper.do1597();
-        SearchHelper4_17.do1107();
+        ScissorStackManager.pushClipRegion((int) this.moduleListSearchHelper4.getX(), (int) this.moduleListSearchHelper4.getY(), (int) floatArray2950[0], (int) floatArray2950[1]);
+        Shape2DRenderer.resetShadowOffset();
+        ScissorStackManager.popClipRegion();
         do2055(drawContext, floatValue, floatValue2);
     }
 
-    @Override // me.mioclient.ModuleList
-    public float[] getFloatArray365() {
+    @Override // me.mioclient.module.HudModule
+    public float[] getSize() {
         return new float[]{this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue()};
     }
 
-    public boolean is2053(ChunkPos chunkPos) {
+    public boolean isChunkInRange(ChunkPos chunkPos) {
         int ceil = (int) Math.ceil(Math.hypot(this.setting2.getValue().floatValue(), this.setting3.getValue().floatValue()) / Double.longBitsToDouble(4625196817309499392L));
         return chunkPos.getSquaredDistance(minecraftClient.player.getChunkPos()) <= ceil * ceil;
     }
 
-    public void do2054(DrawContext drawContext, ChunkPos chunkPos, Color color) {
+    public void drawChunkRect(DrawContext drawContext, ChunkPos chunkPos, Color color) {
         Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
         float startX = (((float) (pos.x - chunkPos.getStartX())) / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1090519040);
         float startZ = (((float) (pos.z - chunkPos.getStartZ())) / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1090519040);
         drawContext.getMatrices().push();
         drawContext.getMatrices().translate(startX, startZ, 0.0f);
-        CrosshairHelper.do1707(drawContext.getMatrices(), 0.0f, 0.0f, Float.intBitsToFloat(1090519040), Float.intBitsToFloat(1090519040), color);
+        Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, 0.0f, Float.intBitsToFloat(1090519040), Float.intBitsToFloat(1090519040), color);
         drawContext.getMatrices().pop();
     }
 

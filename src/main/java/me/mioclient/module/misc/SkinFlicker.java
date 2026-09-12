@@ -1,29 +1,37 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.NamedValue;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.entity.player.PlayerModelPart;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/SkinFlicker.class */
 public class SkinFlicker extends Module {
     public static final PlayerModelPart[] playerModelPartArr = {PlayerModelPart.LEFT_SLEEVE, PlayerModelPart.JACKET, PlayerModelPart.HAT, PlayerModelPart.LEFT_PANTS_LEG, PlayerModelPart.RIGHT_PANTS_LEG, PlayerModelPart.RIGHT_SLEEVE};
     public static final PlayerModelPart[] playerModelPartArr2 = {PlayerModelPart.HAT, PlayerModelPart.JACKET, PlayerModelPart.LEFT_SLEEVE, PlayerModelPart.RIGHT_SLEEVE, PlayerModelPart.LEFT_PANTS_LEG, PlayerModelPart.RIGHT_PANTS_LEG};
-    public Setting<SkinFlickerMode> mode;
-    public Setting<Boolean> cape;
-    public Setting<Float> delay;
+    public Setting<SkinFlickerMode> mode = add(new EnumSetting<>("Mode", SkinFlickerMode.FULL));
+    public Setting<Boolean> cape = add(new BooleanSetting("Cape", false));
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 1.0f, 0.0f, 10.0f).setSuffix("s"));
     public final Map<PlayerModelPart, Boolean> map;
     public final int num;
     public final Stopwatch stopwatch;
@@ -31,7 +39,7 @@ public class SkinFlicker extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/SkinFlicker$SkinFlickerMode.class */
-    public enum SkinFlickerMode implements EnumSettingHelper {
+    public enum SkinFlickerMode implements NamedValue {
         FULL("Full"),
         VERTICAL("Vertical"),
         HORIZONTAL("Horizontal"),
@@ -43,7 +51,7 @@ public class SkinFlicker extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -51,7 +59,6 @@ public class SkinFlicker extends Module {
 
     public SkinFlicker() {
         super("SkinFlicker", "Flicks your skin parts.", Category.MISC, "skinblinker");
-        PhaseESPHelper.do1351(this);
         this.map = new HashMap();
         this.num = PlayerModelPart.values().length;
         this.stopwatch = new Stopwatch();
@@ -75,29 +82,29 @@ public class SkinFlicker extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (this.stopwatch.is418(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
+    public void onTick(TickEvent tickEvent) {
+        if (this.stopwatch.hasElapsed(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
             switch (this.mode.getValue()) {
                 case FULL:
                     for (PlayerModelPart playerModelPart : PlayerModelPart.values()) {
-                        if (is2685(playerModelPart)) {
-                            do2684(playerModelPart);
+                        if (shouldFlickPart(playerModelPart)) {
+                            toggleSkinPart(playerModelPart);
                         }
                     }
                     break;
                 case VERTICAL:
                 case HORIZONTAL:
                     PlayerModelPart playerModelPart2 = (this.mode.getValue() == SkinFlickerMode.HORIZONTAL ? playerModelPartArr : playerModelPartArr2)[this.num2 % 6];
-                    if (is2685(playerModelPart2)) {
-                        do2684(playerModelPart2);
+                    if (shouldFlickPart(playerModelPart2)) {
+                        toggleSkinPart(playerModelPart2);
                         this.num2 = (this.num2 + 1) % 6;
                         break;
                     }
                     break;
                 case RANDOM:
                     PlayerModelPart playerModelPart3 = PlayerModelPart.values()[ThreadLocalRandom.current().nextInt(this.num)];
-                    if (is2685(playerModelPart3)) {
-                        do2684(playerModelPart3);
+                    if (shouldFlickPart(playerModelPart3)) {
+                        toggleSkinPart(playerModelPart3);
                         break;
                     }
                     break;
@@ -106,11 +113,11 @@ public class SkinFlicker extends Module {
         }
     }
 
-    public void do2684(PlayerModelPart playerModelPart) {
+    public void toggleSkinPart(PlayerModelPart playerModelPart) {
         minecraftClient.options.togglePlayerModelPart(playerModelPart, !minecraftClient.options.isPlayerModelPartEnabled(playerModelPart));
     }
 
-    public boolean is2685(PlayerModelPart playerModelPart) {
+    public boolean shouldFlickPart(PlayerModelPart playerModelPart) {
         return this.cape.getValue().booleanValue() || playerModelPart != PlayerModelPart.CAPE;
     }
 }

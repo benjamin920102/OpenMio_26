@@ -1,16 +1,26 @@
 package me.mioclient.module.client;
 
+import me.mioclient.event.events.client.ClientTickEvent;
+
+import me.mioclient.gui.screen.AbstractClickGuiScreen;
+import me.mioclient.mode.client.FontStyle;
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.gui.screen.AbstractClickGuiScreen;
+import me.mioclient.render.font.ClientTextRenderer;
+
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.FontsEvent;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.FontsSearchHelper4_2;
-import me.mioclient.Mode_8;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.event.events.client.ClientTickEvent;
+import me.mioclient.mode.client.FontStyle;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
 import org.lwjgl.glfw.GLFW;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.setting.StringSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/client/Fonts.class */
@@ -18,39 +28,38 @@ public class Fonts extends Module {
     public static Fonts fonts;
     public final AtomicBoolean atomicBoolean;
     public static final Runnable runnable = () -> {
-        if (minecraftClient.player != null || (minecraftClient.currentScreen instanceof FontsSearchHelper4_2)) {
-            FontsSearchHelper4.fontsSearchHelper4.do1687(FontsSearchHelper4.fontsSearchHelper4.getAdvanceGlyph1688());
+        if (minecraftClient.player != null || (minecraftClient.currentScreen instanceof AbstractClickGuiScreen)) {
+            ClientTextRenderer.INSTANCE.setAdvanceGlyph(ClientTextRenderer.INSTANCE.createAdvanceGlyph());
         }
     };
-    public Setting<String> font;
-    public Setting<Mode_8> style;
-    public Setting<Boolean> antiAlias;
-    public Setting<Boolean> chat;
-    public Setting<Integer> size;
-    public Setting<Integer> shift;
-    public Setting<Float> shadow;
-    public Setting<Integer> translate;
+    public Setting<String> font = add(new StringSetting("Font", "Verdana"));
+    public Setting<FontStyle> style = add(new EnumSetting<>("Style", FontStyle.PLAIN));
+    public Setting<Boolean> antiAlias = add(new BooleanSetting("AntiAlias", false));
+    public Setting<Boolean> chat = add(new BooleanSetting("Chat", false));
+    public Setting<Integer> size = add(new NumberSetting<>("Size", 16, 12, 30));
+    public Setting<Integer> shift = add(new NumberSetting<>("Shift", -2, -4, 4));
+    public Setting<Float> shadow = add(new NumberSetting<>("Shadow", 0.7f, 0.5f, 1.0f));
+    public Setting<Integer> translate = add(new NumberSetting<>("Translate", -1, -4, 4));
 
     public Fonts() {
         super("Fonts", "Manages the client's font renderer.", Category.CLIENT, new String[0]);
         this.atomicBoolean = new AtomicBoolean(false);
-        PhaseESPHelper.do1351(this);
-        this.style.do2339(runnable);
-        this.antiAlias.do2339(runnable);
-        this.size.do2339(() -> {
+        this.style.setChangeCallback(runnable);
+        this.antiAlias.setChangeCallback(runnable);
+        this.size.setChangeCallback(() -> {
             this.atomicBoolean.set(true);
         });
-        this.font.do2339(runnable);
+        this.font.setChangeCallback(runnable);
         fonts = this;
         setDrawn(false);
     }
 
     @Listen
-    public void onEvent(FontsEvent fontsEvent) {
+    public void onClientTick(ClientTickEvent fontsEvent) {
         if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 0) == 1 || !this.atomicBoolean.get()) {
             return;
         }
-        FontsSearchHelper4.fontsSearchHelper4.do1687(FontsSearchHelper4.fontsSearchHelper4.getAdvanceGlyph1688());
+        ClientTextRenderer.INSTANCE.setAdvanceGlyph(ClientTextRenderer.INSTANCE.createAdvanceGlyph());
         this.atomicBoolean.set(false);
     }
 }

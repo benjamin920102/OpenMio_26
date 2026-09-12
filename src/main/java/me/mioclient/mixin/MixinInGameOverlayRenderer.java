@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.render.NoRender;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.InGameOverlayRenderer;
@@ -15,25 +18,49 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({InGameOverlayRenderer.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinInGameOverlayRenderer.class */
 public class MixinInGameOverlayRenderer {
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
 
     @Inject(method = {"renderFireOverlay"}, at = {@At("HEAD")}, cancellable = true)
     private static void onRenderFireOverlay(MinecraftClient minecraftClient, MatrixStack matrixStack, CallbackInfo callbackInfo) {
-        if (norender.isToggled() && norender.fire.getValue().booleanValue()) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled() && norender_lcl.fire.getValue().booleanValue()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"renderUnderwaterOverlay"}, at = {@At("HEAD")}, cancellable = true)
     private static void onRenderUnderwaterOverlay(MinecraftClient minecraftClient, MatrixStack matrixStack, CallbackInfo callbackInfo) {
-        if (norender.isToggled() && norender.blindness.getValue().booleanValue()) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled() && norender_lcl.blindness.getValue().booleanValue()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"renderInWallOverlay"}, at = {@At("HEAD")}, cancellable = true)
     private static void render(Sprite sprite, MatrixStack matrixStack, CallbackInfo callbackInfo) {
-        if (norender.isToggled() && norender.blindness.getValue().booleanValue()) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled() && norender_lcl.blindness.getValue().booleanValue()) {
             callbackInfo.cancel();
         }
     }

@@ -1,16 +1,25 @@
 package me.mioclient.module.player;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.EntityUtil;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.util.Iterator;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper_3;
+import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.MotionEvent;
+import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.component.DataComponentTypes;
@@ -21,18 +30,22 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoEat.class */
 public class AutoEat extends Module {
-    public Setting<Integer> health;
-    public Setting<Integer> hunger;
-    public Setting<Boolean> pauseBaritone;
-    public Setting<Boolean> autoSwap;
-    public Setting<AutoEatMode> sort;
-    public Setting<Boolean> swapBack;
-    public Setting<Boolean> autoEscape;
-    public Setting<Boolean> autoDisable;
+    public Setting<Integer> health = add(new NumberSetting<>("Health", 16, 0, 36).setHoleSnapConfig("Off", HoleSnapMode.MIN));
+    public Setting<Integer> hunger = add(new NumberSetting<>("Hunger", 6, -1, 20).setHoleSnapConfig("Off", HoleSnapMode.MIN));
+    public Setting<Boolean> pauseBaritone = add(new BooleanSetting("PauseBaritone", false));
+    public Setting<Boolean> autoSwap = add(new BooleanSetting("AutoSwap", true).setVisible());
+    public Setting<AutoEatMode> sort = add(new EnumSetting<>("Sort", AutoEatMode.autoEatMode2).requiresSettings(this.autoSwap));
+    public Setting<Boolean> swapBack = add(new BooleanSetting("SwapBack", false).requiresSettings(this.autoSwap));
+    public Setting<Boolean> autoEscape = add(new BooleanSetting("AutoEscape", false).setVisible());
+    public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", false).requiresSettings(this.autoEscape));
     public int num;
     public boolean flag;
     public int num2;
@@ -42,22 +55,22 @@ public class AutoEat extends Module {
     /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoEat$AutoEatMode.class */
-    public static enum AutoEatMode implements EnumSettingHelper {
+    public static enum AutoEatMode implements NamedValue {
         autoEatMode("Hunger") {
             @Override
-            public double get872(FoodComponent foodComponent) {
+            public double scoreFood(FoodComponent foodComponent) {
                 return foodComponent.nutrition();
             }
         },
         autoEatMode2("Saturation") {
             @Override
-            public double get872(FoodComponent foodComponent) {
+            public double scoreFood(FoodComponent foodComponent) {
                 return foodComponent.saturation();
             }
         },
         autoEatMode3("Health") {
             @Override
-            public double get872(FoodComponent foodComponent) {
+            public double scoreFood(FoodComponent foodComponent) {
                 Iterator it = foodComponent.effects().iterator();
                 while (it.hasNext()) {
                     FoodComponent.StatusEffectEntry statusEffectEntry = (FoodComponent.StatusEffectEntry) it.next();
@@ -75,25 +88,24 @@ public class AutoEat extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public double get872(FoodComponent foodComponent) {
+        public double scoreFood(FoodComponent foodComponent) {
             return 0.0d;
         }
     }
 
     public AutoEat() {
         super("AutoEat", "Eats your food for you.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.pauseBaritone.do2344();
+        this.pauseBaritone.requireBaritone();
     }
 
     @Override // me.mioclient.module.Module
     public void onToggle() {
-        do2089(false);
+        setEating(false);
         this.num = -1;
         this.num2 = -1;
     }
@@ -101,7 +113,7 @@ public class AutoEat extends Module {
     @Override // me.mioclient.module.Module
     public void onDisable() {
         minecraftClient.options.useKey.setPressed(false);
-        BaritoneHelper_3.obstaclePasserHelper.do700(this);
+        ClientServices.obstaclePasserHelper.removePauseRequest(this);
     }
 
     /* JADX WARN: Code restructure failed: missing block: B:16:0x00e7, code lost:
@@ -114,31 +126,31 @@ public class AutoEat extends Module {
     */
     public void onResetEvent(MotionEvent motionEvent) {
         int i;
-        if (motionEvent.getKeyPearlMode1472() == KeyPearlMode.Post) {
+        if (motionEvent.getPhase() == KeyPearlMode.Post) {
             return;
         }
-        BaritoneHelper_3.obstaclePasserHelper.do700(this);
+        ClientServices.obstaclePasserHelper.removePauseRequest(this);
         if (!this.autoSwap.getValue().booleanValue() && this.flag) {
             if (!minecraftClient.player.getMainHandStack().contains(DataComponentTypes.FOOD)) {
                 minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
-                do2089(false);
+                setEating(false);
                 return;
             }
         }
         int i2 = get2085();
         if (i2 != -1) {
         }
-        if (is2087() && (i = FireworksHelper.get443(Items.CHORUS_FRUIT)) != -1) {
+        if (isInDangerousProximity() && (i = InventoryUtils.findSlot(Items.CHORUS_FRUIT)) != -1) {
             i2 = -1;
             this.num2 = i;
             do438(this.num2);
         }
-        if (is2088() && !is2087()) {
+        if (is2088() && !isInDangerousProximity()) {
             if (this.flag) {
                 minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
-                do2089(false);
+                setEating(false);
                 if (this.autoSwap.getValue().booleanValue() && this.swapBack.getValue().booleanValue() && this.num != -1) {
-                    FireworksHelper.do456(this.num);
+                    InventoryUtils.selectSlot(this.num);
                 }
                 if (this.num2 != -1) {
                     do438(this.num2);
@@ -155,15 +167,15 @@ public class AutoEat extends Module {
         boolean z = i2 == 40;
         if (this.autoSwap.getValue().booleanValue() && !z && i2 != -1 && minecraftClient.player.getInventory().selectedSlot != i2) {
             this.num = minecraftClient.player.getInventory().selectedSlot;
-            FireworksHelper.do456(i2);
+            InventoryUtils.selectSlot(i2);
         }
         ItemStack mainHandStack = minecraftClient.player.getMainHandStack();
         if (!minecraftClient.player.isUsingItem() && (z || mainHandStack.contains(DataComponentTypes.FOOD))) {
             minecraftClient.interactionManager.interactItem(minecraftClient.player, z ? Hand.OFF_HAND : Hand.MAIN_HAND);
-            do2089(true);
+            setEating(true);
         }
         if (this.pauseBaritone.getValue().booleanValue() && minecraftClient.player.isUsingItem()) {
-            BaritoneHelper_3.obstaclePasserHelper.do699(this);
+            ClientServices.obstaclePasserHelper.addPauseRequest(this);
         }
     }
 
@@ -181,12 +193,12 @@ public class AutoEat extends Module {
             ItemStack stack = minecraftClient.player.getInventory().getStack(i2);
             FoodComponent foodComponent = (FoodComponent) stack.get(DataComponentTypes.FOOD);
             if (foodComponent != null && (foodComponent.canAlwaysEat() || minecraftClient.player.getHungerManager().getFoodLevel() < 20)) {
-                double d = this.sort.getValue().get872(foodComponent);
+                double d = this.sort.getValue().scoreFood(foodComponent);
                 if (d > longBitsToDouble || (d == longBitsToDouble && i2 == minecraftClient.player.getInventory().selectedSlot)) {
                     longBitsToDouble = d;
                     i = i2;
                 }
-                if (stack.getItem() == Items.CHORUS_FRUIT && is2087()) {
+                if (stack.getItem() == Items.CHORUS_FRUIT && isInDangerousProximity()) {
                     i = i2;
                     break;
                 }
@@ -200,7 +212,7 @@ public class AutoEat extends Module {
         return this.flag;
     }
 
-    public boolean is2087() {
+    public boolean isInDangerousProximity() {
         if (!this.autoEscape.getValue().booleanValue()) {
             return false;
         }
@@ -211,7 +223,7 @@ public class AutoEat extends Module {
                 break;
             }
             ClientPlayerEntity clientPlayerEntity2 = (ClientPlayerEntity)((PlayerEntity) it.next());
-            if (((PlayerEntity) clientPlayerEntity2).distanceTo(minecraftClient.player) <= Float.intBitsToFloat(1094713344) && !BaritoneHelper_3.searchHelper4_14.is520((PlayerEntity) clientPlayerEntity2) && clientPlayerEntity2 != minecraftClient.player) {
+            if (((PlayerEntity) clientPlayerEntity2).distanceTo(minecraftClient.player) <= Float.intBitsToFloat(1094713344) && !ClientServices.socialManager.isFriendEntity((PlayerEntity) clientPlayerEntity2) && clientPlayerEntity2 != minecraftClient.player) {
                 clientPlayerEntity = clientPlayerEntity2;
                 break;
             }
@@ -220,10 +232,10 @@ public class AutoEat extends Module {
     }
 
     public boolean is2088() {
-        return (this.hunger.getValue().intValue() == -1 || minecraftClient.player.getHungerManager().getFoodLevel() > this.hunger.getValue().intValue()) && (this.health.getValue().intValue() == 0 || SearchHelper_3.get643() > ((float) this.health.getValue().intValue()));
+        return (this.hunger.getValue().intValue() == -1 || minecraftClient.player.getHungerManager().getFoodLevel() > this.hunger.getValue().intValue()) && (this.health.getValue().intValue() == 0 || EntityUtil.getPlayerHealth() > ((float) this.health.getValue().intValue()));
     }
 
-    public void do2089(boolean z) {
+    public void setEating(boolean z) {
         if (this.flag == z) {
             return;
         }

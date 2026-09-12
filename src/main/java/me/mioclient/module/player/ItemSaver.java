@@ -1,10 +1,14 @@
 package me.mioclient.module.player;
 
-import me.mioclient.ArmorSearchHelper4;
-import me.mioclient.BreakingProgressHelper;
-import me.mioclient.FireworksHelper;
+import me.mioclient.util.combat.ExplosionDamageCalculator;
+import me.mioclient.util.inventory.InventoryUtils;
+
+import me.mioclient.util.combat.ExplosionDamageCalculator;
+import me.mioclient.util.inventory.InventoryUtils;
+
+import me.mioclient.ducks.DuckClientPlayerInteractionManager;
 import me.mioclient.api.Category;
-import me.mioclient.event.AttackBlockEvent;
+import me.mioclient.event.events.interaction.AttackBlockEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
 import net.minecraft.item.ArmorItem;
@@ -21,14 +25,14 @@ public class ItemSaver extends Module {
     @Listen
     public void onAttackBlock(AttackBlockEvent attackBlockEvent) {
         int i = minecraftClient.player.getInventory().selectedSlot;
-        if (is905(minecraftClient.player.getInventory().getStack(i)) || ((BreakingProgressHelper) minecraftClient.interactionManager).getCurrentBreakingBlock() == null || !minecraftClient.options.attackKey.isPressed()) {
+        if (isToolSafe(minecraftClient.player.getInventory().getStack(i)) || ((DuckClientPlayerInteractionManager) minecraftClient.interactionManager).getCurrentBreakingBlock() == null || !minecraftClient.options.attackKey.isPressed()) {
             return;
         }
-        FireworksHelper.do456(i == 8 ? i - 1 : i + 1);
-        attackBlockEvent.do1162();
+        InventoryUtils.selectSlot(i == 8 ? i - 1 : i + 1);
+        attackBlockEvent.cancel();
     }
 
-    public static boolean is905(ItemStack itemStack) {
-        return itemStack.isEmpty() || !itemStack.isDamageable() || (itemStack.getItem() instanceof ArmorItem) || itemStack.isOf(Items.ELYTRA) || ArmorSearchHelper4.get1905(itemStack) > 10;
+    public static boolean isToolSafe(ItemStack itemStack) {
+        return itemStack.isEmpty() || !itemStack.isDamageable() || (itemStack.getItem() instanceof ArmorItem) || itemStack.isOf(Items.ELYTRA) || ExplosionDamageCalculator.getClampedDurabilityPercent(itemStack) > 10;
     }
 }

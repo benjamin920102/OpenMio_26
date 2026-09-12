@@ -1,6 +1,6 @@
 package me.mioclient.mixin;
 
-import me.mioclient.SpawnTimeHelper_2;
+import me.mioclient.ducks.DuckEndCrystalEntity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.world.World;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /* compiled from: 0.java */
 @Mixin({EndCrystalEntity.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinEndCrystalEntity.class */
-public class MixinEndCrystalEntity implements SpawnTimeHelper_2 {
+public class MixinEndCrystalEntity implements DuckEndCrystalEntity {
 
     @Unique
     private long spawnTime;
@@ -27,17 +27,17 @@ public class MixinEndCrystalEntity implements SpawnTimeHelper_2 {
         this.mioAttacked = false;
     }
 
-    @Override // me.mioclient.SpawnTimeHelper_2
+    @Override // me.mioclient.ducks.DuckEndCrystalEntity
     public long getSpawnTime() {
         return this.spawnTime;
     }
 
-    @Override // me.mioclient.SpawnTimeHelper_2
+    @Override // me.mioclient.ducks.DuckEndCrystalEntity
     public boolean isMioAttacked() {
         return this.mioAttacked;
     }
 
-    @Override // me.mioclient.SpawnTimeHelper_2
+    @Override // me.mioclient.ducks.DuckEndCrystalEntity
     public void setMioAttacked(boolean z) {
         this.mioAttacked = z;
     }

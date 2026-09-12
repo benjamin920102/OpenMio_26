@@ -12,6 +12,7 @@ import java.io.RandomAccessFile;
 import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.mioclient.module.client.Discord;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:com/jagrosh/discordipc/entities/pipe/WindowsPipe.class */
@@ -87,7 +88,7 @@ public class WindowsPipe extends Pipe {
             if (javaSpec.floatValue() >= 11.0f) {
                 WinRegistry.createKey(-2147483647L, str5);
                 WinRegistry.writeStringValue(-2147483647L, str5, "", str4);
-                WinRegistry.writeStringValue(-2147483647L, str5, "URL Protocol", "��");
+                WinRegistry.writeStringValue(-2147483647L, str5, "URL Protocol", "ï¿½ï¿½");
                 WinRegistry.createKey(-2147483647L, str6);
                 WinRegistry.writeStringValue(-2147483647L, str6, "", absolutePath);
                 WinRegistry.createKey(-2147483647L, str7);
@@ -95,7 +96,7 @@ public class WindowsPipe extends Pipe {
             } else {
                 WinRegistry.createKey(WinRegistry.HKEY_CURRENT_USER, str5);
                 WinRegistry.writeStringValue(WinRegistry.HKEY_CURRENT_USER, str5, "", str4);
-                WinRegistry.writeStringValue(WinRegistry.HKEY_CURRENT_USER, str5, "URL Protocol", "��");
+                WinRegistry.writeStringValue(WinRegistry.HKEY_CURRENT_USER, str5, "URL Protocol", "ï¿½ï¿½");
                 WinRegistry.createKey(WinRegistry.HKEY_CURRENT_USER, str6);
                 WinRegistry.writeStringValue(WinRegistry.HKEY_CURRENT_USER, str6, "", absolutePath);
                 WinRegistry.createKey(WinRegistry.HKEY_CURRENT_USER, str7);

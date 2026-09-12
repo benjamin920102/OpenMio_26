@@ -1,7 +1,8 @@
 package me.mioclient.mixin;
 
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.PlayEvent;
+import me.mioclient.api.ClientAccessor;
+
+import me.mioclient.event.events.sound.PlayEvent;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.sound.SoundSystem;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,8 +17,8 @@ public class MixinSoundSystem {
     @Inject(method = {"play(Lnet/minecraft/client/sound/SoundInstance;)V"}, at = {@At("HEAD")}, cancellable = true)
     private void playHook(SoundInstance soundInstance, CallbackInfo callbackInfo) {
         PlayEvent playEvent = new PlayEvent(soundInstance);
-        SearchHelper_4.baritoneHelper.getObject1794(playEvent);
-        if (playEvent.is2403()) {
+        ClientAccessor.eventBus.fireEvent(playEvent);
+        if (playEvent.isCancelled()) {
             callbackInfo.cancel();
         }
     }

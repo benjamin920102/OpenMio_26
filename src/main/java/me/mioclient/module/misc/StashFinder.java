@@ -1,23 +1,32 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.util.client.SoundIdentifier;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.misc.stashfinder.StashEntry;
+import me.mioclient.util.client.ChatUtils;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_11;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchIdentifier;
-import me.mioclient.StashFinderHelper;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.manager.KillstreakSoundManager;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.LoadChunkFromPacketEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.network.LoadChunkFromPacketEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.block.entity.BarrelBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
@@ -29,38 +38,40 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.chunk.WorldChunk;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.setting.SoundIdentifierSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/StashFinder.class */
 public class StashFinder extends Module {
-    public Setting<Boolean> chests;
-    public Setting<Integer> chestCount;
-    public Setting<Boolean> shulkers;
-    public Setting<Boolean> stackedCarts;
-    public Setting<Boolean> notify;
-    public Setting<Boolean> censorCoords;
-    public Setting<Boolean> log;
-    public Setting<Boolean> sound;
-    public Setting<SearchIdentifier> type;
-    public Setting<Float> volume;
-    public Setting<Boolean> ignoreNatural;
-    public Setting<Boolean> dungeon;
-    public Setting<Boolean> fortress;
-    public Setting<Boolean> bastion;
-    public Setting<Boolean> ancientCity;
-    public Setting<Boolean> trialChambers;
+    public Setting<Boolean> chests = add(new BooleanSetting("Chests", true).setVisible());
+    public Setting<Integer> chestCount = add(new NumberSetting<>("ChestCount", 5, 2, 20).requiresSettings(this.chests));
+    public Setting<Boolean> shulkers = add(new BooleanSetting("Shulkers", true));
+    public Setting<Boolean> stackedCarts = add(new BooleanSetting("StackedCarts", true));
+    public Setting<Boolean> notify = add(new BooleanSetting("Notify", true).setVisible());
+    public Setting<Boolean> censorCoords = add(new BooleanSetting("CensorCoords", false).requiresSettings(this.notify));
+    public Setting<Boolean> log = add(new BooleanSetting("Log", true));
+    public Setting<Boolean> sound = add(new BooleanSetting("Sound", true).setVisible());
+    public Setting<SoundIdentifier> type = add(new SoundIdentifierSetting("Type", new SoundIdentifier("system", "warning")).requiresSettings(this.sound));
+    public Setting<Float> volume = add(new NumberSetting<>("Volume", 1.0f, 0.0f, 1.0f).requiresSettings(this.sound));
+    public Setting<Boolean> ignoreNatural = add(new BooleanSetting("IgnoreNatural", false).setVisible());
+    public Setting<Boolean> dungeon = add(new BooleanSetting("Dungeon", true).requiresSettings(this.ignoreNatural));
+    public Setting<Boolean> fortress = add(new BooleanSetting("Fortress", true).requiresSettings(this.ignoreNatural));
+    public Setting<Boolean> bastion = add(new BooleanSetting("Bastion", true).requiresSettings(this.ignoreNatural));
+    public Setting<Boolean> ancientCity = add(new BooleanSetting("AncientCity", false).requiresSettings(this.ignoreNatural));
+    public Setting<Boolean> trialChambers = add(new BooleanSetting("TrialChambers", true).requiresSettings(this.ignoreNatural));
     public final Stopwatch stopwatch;
 
     public StashFinder() {
         super("StashFinder", "Logs and/or notifies you about possible stashes.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         setDrawn(false);
     }
 
     /* JADX WARN: Code restructure failed: missing block: B:14:0x01b6, code lost:
     
-        if (me.mioclient.BaritoneHelper_3.stashFinderSearchHelper4.is1556(r0.getPos()) == false) goto L16;
+        if (me.mioclient.api.ClientServices.stashFinderHelper.isBlockConfirmed(r0.getPos()) == false) goto L16;
      */
     /* JADX WARN: Removed duplicated region for block: B:22:0x0287 A[SYNTHETIC] */
     /* JADX WARN: Removed duplicated region for block: B:66:0x0063 A[SYNTHETIC] */
@@ -70,12 +81,12 @@ public class StashFinder extends Module {
     */
     public void onLoadChunkFromPacket(LoadChunkFromPacketEvent loadChunkFromPacketEvent) {
         String format = new SimpleDateFormat("MM/dd HH:mm a").format(new Date());
-        WorldChunk worldChunk2555 = loadChunkFromPacketEvent.getWorldChunk2555();
+        WorldChunk worldChunk2555 = loadChunkFromPacketEvent.getChunk();
         ChunkPos pos = worldChunk2555.getPos();
         int i = 0;
         for (BlockEntity blockEntity : worldChunk2555.getBlockEntities().values()) {
             if (this.ignoreNatural.getValue().booleanValue()) {
-                if (SearchHelper4_7.is2428(minecraftClient.world.getChunk(blockEntity.getPos()), blockEntity.getPos(), this.fortress.getValue().booleanValue(), this.bastion.getValue().booleanValue(), this.ancientCity.getValue().booleanValue(), this.dungeon.getValue().booleanValue(), this.trialChambers.getValue().booleanValue())) {
+                if (WorldUtils.isStashChest(minecraftClient.world.getChunk(blockEntity.getPos()), blockEntity.getPos(), this.fortress.getValue().booleanValue(), this.bastion.getValue().booleanValue(), this.ancientCity.getValue().booleanValue(), this.dungeon.getValue().booleanValue(), this.trialChambers.getValue().booleanValue())) {
                     continue;
                 }
             }
@@ -83,8 +94,8 @@ public class StashFinder extends Module {
                 if (blockEntity instanceof BarrelBlockEntity) {
                 }
                 if (!this.chests.getValue().booleanValue() && i >= this.chestCount.getValue().intValue()) {
-                    String string2921 = new ArgumentTypeHelper().getArgumentTypeHelper2906(i).getString2921("\u0001 chests");
-                    if (is255(getStashFinderHelper254(new ArgumentTypeHelper().getArgumentTypeHelper2919(format).getArgumentTypeHelper2919(string2921).getString2921("\u0001 (\u0001)"), pos.getCenterX(), pos.getCenterZ()), string2921)) {
+                    String string2921 = new StringTemplate().arg(i).format("\u0001 chests");
+                    if (tryRegisterStash(createStashEntry(new StringTemplate().arg(format).arg(string2921).format("\u0001 (\u0001)"), pos.getCenterX(), pos.getCenterZ()), string2921)) {
                         break;
                     }
                 } else if (blockEntity instanceof ShulkerBoxBlockEntity) {
@@ -92,8 +103,8 @@ public class StashFinder extends Module {
                 } else {
                     ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity) blockEntity;
                     if (this.shulkers.getValue().booleanValue()) {
-                        if (!BaritoneHelper_3.stashFinderSearchHelper4.is1556(shulkerBoxBlockEntity.getPos())) {
-                            if (is255(getStashFinderHelper254(new ArgumentTypeHelper().getArgumentTypeHelper2919(format).getArgumentTypeHelper2919("a shulkerbox").getString2921("\u0001 (\u0001)"), pos.getCenterX(), pos.getCenterZ()), "a shulkerbox")) {
+                        if (!ClientServices.stashFinderHelper.isBlockConfirmed(shulkerBoxBlockEntity.getPos())) {
+                            if (tryRegisterStash(createStashEntry(new StringTemplate().arg(format).arg("a shulkerbox").format("\u0001 (\u0001)"), pos.getCenterX(), pos.getCenterZ()), "a shulkerbox")) {
                                 break;
                             }
                         } else {
@@ -119,7 +130,7 @@ public class StashFinder extends Module {
                         Iterator it = arrayList.iterator();
                         while (it.hasNext()) {
                             if (chestMinecartEntity2.getBoundingBox().intersects(((ChestMinecartEntity) it.next()).getBoundingBox())) {
-                                is255(getStashFinderHelper254(new ArgumentTypeHelper().getArgumentTypeHelper2919(format).getString2921("Stacked minecarts (\u0001)"), pos.getCenterX(), pos.getCenterZ()), "Stacked minecarts");
+                                tryRegisterStash(createStashEntry(new StringTemplate().arg(format).format("Stacked minecarts (\u0001)"), pos.getCenterX(), pos.getCenterZ()), "Stacked minecarts");
                                 return;
                             }
                         }
@@ -132,31 +143,31 @@ public class StashFinder extends Module {
         }
     }
 
-    public StashFinderHelper getStashFinderHelper254(String str, int i, int i2) {
-        return new StashFinderHelper(str, i, i2, SearchHelper4_7.getStashFinderMode2438().name(), minecraftClient.player.networkHandler.getServerInfo() == null ? "singleplayer" : minecraftClient.player.networkHandler.getServerInfo().address);
+    public StashEntry createStashEntry(String str, int i, int i2) {
+        return new StashEntry(str, i, i2, WorldUtils.getDimension().name(), minecraftClient.player.networkHandler.getServerInfo() == null ? "singleplayer" : minecraftClient.player.networkHandler.getServerInfo().address);
     }
 
-    public boolean is255(StashFinderHelper stashFinderHelper, String str) {
-        if (!BaritoneHelper_3.searchHelper4_15.getOptional2404(stashFinderHelper2 -> {
-            return stashFinderHelper2.get515() == stashFinderHelper.get515() && stashFinderHelper2.get516() == stashFinderHelper.get516();
-        }).isEmpty() || !BaritoneHelper_3.searchHelper4_15.register(stashFinderHelper)) {
+    public boolean tryRegisterStash(StashEntry stashFinderHelper, String str) {
+        if (!ClientServices.stashFinderDataManager.findFirst(stashFinderHelper2 -> {
+            return stashFinderHelper2.getX() == stashFinderHelper.getX() && stashFinderHelper2.getZ() == stashFinderHelper.getZ();
+        }).isEmpty() || !ClientServices.stashFinderDataManager.register(stashFinderHelper)) {
             return false;
         }
         if (this.notify.getValue().booleanValue()) {
-            MutableText append = Text.literal(getName()).append(new ArgumentTypeHelper().getArgumentTypeHelper2919(str).getString2921(" has found \u0001 at: "));
+            MutableText append = Text.literal(getName()).append(new StringTemplate().arg(str).format(" has found \u0001 at: "));
             if (!this.censorCoords.getValue().booleanValue()) {
-                append.append(stashFinderHelper.getString514());
+                append.append(stashFinderHelper.formatCoords());
             }
-            MixinMessageIndicatorHelper.do345((Text) append, MixinMessageIndicatorHelper.getMessageSignatureData337(-13579), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode3);
+            ChatUtils.sendPrefixedMessage((Text) append, ChatUtils.createSignature(-13579), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
         }
         if (!this.sound.getValue().booleanValue()) {
             return true;
         }
-        if (!this.stopwatch.is418(Double.longBitsToDouble(4617315517961601024L), TimeUnit.SECONDS)) {
+        if (!this.stopwatch.hasElapsed(Double.longBitsToDouble(4617315517961601024L), TimeUnit.SECONDS)) {
             return true;
         }
-        SearchHelper4_11 searchHelper4_11 = BaritoneHelper_3.searchHelper4_11;
-        searchHelper4_11.do2971(this.type.getValue(), this.volume.getValue().floatValue());
+        KillstreakSoundManager KillstreakSoundManager = ClientServices.killstreakSoundManager;
+        KillstreakSoundManager.playSound(this.type.getValue(), this.volume.getValue().floatValue());
         this.stopwatch.reset();
         return true;
     }

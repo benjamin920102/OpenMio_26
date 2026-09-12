@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.render.Tooltips;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,15 +15,23 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin({TooltipBackgroundRenderer.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinTooltipBackgroundRenderer.class */
 public class MixinTooltipBackgroundRenderer {
-    private static Tooltips tooltips = (Tooltips) BaritoneHelper_3.baritoneHelper_4.getModule117(Tooltips.class);
+    private static Tooltips tooltips;
+
+    private static Tooltips getTooltips() {
+        if (tooltips == null && ClientServices.moduleInjector != null) {
+            try { tooltips = (Tooltips) ClientServices.moduleInjector.getModule(Tooltips.class); } catch (Exception e) {}
+        }
+        return tooltips;
+    }
 
     @ModifyArgs(method = {"render"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/tooltip/TooltipBackgroundRenderer;renderBorder(Lnet/minecraft/client/gui/DrawContext;IIIIIII)V"))
     private static void renderHook(Args args) {
-        if (!tooltips.isToggled() || tooltips.getColor586() == null) {
+        Tooltips tt = getTooltips();
+        if (tt == null || !tt.isToggled() || tt.getTintColor() == null) {
             return;
         }
-        args.set(6, Integer.valueOf(tooltips.getColor586().hashCode()));
-        args.set(7, Integer.valueOf(tooltips.getColor586().darker().hashCode()));
-        tooltips.do587(null);
+        args.set(6, Integer.valueOf(tt.getTintColor().hashCode()));
+        args.set(7, Integer.valueOf(tt.getTintColor().darker().hashCode()));
+        tt.setShulkerTintColor(null);
     }
 }

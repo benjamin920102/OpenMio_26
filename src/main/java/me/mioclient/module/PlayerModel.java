@@ -1,6 +1,8 @@
 package me.mioclient.module;
 
-import me.mioclient.feature.Size;
+import me.mioclient.render.hud.ResizableHudElement;
+
+import me.mioclient.render.hud.ResizableHudElement;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -11,18 +13,18 @@ import org.joml.Vector3f;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/PlayerModel.class */
-public class PlayerModel extends me.mioclient.ModuleList {
+public class PlayerModel extends me.mioclient.module.HudModule {
     public static boolean flag = false;
 
     public PlayerModel() {
         super("PlayerModel", new String[0]);
-        Size size = new Size(this);
-        size.do2637(this);
-        do3019(size);
+        ResizableHudElement size = new ResizableHudElement(this);
+        size.enableScaling(this);
+        setElement(size);
     }
 
-    @Override // me.mioclient.ModuleList
-    public void do364(DrawContext drawContext) {
+    @Override // me.mioclient.module.HudModule
+    public void renderContent(DrawContext drawContext) {
         LivingEntity livingEntity = minecraftClient.player;
         Quaternionf rotateZ = new Quaternionf().rotateZ(Float.intBitsToFloat(1078530011));
         Quaternionf rotateX = new Quaternionf().rotateX(0.0f);
@@ -33,8 +35,8 @@ public class PlayerModel extends me.mioclient.ModuleList {
         flag = false;
     }
 
-    @Override // me.mioclient.ModuleList
-    public float[] getFloatArray365() {
+    @Override // me.mioclient.module.HudModule
+    public float[] getSize() {
         return new float[]{Float.intBitsToFloat(1112014848), Float.intBitsToFloat(1117782016)};
     }
 }

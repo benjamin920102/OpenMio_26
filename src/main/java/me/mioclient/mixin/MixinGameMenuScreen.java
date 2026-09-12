@@ -1,7 +1,12 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.feature.ConfirmDisconnect;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.gui.screen.ConfirmDisconnect;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.gui.screen.ConfirmDisconnect;
 import me.mioclient.module.exploit.IllegalDisconnect;
 import me.mioclient.module.misc.AntiQuit;
 import net.minecraft.client.gui.screen.GameMenuScreen;
@@ -21,8 +26,32 @@ public abstract class MixinGameMenuScreen extends Screen {
 
     @Unique
     private boolean mio$ignoreDisconnect;
-    private static IllegalDisconnect illegaldisconnect = (IllegalDisconnect) BaritoneHelper_3.baritoneHelper_4.getModule117(IllegalDisconnect.class);
-    private static AntiQuit antiquit = (AntiQuit) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiQuit.class);
+    private static IllegalDisconnect illegaldisconnect;
+
+    private static IllegalDisconnect getIllegaldisconnect() {
+
+        if (illegaldisconnect == null && ClientServices.moduleInjector != null) {
+
+            try { illegaldisconnect = (IllegalDisconnect) ClientServices.moduleInjector.getModule(IllegalDisconnect.class); } catch (Exception e) {}
+
+        }
+
+        return illegaldisconnect;
+
+    }
+    private static AntiQuit antiquit;
+
+    private static AntiQuit getAntiquit() {
+
+        if (antiquit == null && ClientServices.moduleInjector != null) {
+
+            try { antiquit = (AntiQuit) ClientServices.moduleInjector.getModule(AntiQuit.class); } catch (Exception e) {}
+
+        }
+
+        return antiquit;
+
+    }
 
     @Shadow
     protected abstract void method_47632();
@@ -33,17 +62,24 @@ public abstract class MixinGameMenuScreen extends Screen {
 
     @Inject(method = {"disconnect"}, at = {@At("HEAD")}, cancellable = true)
     private void disconnectHook(CallbackInfo callbackInfo) {
-        if (antiquit.isToggled() && antiquit.disconnect.getValue().booleanValue() && !this.mio$ignoreDisconnect) {
+        IllegalDisconnect illegaldisconnect_lcl = getIllegaldisconnect();
+        AntiQuit antiquit_lcl = getAntiquit();
+
+        if (illegaldisconnect_lcl == null) return;
+
+        if (antiquit_lcl == null) return;
+
+        if (antiquit_lcl.isToggled() && antiquit_lcl.disconnect.getValue().booleanValue() && !this.mio$ignoreDisconnect) {
             this.client.setScreen(new ConfirmDisconnect(() -> {
                 this.mio$ignoreDisconnect = true;
                 method_47632();
             }));
             callbackInfo.cancel();
         } else {
-            if (!illegaldisconnect.isToggled() || this.client.player == null || this.client.isInSingleplayer()) {
+            if (!illegaldisconnect_lcl.isToggled() || this.client.player == null || this.client.isInSingleplayer()) {
                 return;
             }
-            illegaldisconnect.do639();
+            illegaldisconnect_lcl.disconnectFromServer();
             callbackInfo.cancel();
         }
     }

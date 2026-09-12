@@ -1,9 +1,14 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.EndDrawingEvent;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.event.events.client.EndDrawingEvent;
 import me.mioclient.module.render.Chams;
 import net.minecraft.client.render.RenderPhase;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,7 +23,19 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin({RenderPhase.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinRenderPhase.class */
 public class MixinRenderPhase {
-    private static final Chams chams = (Chams) BaritoneHelper_3.baritoneHelper_4.getModule117(Chams.class);
+    private static Chams chams;
+
+    private static Chams getChams() {
+
+        if (chams == null && ClientServices.moduleInjector != null) {
+
+            try { chams = (Chams) ClientServices.moduleInjector.getModule(Chams.class); } catch (Exception e) {}
+
+        }
+
+        return chams;
+
+    }
     private static final String TEXTURING_ID = "glint_texturing";
 
     @Unique
@@ -31,8 +48,12 @@ public class MixinRenderPhase {
 
     @ModifyArgs(method = {"setupGlintTexturing"}, at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;translation(FFF)Lorg/joml/Matrix4f;"))
     private static void translateHook(Args args) {
-        if (chams.speed.is2327() && Chams.flag2) {
-            float intValue = chams.progress.getValue().intValue() / 100.0f;
+        Chams chams_lcl = getChams();
+
+        if (chams_lcl == null) return;
+
+        if (chams_lcl.speed.isAtMinimum() && Chams.flag2) {
+            float intValue = chams_lcl.progress.getValue().intValue() / 100.0f;
             args.set(0, Float.valueOf(-intValue));
             args.set(1, Float.valueOf(intValue));
         }
@@ -41,14 +62,14 @@ public class MixinRenderPhase {
     @Inject(method = {"startDrawing"}, at = {@At("TAIL")})
     private void startDraw(CallbackInfo callbackInfo) {
         if (this.mio$isGlintTexturing) {
-            SearchHelper_4.baritoneHelper.getObject1794(new EndDrawingEvent(KeyPearlMode.Pre));
+            ClientAccessor.eventBus.fireEvent(new EndDrawingEvent(KeyPearlMode.Pre));
         }
     }
 
     @Inject(method = {"endDrawing"}, at = {@At("TAIL")})
     private void endDrawing(CallbackInfo callbackInfo) {
         if (this.mio$isGlintTexturing) {
-            SearchHelper_4.baritoneHelper.getObject1794(new EndDrawingEvent(KeyPearlMode.Post));
+            ClientAccessor.eventBus.fireEvent(new EndDrawingEvent(KeyPearlMode.Post));
         }
     }
 }

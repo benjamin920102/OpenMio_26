@@ -1,32 +1,39 @@
 package me.mioclient.module.client;
 
+import me.mioclient.event.events.client.ClientTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+
 import com.jagrosh.discordipc.IPCClient;
 import com.jagrosh.discordipc.entities.DiscordBuild;
 import com.jagrosh.discordipc.entities.RichPresence;
 import java.util.concurrent.CompletableFuture;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FontsEvent;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.event.events.client.ClientTickEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.client.network.ServerInfo;
+import me.mioclient.setting.BooleanSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/client/Discord.class */
 public class Discord extends Module {
-    public Setting<Boolean> uid;
-    public Setting<Boolean> server;
+    public Setting<Boolean> uid = add(new BooleanSetting("UID", false));
+    public Setting<Boolean> server = add(new BooleanSetting("Server", false));
     public CompletableFuture<IPCClient> completableFuture;
     public long num;
     public final Stopwatch stopwatch;
 
     public Discord() {
-        super("Discord", "Displays mioclient.me as your discord activity.", Category.CLIENT, new String[0]);
-        PhaseESPHelper.do1351(this);
+        super("Discord", "Displays me.mioclient.me as your discord activity.", Category.CLIENT, new String[0]);
         this.num = System.currentTimeMillis();
         this.stopwatch = new Stopwatch();
         setDrawn(false);
@@ -46,7 +53,7 @@ public class Discord extends Module {
             if (!isToggled()) {
                 return null;
             }
-            do496();
+            toggle();
             return null;
         });
     }
@@ -64,26 +71,26 @@ public class Discord extends Module {
     }
 
     @Listen
-    public void onEvent(FontsEvent fontsEvent) {
+    public void onClientTick(ClientTickEvent fontsEvent) {
         try {
-            if (this.completableFuture.isDone() && this.stopwatch.is419(2500L)) {
+            if (this.completableFuture.isDone() && this.stopwatch.hasElapsedMs(2500L)) {
                 this.stopwatch.reset();
                 IPCClient now = this.completableFuture.getNow(null);
                 if (now == null) {
                     return;
                 }
                 RichPresence.Builder builder = new RichPresence.Builder();
-                builder.setLargeImage("https://mioclient.me/assets/dcrpc3.png", getString2798());
+                builder.setLargeImage("https://me.mioclient.me/assets/dcrpc3.png", getClientVersion());
                 builder.setStartTimestamp(this.num);
                 if (this.uid.getValue().booleanValue()) {
-                    builder.setDetails(new ArgumentTypeHelper().getArgumentTypeHelper2906(BaritoneHelper_3.welcomerHelper.get2811()).getString2921("uid \u0001"));
+                    builder.setDetails(new StringTemplate().arg(ClientServices.welcomerHelper.getRank()).format("uid \u0001"));
                 }
                 if (this.server.getValue().booleanValue()) {
                     ServerInfo serverInfo = null;
                     String str = "Not playing";
-                    if (!is1469()) {
+                    if (!isNotInGame()) {
                         serverInfo = minecraftClient.player.networkHandler.getServerInfo();
-                        str = new ArgumentTypeHelper().getArgumentTypeHelper2919((minecraftClient.isInSingleplayer() || serverInfo == null) ? "singleplayer" : serverInfo.address).getString2921("Playing \u0001");
+                        str = new StringTemplate().arg((minecraftClient.isInSingleplayer() || serverInfo == null) ? "singleplayer" : serverInfo.address).format("Playing \u0001");
                     }
                     builder.setState(str);
                     if (serverInfo != null && serverInfo.players != null) {
@@ -96,7 +103,7 @@ public class Discord extends Module {
         }
     }
 
-    public String getString2798() {
+    public String getClientVersion() {
         return "Mio v2.1.7";
     }
 }

@@ -1,18 +1,27 @@
 package me.mioclient.mixin;
 
+import me.mioclient.event.events.interaction.InteractItemPacketEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.inventory.InventoryUtils;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.network.PacketSender;
+import me.mioclient.util.inventory.InventoryUtils;
+
+import me.mioclient.event.EventBus;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BreakingProgressHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.AttackBlockEvent;
-import me.mioclient.event.BreakBlockEvent;
-import me.mioclient.event.InteractBlockEvent;
-import me.mioclient.event.InteractItemEvent;
-import me.mioclient.event.InteractItemEvent_2;
-import me.mioclient.event.StopUsingItemEvent;
+import me.mioclient.ducks.DuckClientPlayerInteractionManager;
+import me.mioclient.event.events.interaction.AttackBlockEvent;
+import me.mioclient.event.events.interaction.BreakBlockEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractItemEvent;
+import me.mioclient.event.events.interaction.InteractItemPacketEvent;
+import me.mioclient.event.events.player.StopUsingItemEvent;
 import me.mioclient.module.combat.AutoClicker;
 import me.mioclient.module.player.InventoryTweaks;
 import me.mioclient.module.player.NoInteract;
@@ -47,11 +56,59 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /* compiled from: 0.java */
 @Mixin({ClientPlayerInteractionManager.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientPlayerInteractionManager.class */
-public abstract class MixinClientPlayerInteractionManager implements SearchHelper_4, BreakingProgressHelper {
-    private static final AutoClicker autoclicker = (AutoClicker) BaritoneHelper_3.baritoneHelper_4.getModule117(AutoClicker.class);
-    private static final NoInteract nointeract = (NoInteract) BaritoneHelper_3.baritoneHelper_4.getModule117(NoInteract.class);
-    private static final InventoryTweaks inventorytweaks = (InventoryTweaks) BaritoneHelper_3.baritoneHelper_4.getModule117(InventoryTweaks.class);
-    private static SpeedMine speedmine = (SpeedMine) BaritoneHelper_3.baritoneHelper_4.getModule117(SpeedMine.class);
+public abstract class MixinClientPlayerInteractionManager implements ClientAccessor, DuckClientPlayerInteractionManager {
+    private static AutoClicker autoclicker;
+
+    private static AutoClicker getAutoclicker() {
+
+        if (autoclicker == null && ClientServices.moduleInjector != null) {
+
+            try { autoclicker = (AutoClicker) ClientServices.moduleInjector.getModule(AutoClicker.class); } catch (Exception e) {}
+
+        }
+
+        return autoclicker;
+
+    }
+    private static NoInteract nointeract;
+
+    private static NoInteract getNointeract() {
+
+        if (nointeract == null && ClientServices.moduleInjector != null) {
+
+            try { nointeract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class); } catch (Exception e) {}
+
+        }
+
+        return nointeract;
+
+    }
+    private static InventoryTweaks inventorytweaks;
+
+    private static InventoryTweaks getInventorytweaks() {
+
+        if (inventorytweaks == null && ClientServices.moduleInjector != null) {
+
+            try { inventorytweaks = (InventoryTweaks) ClientServices.moduleInjector.getModule(InventoryTweaks.class); } catch (Exception e) {}
+
+        }
+
+        return inventorytweaks;
+
+    }
+    private static SpeedMine speedmine;
+
+    private static SpeedMine getSpeedmine() {
+
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+
+            try { speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class); } catch (Exception e) {}
+
+        }
+
+        return speedmine;
+
+    }
 
     @Shadow
     private boolean field_3717;
@@ -71,8 +128,8 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
     @Inject(method = {"breakBlock"}, at = {@At("HEAD")}, cancellable = true)
     private void breakBlock(BlockPos blockPos, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         BreakBlockEvent breakBlockEvent = new BreakBlockEvent(blockPos);
-        baritoneHelper.getObject1794(breakBlockEvent);
-        if (breakBlockEvent.is2403()) {
+        eventBus.fireEvent(breakBlockEvent);
+        if (breakBlockEvent.isCancelled()) {
             callbackInfoReturnable.setReturnValue(false);
             callbackInfoReturnable.cancel();
         }
@@ -81,8 +138,8 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
     @Inject(method = {"attackBlock"}, at = {@At("HEAD")}, cancellable = true)
     private void attackBlockHook(BlockPos blockPos, Direction direction, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         AttackBlockEvent attackBlockEvent = new AttackBlockEvent(blockPos, direction);
-        baritoneHelper.getObject1794(attackBlockEvent);
-        if (attackBlockEvent.is2403()) {
+        eventBus.fireEvent(attackBlockEvent);
+        if (attackBlockEvent.isCancelled()) {
             callbackInfoReturnable.setReturnValue(true);
             callbackInfoReturnable.cancel();
         }
@@ -90,17 +147,21 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
 
     @Inject(method = {"clickSlot"}, at = {@At("HEAD")}, cancellable = true)
     public void onClickArmorSlot(int i, int i2, int i3, SlotActionType slotActionType, PlayerEntity playerEntity, CallbackInfo callbackInfo) {
-        if (inventorytweaks.isToggled()) {
+        InventoryTweaks inventorytweaks_lcl = getInventorytweaks();
+
+        if (inventorytweaks_lcl == null) return;
+
+        if (inventorytweaks_lcl.isToggled()) {
             ScreenHandler screenHandler = playerEntity.currentScreenHandler;
-            if (inventorytweaks.fastArmor.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE) {
+            if (inventorytweaks_lcl.fastArmor.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE) {
                 Slot slot = screenHandler.getSlot(i2);
                 if ((slot.getStack().getItem() instanceof ArmorItem) || slot.getStack().isOf(Items.ELYTRA)) {
-                    FireworksHelper.do441(i2, 8 - minecraftClient.player.getPreferredEquipmentSlot(slot.getStack()).getEntitySlotId());
+                    InventoryUtils.swapStacks(i2, 8 - minecraftClient.player.getPreferredEquipmentSlot(slot.getStack()).getEntitySlotId());
                     callbackInfo.cancel();
                     return;
                 }
             }
-            if (inventorytweaks.xCarryTweaks.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE && i2 > 4 && (screenHandler instanceof PlayerScreenHandler)) {
+            if (inventorytweaks_lcl.xCarryTweaks.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE && i2 > 4 && (screenHandler instanceof PlayerScreenHandler)) {
                 for (int i4 = 0; i4 < 4; i4++) {
                     if (((ItemStack) minecraftClient.player.playerScreenHandler.getCraftingInput().getHeldStacks().get(i4)).isEmpty()) {
                         method_2906(i, i2, 0, SlotActionType.PICKUP, minecraftClient.player);
@@ -115,17 +176,21 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
 
     @Inject(method = {"interactBlock"}, at = {@At("HEAD")}, cancellable = true)
     private void interactBlockHook(ClientPlayerEntity clientPlayerEntity, Hand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
+        NoInteract nointeract_lcl = getNointeract();
+
+        if (nointeract_lcl == null) return;
+
         InteractBlockEvent interactBlockEvent = new InteractBlockEvent(blockHitResult, hand);
-        baritoneHelper.getObject1794(interactBlockEvent);
-        if (interactBlockEvent.is2403()) {
+        eventBus.fireEvent(interactBlockEvent);
+        if (interactBlockEvent.isCancelled()) {
             callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
             callbackInfoReturnable.cancel();
         }
-        Hand hand1841 = NoInteract.getHand1841();
-        if (nointeract.is1842(minecraftClient.player.getStackInHand(NoInteract.getHand1841()), blockHitResult.getBlockPos())) {
-            if (nointeract.mode.getValue() == NoInteract.Mode.SHIFT) {
-                nointeract.flag = !BaritoneHelper_3.holeSnapSearchHelper4_4.is2625();
-                AutoSignSearchHelper4.do2567(clientPlayerEntity, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
+        Hand hand1841 = NoInteract.getUsableHand();
+        if (nointeract_lcl.shouldBlockInteraction(minecraftClient.player.getStackInHand(NoInteract.getUsableHand()), blockHitResult.getBlockPos())) {
+            if (nointeract_lcl.mode.getValue() == NoInteract.Mode.SHIFT) {
+                nointeract_lcl.flag = !ClientServices.holeSnapRenderHelper.isSneaking();
+                PacketSender.sendClientCommand(clientPlayerEntity, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
             } else {
                 callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
                 callbackInfoReturnable.cancel();
@@ -135,18 +200,22 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
     }
 
     @Inject(method = {"interactBlock"}, at = {@At("RETURN")})
-    private void interactBlockHook2(ClientPlayerEntity clientPlayerEntity, Hand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
-        if (nointeract.flag) {
-            AutoSignSearchHelper4.do2567(clientPlayerEntity, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
-            nointeract.flag = false;
+    private void releaseShiftKey(ClientPlayerEntity clientPlayerEntity, Hand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
+        NoInteract nointeract_lcl = getNointeract();
+
+        if (nointeract_lcl == null) return;
+
+        if (nointeract_lcl.flag) {
+            PacketSender.sendClientCommand(clientPlayerEntity, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
+            nointeract_lcl.flag = false;
         }
     }
 
     @Inject(method = {"stopUsingItem"}, at = {@At("HEAD")}, cancellable = true)
     private void stopUsingItemHook(PlayerEntity playerEntity, CallbackInfo callbackInfo) {
         StopUsingItemEvent stopUsingItemEvent = new StopUsingItemEvent();
-        baritoneHelper.getObject1794(stopUsingItemEvent);
-        if (stopUsingItemEvent.is2403()) {
+        eventBus.fireEvent(stopUsingItemEvent);
+        if (stopUsingItemEvent.isCancelled()) {
             callbackInfo.cancel();
         }
     }
@@ -154,8 +223,8 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
     @Inject(method = {"interactItem"}, at = {@At("HEAD")}, cancellable = true)
     private void interactItemHook(PlayerEntity playerEntity, Hand hand, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
         InteractItemEvent interactItemEvent = new InteractItemEvent(hand);
-        baritoneHelper.getObject1794(interactItemEvent);
-        if (interactItemEvent.is2403()) {
+        eventBus.fireEvent(interactItemEvent);
+        if (interactItemEvent.isCancelled()) {
             callbackInfoReturnable.cancel();
             callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
         }
@@ -163,56 +232,68 @@ public abstract class MixinClientPlayerInteractionManager implements SearchHelpe
 
     @Inject(method = {"attackEntity"}, at = {@At("HEAD")}, cancellable = true)
     private void attackEntityHook(PlayerEntity playerEntity, Entity entity, CallbackInfo callbackInfo) {
-        if (autoclicker.is1073(entity) && playerEntity == minecraftClient.player) {
+        AutoClicker autoclicker_lcl = getAutoclicker();
+
+        if (autoclicker_lcl == null) return;
+
+        if (autoclicker_lcl.is1073(entity) && playerEntity == minecraftClient.player) {
             callbackInfo.cancel();
         }
     }
 
     @WrapWithCondition(method = {"cancelBlockBreaking"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayNetworkHandler;sendPacket(Lnet/minecraft/network/packet/Packet;)V")})
     private boolean cancelBlockBreaking(ClientPlayNetworkHandler clientPlayNetworkHandler, Packet packet) {
-        return !speedmine.isToggled();
+        SpeedMine speedmine_lcl = getSpeedmine();
+
+        if (speedmine_lcl == null) return true;
+
+        return !speedmine_lcl.isToggled();
     }
 
     @Inject(method = {"updateBlockBreakingProgress"}, at = {@At("HEAD")})
     private void attackBlock(BlockPos blockPos, Direction direction, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (speedmine.isToggled()) {
+        SpeedMine speedmine_lcl = getSpeedmine();
+
+        if (speedmine_lcl == null) return;
+
+        if (speedmine_lcl.isToggled()) {
             this.field_3716 = 0;
         }
     }
 
     @ModifyExpressionValue(method = {"method_41929"}, at = {@At(value = "NEW", target = "(Lnet/minecraft/util/Hand;IFF)Lnet/minecraft/network/packet/c2s/play/PlayerInteractItemC2SPacket;")})
     private PlayerInteractItemC2SPacket interactItemHook(PlayerInteractItemC2SPacket playerInteractItemC2SPacket) {
-        InteractItemEvent_2 interactItemEvent_2 = new InteractItemEvent_2(playerInteractItemC2SPacket);
-        baritoneHelper.getObject1794(interactItemEvent_2);
-        return interactItemEvent_2.is2403() ? interactItemEvent_2.getPlayerInteractItemC2SPacket1816() : playerInteractItemC2SPacket;
+        InteractItemPacketEvent interactItemEvent_2 = new InteractItemPacketEvent(playerInteractItemC2SPacket);
+        eventBus.fireEvent(interactItemEvent_2);
+        return interactItemEvent_2.isCancelled() ? interactItemEvent_2.getInteractPacket() : playerInteractItemC2SPacket;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public boolean isBreakingBlock() {
         return this.field_3717;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public void setBreakingBlock(boolean z) {
         this.field_3717 = z;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public float getBreakingProgress() {
         return this.field_3715;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public void setBreakingProgress(float f) {
         this.field_3715 = f;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public BlockPos getCurrentBreakingBlock() {
         return this.field_3714;
     }
 
-    @Override // me.mioclient.BreakingProgressHelper
+    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
     public void setCurrentBreakingBlock(BlockPos blockPos) {
         this.field_3714 = blockPos;
     }

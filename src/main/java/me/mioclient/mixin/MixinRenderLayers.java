@@ -1,7 +1,10 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import com.mojang.blaze3d.systems.RenderSystem;
-import me.mioclient.BaritoneHelper_3;
 import me.mioclient.module.render.NoRender;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.RenderLayer;
@@ -16,11 +19,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({RenderLayers.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinRenderLayers.class */
 public class MixinRenderLayers {
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
 
     @Inject(method = {"getEntityBlockLayer"}, at = {@At("HEAD")}, cancellable = true)
     private static void getEntityBlockLayer(BlockState blockState, boolean z, CallbackInfoReturnable<RenderLayer> callbackInfoReturnable) {
-        if (norender.get1995() == 1.0f || RenderSystem.getShaderColor()[3] == 1.0f) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.getHandOpacity() == 1.0f || RenderSystem.getShaderColor()[3] == 1.0f) {
             return;
         }
         callbackInfoReturnable.setReturnValue(TexturedRenderLayers.getEntityTranslucentCull());

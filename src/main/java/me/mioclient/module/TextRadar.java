@@ -1,5 +1,20 @@
 package me.mioclient.module;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.render.hud.ResizableHudElement;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.player.PlayerUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.player.PlayerUtils;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -7,19 +22,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BooleanSetting;
-import me.mioclient.EnumSetting;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.NumberSetting;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_3;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Size;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.module.render.NameTags;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.Entity;
@@ -35,7 +45,7 @@ import net.minecraft.util.math.MathHelper;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/TextRadar.class */
-public class TextRadar extends me.mioclient.ModuleList {
+public class TextRadar extends me.mioclient.module.HudModule {
     public Setting<TextRadarMode> setting;
     public Setting<Boolean> setting2;
     public Setting<Boolean> setting3;
@@ -52,7 +62,7 @@ public class TextRadar extends me.mioclient.ModuleList {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/TextRadar$TextRadarMode.class */
-    public enum TextRadarMode implements EnumSettingHelper {
+    public enum TextRadarMode implements NamedValue {
         DISTANCE("Distance"),
         ANGLE("Angle");
 
@@ -62,7 +72,7 @@ public class TextRadar extends me.mioclient.ModuleList {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -77,13 +87,13 @@ public class TextRadar extends me.mioclient.ModuleList {
         this.setting5 = add(new BooleanSetting("FriendColor", true));
         this.setting6 = add(new BooleanSetting("EnemyColor", true));
         this.setting7 = add(new BooleanSetting("Armor", false));
-        this.setting8 = add(new BooleanSetting("Limit", false).getSetting2336());
-        this.setting9 = add(new NumberSetting("Max", 8, 1, 32).getSetting2342(this.setting8));
-        this.setting10 = add(new BooleanSetting("Ignore", false).getSetting2337());
-        this.setting11 = add(new BooleanSetting("Friends", false).getSetting2342(this.setting10));
-        this.setting12 = add(new BooleanSetting("Nakeds", false).getSetting2342(this.setting10));
+        this.setting8 = add(new BooleanSetting("Limit", false).setVisible());
+        this.setting9 = add(new NumberSetting("Max", 8, 1, 32).requiresSettings(this.setting8));
+        this.setting10 = add(new BooleanSetting("Ignore", false).setDependent());
+        this.setting11 = add(new BooleanSetting("Friends", false).requiresSettings(this.setting10));
+        this.setting12 = add(new BooleanSetting("Nakeds", false).requiresSettings(this.setting10));
         this.list = new ArrayList();
-        do3019(new Size(this));
+        setElement(new ResizableHudElement(this));
     }
 
     @Override // me.mioclient.module.Module
@@ -92,13 +102,13 @@ public class TextRadar extends me.mioclient.ModuleList {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         synchronized (this.list) {
             this.list.clear();
             Stream limit = minecraftClient.world.getPlayers().stream().filter((v1) -> {
-                return is2648(v1);
+                return shouldShowPlayer(v1);
             }).sorted(Comparator.comparing((v1) -> {
-                return get2647(v1);
+                return getSortValue(v1);
             })).limit(this.setting8.getValue().booleanValue() ? this.setting9.getValue().intValue() : Long.MAX_VALUE);
             List<PlayerEntity> list = this.list;
             Objects.requireNonNull(list);
@@ -108,30 +118,30 @@ public class TextRadar extends me.mioclient.ModuleList {
         }
     }
 
-    @Override // me.mioclient.ModuleList
-    public void do364(DrawContext drawContext) {
-        float f = this.moduleListSearchHelper4.get2954(FontsSearchHelper4.fontsSearchHelper4.get93()) - this.moduleListSearchHelper4.get124();
+    @Override // me.mioclient.module.HudModule
+    public void renderContent(DrawContext drawContext) {
+        float f = this.moduleListSearchHelper4.getAlignedY(ClientTextRenderer.INSTANCE.getFontHeight()) - this.moduleListSearchHelper4.getY();
         for (PlayerEntity playerEntity : this.list) {
-            Color color3018 = getColor3018(f);
-            if (BaritoneHelper_3.searchHelper4_14.is520(playerEntity) && this.setting5.getValue().booleanValue()) {
-                color3018 = BaritoneHelper_3.searchHelper4_14.getColor530(playerEntity.getGameProfile().getName(), color3018);
-            } else if (BaritoneHelper_3.searchHelper4_14.is522(playerEntity) && this.setting6.getValue().booleanValue()) {
-                color3018 = BaritoneHelper_3.searchHelper4_14.getColor530(playerEntity.getGameProfile().getName(), color3018);
+            Color color3018 = getHudColor(f);
+            if (ClientServices.socialManager.isFriendEntity(playerEntity) && this.setting5.getValue().booleanValue()) {
+                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().getName(), color3018);
+            } else if (ClientServices.socialManager.isEnemyEntity(playerEntity) && this.setting6.getValue().booleanValue()) {
+                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().getName(), color3018);
             }
-            String string2646 = getString2646(playerEntity);
-            FontsSearchHelper4.fontsSearchHelper4.do1691(drawContext, string2646, this.moduleListSearchHelper4.get2953(FontsSearchHelper4.fontsSearchHelper4.get1316(string2646)) - this.moduleListSearchHelper4.get123(), f, color3018);
-            f += (FontsSearchHelper4.fontsSearchHelper4.get93() + 1) * this.moduleListSearchHelper4.get2956();
+            String string2646 = formatPlayerEntry(playerEntity);
+            ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, string2646, this.moduleListSearchHelper4.getAlignedX(ClientTextRenderer.INSTANCE.getStringWidth(string2646)) - this.moduleListSearchHelper4.getX(), f, color3018);
+            f += (ClientTextRenderer.INSTANCE.getFontHeight() + 1) * this.moduleListSearchHelper4.getVerticalSide();
         }
     }
 
-    @Override // me.mioclient.ModuleList
-    public float[] getFloatArray365() {
+    @Override // me.mioclient.module.HudModule
+    public float[] getSize() {
         float f = 0.0f;
         float f2 = 0.0f;
         Iterator<PlayerEntity> it = this.list.iterator();
         while (it.hasNext()) {
-            float f3 = FontsSearchHelper4.fontsSearchHelper4.get1316(getString2646(it.next()));
-            f += FontsSearchHelper4.fontsSearchHelper4.get93() + 1;
+            float f3 = ClientTextRenderer.INSTANCE.getStringWidth(formatPlayerEntry(it.next()));
+            f += ClientTextRenderer.INSTANCE.getFontHeight() + 1;
             if (f3 > f2) {
                 f2 = f3;
             }
@@ -139,17 +149,17 @@ public class TextRadar extends me.mioclient.ModuleList {
         return new float[]{f2, f};
     }
 
-    public String getString2646(PlayerEntity playerEntity) {
+    public String formatPlayerEntry(PlayerEntity playerEntity) {
         int i;
         StringBuilder sb = new StringBuilder();
-        float f = SearchHelper_3.get644((Entity) playerEntity);
+        float f = EntityUtil.getEntityHealth((Entity) playerEntity);
         if (this.setting2.getValue().booleanValue()) {
-            sb.append(getFormatting1313(f)).append(Math.round(f)).append(" ");
+            sb.append(getHealthColor(f)).append(Math.round(f)).append(" ");
         }
         sb.append(Formatting.RESET);
-        sb.append(BaritoneHelper_3.notificationsHelper.getString398(playerEntity.getGameProfile().getName()));
-        if (this.setting4.getValue().booleanValue() && (i = BaritoneHelper_3.logoutSpotsHelper.get895(playerEntity)) > 0) {
-            sb.append(NameTags.getFormatting1314(i)).append(" -").append(i);
+        sb.append(ClientServices.notificationsHelper.getPlayerDisplayName(playerEntity.getGameProfile().getName()));
+        if (this.setting4.getValue().booleanValue() && (i = ClientServices.logoutSpotsHelper.getPopCount(playerEntity)) > 0) {
+            sb.append(NameTags.getTotemPopColor(i)).append(" -").append(i);
         }
         if (this.setting3.getValue().booleanValue()) {
             sb.append(Formatting.WHITE).append(" ").append(Math.round(minecraftClient.player.distanceTo((Entity) playerEntity))).append("m");
@@ -186,21 +196,21 @@ public class TextRadar extends me.mioclient.ModuleList {
         return sb.toString();
     }
 
-    public Formatting getFormatting1313(double d) {
+    public Formatting getHealthColor(double d) {
         return d >= Double.longBitsToDouble(4626322717216342016L) ? Formatting.GREEN : d >= Double.longBitsToDouble(4625196817309499392L) ? Formatting.DARK_GREEN : d >= Double.longBitsToDouble(4621819117588971520L) ? Formatting.GOLD : d >= Double.longBitsToDouble(4616189618054758400L) ? Formatting.RED : Formatting.DARK_RED;
     }
 
-    public double get2647(Entity entity) {
-        return this.setting.getValue() == TextRadarMode.DISTANCE ? entity.squaredDistanceTo(minecraftClient.player) : MathHelper.angleBetween(minecraftClient.gameRenderer.getCamera().getYaw(), SearchHelper4_8.getFloatArray2483(entity)[0]);
+    public double getSortValue(Entity entity) {
+        return this.setting.getValue() == TextRadarMode.DISTANCE ? entity.squaredDistanceTo(minecraftClient.player) : MathHelper.angleBetween(minecraftClient.gameRenderer.getCamera().getYaw(), RotationManager.getRotationsTo(entity)[0]);
     }
 
-    public boolean is2648(PlayerEntity playerEntity) {
-        if (!is3017() && minecraftClient.player == playerEntity) {
+    public boolean shouldShowPlayer(PlayerEntity playerEntity) {
+        if (!isInHudEditor() && minecraftClient.player == playerEntity) {
             return false;
         }
-        if (this.setting11.getValue().booleanValue() && BaritoneHelper_3.searchHelper4_14.is520(playerEntity)) {
+        if (this.setting11.getValue().booleanValue() && ClientServices.socialManager.isFriendEntity(playerEntity)) {
             return false;
         }
-        return !this.setting12.getValue().booleanValue() || HoleSnapSearchHelper4.is2013((LivingEntity) playerEntity);
+        return !this.setting12.getValue().booleanValue() || PlayerUtils.hasArmor((LivingEntity) playerEntity);
     }
 }

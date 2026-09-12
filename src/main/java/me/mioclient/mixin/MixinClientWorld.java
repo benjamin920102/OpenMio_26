@@ -1,12 +1,16 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
 import com.llamalad7.mixinextras.sugar.Local;
 import java.util.Random;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.MixinWorldRendererHelper;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.RemoveEntityEvent;
+import me.mioclient.ducks.DuckClientWorldEffects;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.event.events.entity.RemoveEntityEvent;
 import me.mioclient.module.render.Ambience;
 import me.mioclient.module.render.SkyColor;
 import net.minecraft.block.Block;
@@ -31,9 +35,33 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /* compiled from: 0.java */
 @Mixin({ClientWorld.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientWorld.class */
-public abstract class MixinClientWorld implements MixinWorldRendererHelper {
-    private static SkyColor skycolor = (SkyColor) BaritoneHelper_3.baritoneHelper_4.getModule117(SkyColor.class);
-    private static Ambience ambience = (Ambience) BaritoneHelper_3.baritoneHelper_4.getModule117(Ambience.class);
+public abstract class MixinClientWorld implements DuckClientWorldEffects {
+    private static SkyColor skycolor;
+
+    private static SkyColor getSkycolor() {
+
+        if (skycolor == null && ClientServices.moduleInjector != null) {
+
+            try { skycolor = (SkyColor) ClientServices.moduleInjector.getModule(SkyColor.class); } catch (Exception e) {}
+
+        }
+
+        return skycolor;
+
+    }
+    private static Ambience ambience;
+
+    private static Ambience getAmbience() {
+
+        if (ambience == null && ClientServices.moduleInjector != null) {
+
+            try { ambience = (Ambience) ClientServices.moduleInjector.getModule(Ambience.class); } catch (Exception e) {}
+
+        }
+
+        return ambience;
+
+    }
 
     @Shadow
     @Final
@@ -45,10 +73,18 @@ public abstract class MixinClientWorld implements MixinWorldRendererHelper {
     @Unique
     private final DimensionEffects customSky = new DimensionEffects(Float.NaN, true, DimensionEffects.SkyType.NONE, false, false) { // from class: me.mioclient.mixin.MixinClientWorld.1
         public Vec3d adjustFogColor(Vec3d vec3d, float f) {
+        SkyColor skycolor_lcl = getSkycolor();
+
+        if (skycolor_lcl == null) return null;
+
             return Vec3d.unpackRgb(MixinClientWorld.skycolor.sky.getValue().getRGB());
         }
 
         public boolean useThickFog(int i, int i2) {
+        SkyColor skycolor_lcl = getSkycolor();
+
+        if (skycolor_lcl == null) return false;
+
             return MixinClientWorld.skycolor.dense.getValue().booleanValue();
         }
 
@@ -65,17 +101,21 @@ public abstract class MixinClientWorld implements MixinWorldRendererHelper {
 
     @ModifyArg(method = {"method_24462"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/world/ClientWorld;addParticle(Lnet/minecraft/particle/ParticleEffect;DDDDDD)V"))
     private ParticleEffect randomBlockDisplayTickHook(ParticleEffect particleEffect, @Local(argsOnly = true) BlockPos.Mutable mutable) {
-        double squaredDistanceTo = SearchHelper_4.minecraftClient.gameRenderer.getCamera().getPos().squaredDistanceTo(mutable.getX(), mutable.getY(), mutable.getZ());
-        if (ambience.isToggled() && ambience.weather.getValue() == Ambience.AmbiencePredicateMode.DUSTY && ambience.worldWeather.getValue().booleanValue() && squaredDistanceTo < 25.0d) {
+        double squaredDistanceTo = ClientAccessor.minecraftClient.gameRenderer.getCamera().getPos().squaredDistanceTo(mutable.getX(), mutable.getY(), mutable.getZ());
+        if (getAmbience().isToggled() && getAmbience().weather.getValue() == Ambience.AmbiencePredicateMode.DUSTY && getAmbience().worldWeather.getValue().booleanValue() && squaredDistanceTo < 25.0d) {
             return new BiomeParticleConfig(this.random.nextBoolean() ? ParticleTypes.WHITE_ASH : ParticleTypes.ASH, 0.1f).getParticle();
         }
         return particleEffect;
     }
 
     @Inject(method = {"randomBlockDisplayTick"}, at = {@At(value = "INVOKE", target = "Ljava/util/Optional;ifPresent(Ljava/util/function/Consumer;)V", shift = At.Shift.BEFORE)})
-    private void randomBlockDisplayTickHook0(int i, int i2, int i3, int i4, net.minecraft.util.math.random.Random random, Block block, BlockPos.Mutable mutable, CallbackInfo callbackInfo) {
-        if (ambience.isToggled() && ambience.weather.getValue() == Ambience.AmbiencePredicateMode.DUSTY && ambience.worldWeather.getValue().booleanValue()) {
-            BiomeParticleConfig biomeParticleConfig = new BiomeParticleConfig(random.nextBoolean() ? ParticleTypes.WHITE_ASH : ParticleTypes.ASH, 0.2f * ambience.amount.getValue().floatValue());
+    private void dustParticleTickHook(int i, int i2, int i3, int i4, net.minecraft.util.math.random.Random random, Block block, BlockPos.Mutable mutable, CallbackInfo callbackInfo) {
+        Ambience ambience_lcl = getAmbience();
+
+        if (ambience_lcl == null) return;
+
+        if (ambience_lcl.isToggled() && ambience_lcl.weather.getValue() == Ambience.AmbiencePredicateMode.DUSTY && ambience_lcl.worldWeather.getValue().booleanValue()) {
+            BiomeParticleConfig biomeParticleConfig = new BiomeParticleConfig(random.nextBoolean() ? ParticleTypes.WHITE_ASH : ParticleTypes.ASH, 0.2f * ambience_lcl.amount.getValue().floatValue());
             if (biomeParticleConfig.shouldAddParticle(random)) {
                 method_8406(biomeParticleConfig.getParticle(), mutable.getX() + this.random.nextDouble(), mutable.getY() + this.random.nextDouble(), mutable.getZ() + this.random.nextDouble(), 0.0d, 0.0d, 0.0d);
             }
@@ -85,38 +125,46 @@ public abstract class MixinClientWorld implements MixinWorldRendererHelper {
     @Inject(method = {"removeEntity"}, at = {@At("HEAD")}, cancellable = true)
     private void removeEntityHook(int i, Entity.RemovalReason removalReason, CallbackInfo callbackInfo) {
         RemoveEntityEvent removeEntityEvent = new RemoveEntityEvent(i);
-        SearchHelper_4.baritoneHelper.getObject1794(removeEntityEvent);
-        if (removeEntityEvent.is2403()) {
+        ClientAccessor.eventBus.fireEvent(removeEntityEvent);
+        if (removeEntityEvent.isCancelled()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"getSkyColor"}, at = {@At("HEAD")}, cancellable = true)
     private void getSkyColorHook(Vec3d vec3d, float f, CallbackInfoReturnable<Vec3d> callbackInfoReturnable) {
-        if (skycolor.isToggled() && skycolor.is3136()) {
-            callbackInfoReturnable.setReturnValue(Vec3d.unpackRgb(skycolor.sky.getValue().getRGB()));
+        SkyColor skycolor_lcl = getSkycolor();
+
+        if (skycolor_lcl == null) return;
+
+        if (skycolor_lcl.isToggled() && skycolor_lcl.isDimensionEnabled()) {
+            callbackInfoReturnable.setReturnValue(Vec3d.unpackRgb(skycolor_lcl.sky.getValue().getRGB()));
             callbackInfoReturnable.cancel();
         }
     }
 
     @Inject(method = {"getDimensionEffects"}, at = {@At("HEAD")}, cancellable = true)
     private void onGetSkyProperties(CallbackInfoReturnable<DimensionEffects> callbackInfoReturnable) {
-        if (SearchHelper_4.minecraftClient.world == null) {
+        SkyColor skycolor_lcl = getSkycolor();
+
+        if (skycolor_lcl == null) return;
+
+        if (ClientAccessor.minecraftClient.world == null) {
             return;
         }
         DimensionEffects dimensionEffects = null;
-        if (skycolor.type.getValue() == SkyColor.MixinClientWorldMode.END) {
+        if (skycolor_lcl.type.getValue() == SkyColor.MixinClientWorldMode.END) {
             dimensionEffects = this.mio$customEnd;
-        } else if (!SearchHelper4_7.getStashFinderMode2438().is2172() || skycolor.type.getValue() == SkyColor.MixinClientWorldMode.FLAT) {
+        } else if (!WorldUtils.getDimension().isOverworld() || skycolor_lcl.type.getValue() == SkyColor.MixinClientWorldMode.FLAT) {
             dimensionEffects = this.customSky;
         }
-        if (skycolor.isToggled() && skycolor.is3136() && dimensionEffects != null) {
+        if (skycolor_lcl.isToggled() && skycolor_lcl.isDimensionEnabled() && dimensionEffects != null) {
             callbackInfoReturnable.setReturnValue(dimensionEffects);
             callbackInfoReturnable.cancel();
         }
     }
 
-    @Override // me.mioclient.MixinWorldRendererHelper
+    @Override // me.mioclient.ducks.DuckClientWorldEffects
     public DimensionEffects mio$getOriginalEffects() {
         return this.field_24606;
     }

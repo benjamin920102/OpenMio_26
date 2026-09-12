@@ -1,9 +1,12 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import com.llamalad7.mixinextras.sugar.Local;
 import java.io.File;
 import java.util.function.Consumer;
-import me.mioclient.BaritoneHelper_3;
 import me.mioclient.module.misc.ExtraScreenshot;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.texture.NativeImage;
@@ -20,15 +23,31 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({ScreenshotRecorder.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinScreenshotRecorder.class */
 public class MixinScreenshotRecorder {
-    private static ExtraScreenshot screenshot = (ExtraScreenshot) BaritoneHelper_3.baritoneHelper_4.getModule117(ExtraScreenshot.class);
+    private static ExtraScreenshot screenshot;
+
+    private static ExtraScreenshot getScreenshot() {
+
+        if (screenshot == null && ClientServices.moduleInjector != null) {
+
+            try { screenshot = (ExtraScreenshot) ClientServices.moduleInjector.getModule(ExtraScreenshot.class); } catch (Exception e) {}
+
+        }
+
+        return screenshot;
+
+    }
 
     @Inject(method = {"saveScreenshotInner"}, at = {@At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/client/util/ScreenshotRecorder;takeScreenshot(Lnet/minecraft/client/gl/Framebuffer;)Lnet/minecraft/client/texture/NativeImage;", shift = At.Shift.AFTER)}, cancellable = true)
     private static void saveScreenshotInner(File file, String str, Framebuffer framebuffer, Consumer<Text> consumer, CallbackInfo callbackInfo, @Local NativeImage nativeImage) {
-        if (screenshot.isToggled()) {
+        ExtraScreenshot screenshot_lcl = getScreenshot();
+
+        if (screenshot_lcl == null) return;
+
+        if (screenshot_lcl.isToggled()) {
             Util.getIoWorkerExecutor().execute(() -> {
-                screenshot.do2188(nativeImage);
+                screenshot_lcl.processNativeImage(nativeImage);
             });
-            if (screenshot.is2190()) {
+            if (screenshot_lcl.shouldDeleteFile()) {
                 callbackInfo.cancel();
             }
         }
@@ -36,7 +55,11 @@ public class MixinScreenshotRecorder {
 
     @ModifyVariable(method = {"saveScreenshotInner"}, at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private static Consumer<Text> modifyMessageReceiver(Consumer<Text> consumer) {
-        return (!screenshot.isToggled() || screenshot.is2191()) ? consumer : new Consumer<Text>() { // from class: me.mioclient.mixin.MixinScreenshotRecorder.1
+        ExtraScreenshot screenshot_lcl = getScreenshot();
+
+        if (screenshot_lcl == null) return consumer;
+
+        return (!screenshot_lcl.isToggled() || screenshot_lcl.isModeNone()) ? consumer : new Consumer<Text>() { // from class: me.mioclient.mixin.MixinScreenshotRecorder.1
             @Override // java.util.function.Consumer
             public void accept(Text text) {
             }

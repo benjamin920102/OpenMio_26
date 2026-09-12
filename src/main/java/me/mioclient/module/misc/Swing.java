@@ -1,22 +1,32 @@
 package me.mioclient.module.misc;
 
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.combat.ScaffoldHelperMode;
+
+import me.mioclient.api.NamedValue;
+
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
 import net.minecraft.util.Hand;
+import me.mioclient.module.combat.Mainhand;
+import me.mioclient.module.combat.Offhand;
+import me.mioclient.mode.combat.ScaffoldHelperMode;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing.class */
 public class Swing extends Module {
-    public Setting<ScaffoldHelperMode> hand;
-    public Setting<MixinLivingEntityMode> type;
-    public Setting<Double> speed;
+    public Setting<ScaffoldHelperMode> hand = add(new EnumSetting<>("Hand", ScaffoldHelperMode.scaffoldHelperMode));
+    public Setting<MixinLivingEntityMode> type = add(new EnumSetting<>("Type", MixinLivingEntityMode.VANILLA));
+    public Setting<Double> speed = add(new NumberSetting<>("Speed", 1.0, 0.1, 3.0));
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing$MixinLivingEntityMode.class */
-    public enum MixinLivingEntityMode implements EnumSettingHelper {
+    public enum MixinLivingEntityMode implements NamedValue {
         VANILLA("Vanilla"),
         ONE_EIGHT("1.8"),
         ONE_TWELVE("1.12");
@@ -27,7 +37,7 @@ public class Swing extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -35,16 +45,16 @@ public class Swing extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing$ScaffoldHelperMode.class */
-    public static enum ScaffoldHelperMode implements EnumSettingHelper {
+    public static enum ScaffoldHelperMode implements NamedValue {
         scaffoldHelperMode("Mainhand") {
             @Override // me.mioclient.module.misc.Swing.ScaffoldHelperMode
-            public Hand getHand2084() {
+            public Hand getHand() {
                 return Hand.MAIN_HAND;
             }
         },
         scaffoldHelperMode2("Offhand") {
             @Override // me.mioclient.module.misc.Swing.ScaffoldHelperMode
-            public Hand getHand2084() {
+            public Hand getHand() {
                 return Hand.OFF_HAND;
             }
         },
@@ -57,18 +67,17 @@ public class Swing extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public Hand getHand2084() {
+        public Hand getHand() {
             return null;
         }
     }
 
     public Swing() {
         super("Swing", "Changes your swinging hand.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 }

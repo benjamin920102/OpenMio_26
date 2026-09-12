@@ -1,7 +1,10 @@
 package me.mioclient.mixin.lithium;
 
-import me.mioclient.SearchHelper_4;
-import me.mioclient.VoxelShapeEvent;
+import me.mioclient.event.events.world.BlockCollisionShapeEvent;
+
+import me.mioclient.api.ClientAccessor;
+
+import me.mioclient.event.events.world.BlockCollisionShapeEvent;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.client.MinecraftClient;
@@ -25,7 +28,7 @@ public class MixinChunkAwareBlockCollisionSweeper {
         if (blockView != MinecraftClient.getInstance().world) {
             return collisionShape;
         }
-        VoxelShapeEvent voxelShapeEvent = (VoxelShapeEvent) SearchHelper_4.baritoneHelper.getObject1794(VoxelShapeEvent.getVoxelShapeEvent665(collisionShape, blockPos, blockState));
-        return voxelShapeEvent.is2403() ? VoxelShapes.empty() : voxelShapeEvent.getVoxelShape669();
+        BlockCollisionShapeEvent voxelShapeEvent = (BlockCollisionShapeEvent) ClientAccessor.eventBus.fireEvent(BlockCollisionShapeEvent.create(collisionShape, blockPos, blockState));
+        return voxelShapeEvent.isCancelled() ? VoxelShapes.empty() : voxelShapeEvent.getShape();
     }
 }

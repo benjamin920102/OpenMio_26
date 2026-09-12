@@ -2,6 +2,7 @@ package baritone.api;
 import java.awt.Color;
 import java.util.function.Consumer;
 import net.minecraft.text.Text;
+import me.mioclient.api.Setting;
 /** Stub of baritone.api.Settings holding only the settings this mod touches. */
 public class Settings {
     public static class Setting<T> { public T value; }

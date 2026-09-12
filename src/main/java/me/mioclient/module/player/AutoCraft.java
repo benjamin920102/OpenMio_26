@@ -1,27 +1,38 @@
 package me.mioclient.module.player;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.player.AutoCraftMode;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.Tuple;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.network.PacketSender;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.Tuple;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.HoleSnapData_2;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchHelper4_8;
+import me.mioclient.render.RenderConstants;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SetScreenHookPreEvent;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.screen.SetScreenHookPreEvent;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.gui.screen.ingame.CraftingScreen;
@@ -47,34 +58,40 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import me.mioclient.mode.player.AutoCraftMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EntityListObjectSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import net.minecraft.registry.Registries;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoCraft.class */
 public class AutoCraft extends Module {
     public static final RecipeEntry<?> recipeEntry = new RecipeEntry<>(Identifier.of("minecraft:firework_rocket_simple"), (Recipe) null);
     public static final List<Ingredient> list = List.of(Ingredient.ofItems(new ItemConvertible[]{Items.PAPER}), Ingredient.ofItems(new ItemConvertible[]{Items.GUNPOWDER}));
-    public Setting<Set<Item>> items;
-    public Setting<Set<Item>> recipeBlackList;
-    public Setting<Integer> delay;
-    public Setting<Integer> frequency;
-    public Setting<AutoCraftMode> drop;
-    public Setting<Boolean> craftAll;
-    public Setting<Boolean> fastClose;
-    public Setting<Boolean> autoOpen;
-    public Setting<Float> range;
-    public Setting<Boolean> raytrace;
-    public Setting<Boolean> strictDirection;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> limit;
-    public Setting<Integer> max;
-    public Setting<Boolean> stackLimit;
+    public Setting<Set<Item>> items = add(new EntityListObjectSetting<>("Items", Registries.ITEM));
+    public Setting<Set<Item>> recipeBlackList = add(new EntityListObjectSetting<>("RecipeBlackList", Registries.ITEM));
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 150, 75, 1500).setSuffix("ms"));
+    public Setting<Integer> frequency = add(new NumberSetting<>("Frequency", 1, 1, 6));
+    public Setting<AutoCraftMode> drop = add(new EnumSetting<>("Drop", AutoCraftMode.None));
+    public Setting<Boolean> craftAll = add(new BooleanSetting("CraftAll", false, v -> this.drop.getValue() == AutoCraft.AutoCraftMode.None));
+    public Setting<Boolean> fastClose = add(new BooleanSetting("FastClose", false));
+    public Setting<Boolean> autoOpen = add(new BooleanSetting("AutoOpen", false).setVisible());
+    public Setting<Float> range = add(new NumberSetting<>("Range", 4.0f, 1.0f, 6.0f).setSuffix("m").requiresSettings(this.autoOpen));
+    public Setting<Boolean> raytrace = add(new BooleanSetting("Raytrace", false).requiresSettings(this.autoOpen));
+    public Setting<Boolean> strictDirection = add(new BooleanSetting("StrictDirection", false).requiresSettings(this.autoOpen));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", false).requiresSettings(this.autoOpen));
+    public Setting<Boolean> limit = add(new BooleanSetting("Limit", false, v -> !this.craftAll.getValue().booleanValue()).setVisible());
+    public Setting<Integer> max = add(new NumberSetting<>("Max", 64, 1, 64));
+    public Setting<Boolean> stackLimit = add(new BooleanSetting("StackLimit", false).requiresSettings(this.limit));
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
 
     /* JADX INFO: Access modifiers changed from: private */
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoCraft$AutoCraftMode.class */
-    public enum AutoCraftMode implements EnumSettingHelper {
+    public enum AutoCraftMode implements NamedValue {
         None("None", SlotActionType.QUICK_MOVE),
         Throw("Throw", SlotActionType.THROW),
         Pickup("Pickup", SlotActionType.PICKUP);
@@ -87,7 +104,7 @@ public class AutoCraft extends Module {
             this.slotActionType = slotActionType;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -99,27 +116,26 @@ public class AutoCraft extends Module {
 
     public AutoCraft() {
         super("AutoCraft", "Automatically crafts listed items.", Category.PLAYER, "craftbot");
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
     }
 
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
-        HoleSnapData_2<BlockPos, Direction> holeSnapData_2838;
-        RecipeEntry<?> recipeEntry834 = getRecipeEntry834();
+        Tuple<BlockPos, Direction> holeSnapData_2838;
+        RecipeEntry<?> recipeEntry834 = findMatchingRecipe();
         if (recipeEntry834 == null) {
             return;
         }
-        if (this.autoOpen.getValue().booleanValue() && this.stopwatch2.is419(500L) && !(minecraftClient.currentScreen instanceof HandledScreen) && (holeSnapData_2838 = getHoleSnapData_2838()) != null) {
+        if (this.autoOpen.getValue().booleanValue() && this.stopwatch2.hasElapsedMs(500L) && !(minecraftClient.currentScreen instanceof HandledScreen) && (holeSnapData_2838 = getHoleSnapData_2838()) != null) {
             if (this.rotate.getValue().booleanValue()) {
-                AutoSignSearchHelper4.do2561(SearchHelper4_8.getFloatArray2484(holeSnapData_2838.getObject3119().toCenterPos()), minecraftClient.player.isOnGround());
+                PacketSender.sendLook(RotationManager.getRotationsTo(holeSnapData_2838.getLeft().toCenterPos()), minecraftClient.player.isOnGround());
             }
-            AutoSignSearchHelper4.do2556(Hand.MAIN_HAND, new BlockHitResult(holeSnapData_2838.getObject3119().toCenterPos(), holeSnapData_2838.getObject3120(), holeSnapData_2838.getObject3119(), false));
-            AutoSignSearchHelper4.do2559(Hand.MAIN_HAND);
+            PacketSender.sendInteractBlock(Hand.MAIN_HAND, new BlockHitResult(holeSnapData_2838.getLeft().toCenterPos(), holeSnapData_2838.getRight(), holeSnapData_2838.getLeft(), false));
+            PacketSender.sendHandSwing(Hand.MAIN_HAND);
             this.stopwatch2.reset();
         }
-        if ((minecraftClient.player.currentScreenHandler instanceof CraftingScreenHandler) && !this.items.getValue().isEmpty() && this.stopwatch.is419(this.delay.getValue().intValue())) {
+        if ((minecraftClient.player.currentScreenHandler instanceof CraftingScreenHandler) && !this.items.getValue().isEmpty() && this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
             CraftingScreenHandler craftingScreenHandler = (CraftingScreenHandler)(minecraftClient.player.currentScreenHandler);
             ItemStack result = recipeEntry834.value().getResult(minecraftClient.world.getRegistryManager());
             if (result.isOf(Items.FIREWORK_ROCKET)) {
@@ -136,7 +152,7 @@ public class AutoCraft extends Module {
                 }
                 if (i2 != -1 && craftingScreenHandler.getSlot(1).getStack().isEmpty()) {
                     this.stopwatch.reset();
-                    FireworksHelper.do441(i2, 1);
+                    InventoryUtils.swapStacks(i2, 1);
                     return;
                 }
                 int[] iArr = {2, 4, 5};
@@ -167,7 +183,7 @@ public class AutoCraft extends Module {
                 }
                 ItemStack stack2 = craftingScreenHandler.getSlot(0).getStack();
                 FireworksComponent fireworksComponent = (FireworksComponent) stack2.getOrDefault(DataComponentTypes.FIREWORKS, new FireworksComponent(0, Collections.emptyList()));
-                if (!stack2.isOf(Items.FIREWORK_ROCKET) || fireworksComponent.flightDuration() != 3 || !z || !this.stopwatch.is419(Math.max(Helper_7.num, this.delay.getValue().intValue()))) {
+                if (!stack2.isOf(Items.FIREWORK_ROCKET) || fireworksComponent.flightDuration() != 3 || !z || !this.stopwatch.hasElapsedMs(Math.max(RenderConstants.num, this.delay.getValue().intValue()))) {
                     return;
                 }
             } else {
@@ -180,8 +196,8 @@ public class AutoCraft extends Module {
                 minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, -999, 0, SlotActionType.PICKUP, minecraftClient.player);
             }
             if (this.fastClose.getValue().booleanValue()) {
-                BaritoneHelper_3.tooltipsSearchHelper4_2.do164(() -> {
-                    AutoSignSearchHelper4.do2571(new CloseHandledScreenC2SPacket(minecraftClient.player.currentScreenHandler.syncId));
+                ClientServices.tooltipsHelper.schedule(() -> {
+                    PacketSender.sendPacket(new CloseHandledScreenC2SPacket(minecraftClient.player.currentScreenHandler.syncId));
                     minecraftClient.player.currentScreenHandler = minecraftClient.player.playerScreenHandler;
                 }, 1);
             }
@@ -191,13 +207,13 @@ public class AutoCraft extends Module {
 
     @Listen
     public void onSetScreenHookPre(SetScreenHookPreEvent setScreenHookPreEvent) {
-        if ((setScreenHookPreEvent.getScreen247() instanceof CraftingScreen) && this.fastClose.getValue().booleanValue()) {
-            setScreenHookPreEvent.getScreen247().init(minecraftClient, 0, 0);
-            setScreenHookPreEvent.do1162();
+        if ((setScreenHookPreEvent.getScreen() instanceof CraftingScreen) && this.fastClose.getValue().booleanValue()) {
+            setScreenHookPreEvent.getScreen().init(minecraftClient, 0, 0);
+            setScreenHookPreEvent.cancel();
         }
     }
 
-    public RecipeEntry<?> getRecipeEntry834() {
+    public RecipeEntry<?> findMatchingRecipe() {
         if (this.items.getValue().isEmpty()) {
             return null;
         }
@@ -299,12 +315,12 @@ public class AutoCraft extends Module {
         return true;
     }
 
-    public HoleSnapData_2<BlockPos, Direction> getHoleSnapData_2838() {
-        for (BlockPos blockPos : SearchHelper4_7.getList2429(minecraftClient.player.getEyePos(), this.range.getValue().floatValue(), true)) {
-            if (minecraftClient.world.getBlockState(blockPos).isOf(Blocks.CRAFTING_TABLE) && (SearchHelper4_7.is2432(me.mioclient.AutoCraftMode.X8.getList899(blockPos)) || !this.raytrace.getValue().booleanValue())) {
-                List<Direction> list3031 = PhaseESPSearchHelper4_2.getList3031(blockPos);
+    public Tuple<BlockPos, Direction> getHoleSnapData_2838() {
+        for (BlockPos blockPos : WorldUtils.getBlocksInRadius(minecraftClient.player.getEyePos(), this.range.getValue().floatValue(), true)) {
+            if (minecraftClient.world.getBlockState(blockPos).isOf(Blocks.CRAFTING_TABLE) && (WorldUtils.isAnyPositionVisible(me.mioclient.mode.player.AutoCraftMode.X8.getWorldCorners(blockPos)) || !this.raytrace.getValue().booleanValue())) {
+                List<Direction> list3031 = BlockPlacer.getInteractableSides(blockPos);
                 if (!list3031.isEmpty() || !this.strictDirection.getValue().booleanValue()) {
-                    return new HoleSnapData_2<>(blockPos, list3031.isEmpty() ? Direction.UP : list3031.get(0));
+                    return new Tuple<>(blockPos, list3031.isEmpty() ? Direction.UP : list3031.get(0));
                 }
             }
         }

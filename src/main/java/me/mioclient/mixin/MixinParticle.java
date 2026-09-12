@@ -1,6 +1,6 @@
 package me.mioclient.mixin;
 
-import me.mioclient.ParticlesHelper;
+import me.mioclient.ducks.DuckParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.world.ClientWorld;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /* compiled from: 0.java */
 @Mixin({Particle.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinParticle.class */
-public class MixinParticle implements ParticlesHelper {
+public class MixinParticle implements DuckParticle {
 
     @Shadow
     protected float field_3841;
@@ -32,13 +32,13 @@ public class MixinParticle implements ParticlesHelper {
         return f * this.mio$initialAlpha;
     }
 
-    @Override // me.mioclient.ParticlesHelper
+    @Override // me.mioclient.ducks.DuckParticle
     public void mio$setInitialAlpha(float f) {
         this.mio$initialAlpha = f;
         this.field_3841 = f;
     }
 
-    @Override // me.mioclient.ParticlesHelper
+    @Override // me.mioclient.ducks.DuckParticle
     public float mio$getInitialAlpha() {
         return this.mio$initialAlpha;
     }

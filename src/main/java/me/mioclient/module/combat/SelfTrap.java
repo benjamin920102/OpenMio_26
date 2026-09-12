@@ -1,20 +1,25 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BooleanSetting;
-import me.mioclient.NumberSetting;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
+import me.mioclient.module.Delay;
+import me.mioclient.module.Module;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/SelfTrap.class */
@@ -39,40 +44,40 @@ public class SelfTrap extends Range {
     }
 
     @Override // me.mioclient.module.combat.Range, me.mioclient.module.Delay
-    public List<BlockPos> getList876() {
-        List<BlockPos> list876 = super.getList876();
-        if ((is1078() && getEntity1081() == null) || (is1077() && !BaritoneHelper_3.holeSnapSearchHelper4_5.is2728())) {
+    public List<BlockPos> getPlacePositions() {
+        List<BlockPos> list876 = super.getPlacePositions();
+        if ((isSmartEnabled() && getEntity1081() == null) || (is1077() && !ClientServices.holeSnapOverlayHelper.isInHole())) {
             return Collections.emptyList();
         }
         if (list876.isEmpty() && is1083()) {
-            do495(false);
+            setToggled(false);
         }
         return list876;
     }
 
     @Override // me.mioclient.module.combat.Range
-    public PlayerEntity getPlayerEntity886() {
+    public PlayerEntity getTargetPlayer() {
         return minecraftClient.player;
     }
 
     public void do1076() {
         this.object2 = add(new BooleanSetting("OnlyHole", false));
-        this.object3 = add(new BooleanSetting("Smart", false).getSetting2336());
+        this.object3 = add(new BooleanSetting("Smart", false).setVisible());
         this.object4 = add(new NumberSetting("EnemyRange", Float.valueOf(Float.intBitsToFloat(1077936128)), Float.valueOf(Float.intBitsToFloat(1065353216)), Float.valueOf(Float.intBitsToFloat(1086324736)), f -> {
             return is1079();
-        }).getNumberSetting3023("m"));
+        }).setSuffix("m"));
     }
 
     public boolean is1077() {
         return ((Boolean) ((Setting) this.object2).getValue()).booleanValue();
     }
 
-    public boolean is1078() {
+    public boolean isSmartEnabled() {
         return ((Boolean) ((Setting) this.object3).getValue()).booleanValue();
     }
 
     public boolean is1079() {
-        return ((Setting) this.object3).is623();
+        return ((Setting) this.object3).isShown();
     }
 
     public float get1080() {
@@ -82,7 +87,7 @@ public class SelfTrap extends Range {
     public Entity getEntity1081() {
         Stream<Entity> filter = StreamSupport.stream(minecraftClient.world.getEntities().spliterator(), false).filter(entity -> {
             if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= get1080() && (entity instanceof PlayerEntity)) {
-                if (!BaritoneHelper_3.searchHelper4_14.is519(entity.getName().getString()) && entity.isAlive()) {
+                if (!ClientServices.socialManager.isFriend(entity.getName().getString()) && entity.isAlive()) {
                     return true;
                 }
             }
@@ -94,7 +99,7 @@ public class SelfTrap extends Range {
     }
 
     public Object getObject1082() {
-        return add(new BooleanSetting("Complete", false).getSetting2342(this.setting8), this.setting8);
+        return add(new BooleanSetting("Complete", false).requiresSettings(this.setting8), this.setting8);
     }
 
     public boolean is1083() {

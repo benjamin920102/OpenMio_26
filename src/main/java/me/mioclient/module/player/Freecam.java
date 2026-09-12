@@ -1,24 +1,35 @@
 package me.mioclient.module.player;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FreecamHelper;
-import me.mioclient.FreecamSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_8;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.event.events.input.InputTickEvent;
+import me.mioclient.event.events.interaction.InteractItemPacketEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.player.MovementUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.player.freecam.FreecamInput;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.player.MovementUtils;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.InteractBlockEvent;
-import me.mioclient.event.InteractItemEvent_2;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractItemPacketEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.event.TickEvent_2;
-import me.mioclient.event.TickHookPreEvent;
-import me.mioclient.event.UpdateMouseEvent;
-import me.mioclient.event.UpdateSetPosEvent;
-import me.mioclient.feature.MotionEvent;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.event.events.input.InputTickEvent;
+import me.mioclient.event.events.input.TickHookPreEvent;
+import me.mioclient.event.events.input.UpdateMouseEvent;
+import me.mioclient.event.events.player.UpdateSetPosEvent;
+import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
 import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.option.Perspective;
@@ -26,16 +37,18 @@ import net.minecraft.item.BucketItem;
 import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/Freecam.class */
 public class Freecam extends Module {
-    public final FreecamSearchHelper4 freecamSearchHelper4;
-    public Setting<Float> speed;
-    public Setting<Float> verticalSpeed;
-    public Setting<Boolean> noHands;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> always;
+    public final FreecamInput freecamSearchHelper4;
+    public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 5.0f));
+    public Setting<Float> verticalSpeed = add(new NumberSetting<>("VerticalSpeed", 0.5f, 0.1f, 5.0f));
+    public Setting<Boolean> noHands = add(new BooleanSetting("NoHands", true));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", false).setVisible());
+    public Setting<Boolean> always = add(new BooleanSetting("Always", false).requiresSettings(this.rotate));
     public Vec3d vec3d;
     public Vec3d vec3d2;
     public float[] floatArr;
@@ -47,21 +60,20 @@ public class Freecam extends Module {
 
     public Freecam() {
         super("Freecam", "Allows your camera to fly through walls.", Category.PLAYER, new String[0]);
-        this.freecamSearchHelper4 = new FreecamSearchHelper4();
-        PhaseESPHelper.do1351(this);
+        this.freecamSearchHelper4 = new FreecamInput();
         this.floatArr = null;
-        this.speed.do2351();
-        this.verticalSpeed.do2351();
+        this.speed.removeBounds();
+        this.verticalSpeed.removeBounds();
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        if (is1469()) {
+        if (isNotInGame()) {
             disable();
             return;
         }
         this.perspective = minecraftClient.options.getPerspective();
-        new TickEvent_2(minecraftClient.player.input, 0.0f).reset();
+        new InputTickEvent(minecraftClient.player.input, 0.0f).reset();
         Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
         this.vec3d = pos;
         this.vec3d2 = pos;
@@ -76,7 +88,7 @@ public class Freecam extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
         minecraftClient.player.setYaw(this.floatArr[0]);
@@ -85,13 +97,13 @@ public class Freecam extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         if (minecraftClient.currentScreen instanceof DownloadingTerrainScreen) {
             disable();
         }
         minecraftClient.options.setPerspective(Perspective.FIRST_PERSON);
         this.vec3d2 = this.vec3d;
-        double[] doubleArray2508 = HoleSnapSearchHelper4_3.getDoubleArray2508(this.val, this.freecamSearchHelper4, this.speed.getValue().floatValue());
+        double[] doubleArray2508 = MovementUtils.computeVelocity(this.val, this.freecamSearchHelper4, this.speed.getValue().floatValue());
         this.vec3d = this.vec3d.add(doubleArray2508[0], 0.0d, doubleArray2508[1]);
         if (minecraftClient.options.jumpKey.isPressed()) {
             this.vec3d = this.vec3d.add(0.0d, this.verticalSpeed.getValue().floatValue(), 0.0d);
@@ -104,53 +116,53 @@ public class Freecam extends Module {
 
     @Listen
     public void onTickHookPre(TickHookPreEvent tickHookPreEvent) {
-        tickHookPreEvent.do1162();
+        tickHookPreEvent.cancel();
     }
 
     @Listen(get219= 1000)
-    public void do31(MotionEvent motionEvent) {
+    public void onMotion(MotionEvent motionEvent) {
         boolean isBreakingBlock = minecraftClient.interactionManager.isBreakingBlock();
-        if (motionEvent.getKeyPearlMode1472() == KeyPearlMode.Post || !this.rotate.getValue().booleanValue() || minecraftClient.crosshairTarget == null) {
+        if (motionEvent.getPhase() == KeyPearlMode.Post || !this.rotate.getValue().booleanValue() || minecraftClient.crosshairTarget == null) {
             return;
         }
-        if (!SearchHelper4_8.is724() || isBreakingBlock || this.always.getValue().booleanValue()) {
-            motionEvent.do2257(SearchHelper4_8.getFloatArray2484(minecraftClient.crosshairTarget.getPos()));
+        if (!RotationManager.is724() || isBreakingBlock || this.always.getValue().booleanValue()) {
+            motionEvent.setRotation(RotationManager.getRotationsTo(minecraftClient.crosshairTarget.getPos()));
         }
     }
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if ((minecraftClient.player.getStackInHand(interactBlockEvent.getHand2084()).getItem() instanceof BucketItem) || (this.rotate.getValue().booleanValue() && SearchHelper4_8.is724())) {
-            BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2484(interactBlockEvent.getBlockHitResult2585().getPos()), 1000);
+        if ((minecraftClient.player.getStackInHand(interactBlockEvent.getHand()).getItem() instanceof BucketItem) || (this.rotate.getValue().booleanValue() && RotationManager.is724())) {
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(interactBlockEvent.getHitResult().getPos()), 1000);
         }
     }
 
     @Listen
-    public void onInteractItem(InteractItemEvent_2 interactItemEvent_2) {
+    public void onInteractItemPacket(InteractItemPacketEvent interactItemEvent_2) {
         if (!this.rotate.getValue().booleanValue() || minecraftClient.crosshairTarget == null || this.always.getValue().booleanValue()) {
             return;
         }
-        interactItemEvent_2.do1818(SearchHelper4_8.getFloatArray2484(minecraftClient.crosshairTarget.getPos()));
+        interactItemEvent_2.setRotation(RotationManager.getRotationsTo(minecraftClient.crosshairTarget.getPos()));
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        if (channelRead0Event.getPacket904() instanceof DisconnectS2CPacket) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        if (channelRead0Event.getPacket() instanceof DisconnectS2CPacket) {
             disable();
         }
     }
 
     @Listen
     public void onUpdateMouse(UpdateMouseEvent updateMouseEvent) {
-        do173(updateMouseEvent.get1008() * Double.longBitsToDouble(4594572340058128384L), updateMouseEvent.get1009() * Double.longBitsToDouble(4594572340058128384L));
-        updateMouseEvent.do1162();
+        do173(updateMouseEvent.getDeltaX() * Double.longBitsToDouble(4594572340058128384L), updateMouseEvent.getDeltaY() * Double.longBitsToDouble(4594572340058128384L));
+        updateMouseEvent.cancel();
     }
 
     @Listen
     public void onUpdateSetPos(UpdateSetPosEvent updateSetPosEvent) {
         float tickDelta = minecraftClient.getRenderTickCounter().getTickDelta(true);
-        updateSetPosEvent.do1302(new Vec3d(get174(tickDelta), get175(tickDelta), get176(tickDelta)));
-        updateSetPosEvent.do1162();
+        updateSetPosEvent.setPos(new Vec3d(lerpX(tickDelta), get175(tickDelta), get176(tickDelta)));
+        updateSetPosEvent.cancel();
     }
 
     public void do173(double d, double d2) {
@@ -158,10 +170,10 @@ public class Freecam extends Module {
         this.val4 = this.val3;
         this.val = (float) (this.val + d);
         this.val3 = (float) (this.val3 + d2);
-        this.val3 = MathHelper.clamp(this.val3, -FreecamHelper.num2, FreecamHelper.num2);
+        this.val3 = MathHelper.clamp(this.val3, -MathConstants.num2, MathConstants.num2);
     }
 
-    public double get174(float f) {
+    public double lerpX(float f) {
         return MathHelper.lerp(f, this.vec3d2.x, this.vec3d.x);
     }
 

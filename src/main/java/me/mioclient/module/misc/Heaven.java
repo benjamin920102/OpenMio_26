@@ -2,7 +2,7 @@ package me.mioclient.module.misc;
 
 import me.mioclient.api.Category;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.client.gui.screen.DeathScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -18,7 +18,7 @@ public class Heaven extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         if (minecraftClient.currentScreen instanceof DeathScreen) {
             if (minecraftClient.player.verticalCollision) {
                 minecraftClient.player.setBoundingBox(new Box(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));

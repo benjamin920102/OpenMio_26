@@ -16,6 +16,7 @@ import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.mioclient.event.Event;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:com/jagrosh/discordipc/IPCClient.class */

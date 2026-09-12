@@ -1,23 +1,31 @@
 package me.mioclient.module.movement;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.network.PacketSender;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+
 import java.util.concurrent.TimeUnit;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FireworksHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.HoleSnapMode;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.render.RenderConstants;
+import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.InteractBlockEvent;
-import me.mioclient.event.InteractItemEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractItemEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent;
-import me.mioclient.event.PlayEvent;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MoveEvent;
+import me.mioclient.event.events.sound.PlayEvent;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.mixin.ducks.DuckFireworkEntity;
 import me.mioclient.module.Module;
 import me.mioclient.module.exploit.RocketExtender;
@@ -28,26 +36,28 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Fireworks.class */
 public final class Fireworks extends Module {
-    public static final RocketExtender rocketExtender = (RocketExtender) BaritoneHelper_3.baritoneHelper_4.getModule117(RocketExtender.class);
-    public static final ElytraFly elytraFly = (ElytraFly) BaritoneHelper_3.baritoneHelper_4.getModule117(ElytraFly.class);
-    public Setting<Boolean> antiWaste;
-    public Setting<Boolean> boost;
-    public Setting<Boolean> withElytraFly;
-    public Setting<Float> boostFactor;
-    public Setting<Boolean> autoLaunch;
-    public Setting<Boolean> onlyElytraFly;
-    public Setting<Boolean> onlyFirst;
-    public Setting<Boolean> await;
-    public Setting<Float> delay;
-    public Setting<Boolean> fastLaunch;
-    public Setting<Integer> ticks;
-    public Setting<Boolean> flight;
-    public Setting<Float> horizontal;
-    public Setting<Float> vertical;
+    public static final RocketExtender rocketExtender = (RocketExtender) ClientServices.moduleInjector.getModule(RocketExtender.class);
+    public static final ElytraFly elytraFly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class);
+    public Setting<Boolean> antiWaste = add(new BooleanSetting("AntiWaste", true));
+    public Setting<Boolean> boost = add(new BooleanSetting("Boost", false).setVisible());
+    public Setting<Boolean> withElytraFly = add(new BooleanSetting("WithElytraFly", true).requiresSettings(this.boost));
+    public Setting<Float> boostFactor = add(new NumberSetting<>("BoostFactor", 0.0f, 0.0f, 3.0f).requiresSettings(this.boost));
+    public Setting<Boolean> autoLaunch = add(new BooleanSetting("AutoLaunch", false).setVisible());
+    public Setting<Boolean> onlyElytraFly = add(new BooleanSetting("OnlyElytraFly", true).requiresSettings(this.autoLaunch));
+    public Setting<Boolean> onlyFirst = add(new BooleanSetting("OnlyFirst", false).requiresSettings(this.autoLaunch));
+    public Setting<Boolean> await = add(new BooleanSetting("Await", false).requiresSettings(this.autoLaunch));
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 0.0f, 0.0f, 5.0f).setSuffix("s").setHoleSnapConfig("Auto", HoleSnapMode.MIN).requiresSettings(this.autoLaunch));
+    public Setting<Boolean> fastLaunch = add(new BooleanSetting("FastLaunch", false).setVisible());
+    public Setting<Integer> ticks = add(new NumberSetting<>("Ticks", 10, 3, 40).requiresSettings(this.fastLaunch));
+    public Setting<Boolean> flight = add(new BooleanSetting("Flight", false).setVisible().requiresSettings(this.fastLaunch));
+    public Setting<Float> horizontal = add(new NumberSetting<>("Horizontal", 1.0f, 0.0f, 3.0f).requiresSettings(this.fastLaunch, this.flight));
+    public Setting<Float> vertical = add(new NumberSetting<>("Vertical", 0.2f, 0.0f, 1.0f).requiresSettings(this.fastLaunch, this.flight));
     public final Stopwatch stopwatch;
     public boolean flag;
     public int num;
@@ -57,28 +67,27 @@ public final class Fireworks extends Module {
 
     public Fireworks() {
         super("Fireworks", "Enhances the usage of firework rockets.", Category.MOVEMENT, "rockets");
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
-        this.delay.getSetting2338("Auto", HoleSnapMode.MIN);
+        this.delay.setHoleSnapConfig("Auto", HoleSnapMode.MIN);
     }
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
         if (this.antiWaste.getValue().booleanValue()) {
-            if (minecraftClient.player.getStackInHand(interactBlockEvent.getHand2084()).isOf(Items.FIREWORK_ROCKET)) {
-                minecraftClient.interactionManager.interactItem(minecraftClient.player, interactBlockEvent.getHand2084());
-                minecraftClient.player.swingHand(interactBlockEvent.getHand2084());
-                interactBlockEvent.do1162();
+            if (minecraftClient.player.getStackInHand(interactBlockEvent.getHand()).isOf(Items.FIREWORK_ROCKET)) {
+                minecraftClient.interactionManager.interactItem(minecraftClient.player, interactBlockEvent.getHand());
+                minecraftClient.player.swingHand(interactBlockEvent.getHand());
+                interactBlockEvent.cancel();
             }
         }
     }
 
     @Listen
     public void onInteractItem(InteractItemEvent interactItemEvent) {
-        if (is144()) {
+        if (shouldFastLaunch()) {
             if (minecraftClient.player.isHolding(Items.FIREWORK_ROCKET)) {
                 this.num2 = 0;
-                do145();
+                swapElytraAndFly();
                 this.num = this.ticks.getValue().intValue();
                 this.flag3 = true;
             }
@@ -86,17 +95,17 @@ public final class Fireworks extends Module {
     }
 
     @Listen
-    public void do32(TickPostEvent tickPostEvent) {
+    public void onTickPost(TickPostEvent tickPostEvent) {
         if (this.flag2) {
             minecraftClient.player.setSneaking(false);
-            AutoSignSearchHelper4.do2567(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
+            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
             this.flag2 = false;
-            if (!HoleSnapSearchHelper4.is2014(minecraftClient.player)) {
+            if (!PlayerUtils.hasElytraEquipped(minecraftClient.player)) {
                 minecraftClient.player.stopFallFlying();
             }
         }
         if (this.num > 0) {
-            do145();
+            swapElytraAndFly();
             this.num--;
             this.flag2 = this.num == 0;
         }
@@ -105,8 +114,8 @@ public final class Fireworks extends Module {
                 if (!minecraftClient.player.isFallFlying()) {
                     this.stopwatch.setTime(-1L);
                 }
-                boolean z = (this.stopwatch.is418((double) this.delay.getValue().floatValue(), TimeUnit.SECONDS) && (!rocketExtender.isToggled() || rocketExtender.num == -1 || rocketExtender.blockPos == null)) ? false : true;
-                if (is141()) {
+                boolean z = (this.stopwatch.hasElapsed((double) this.delay.getValue().floatValue(), TimeUnit.SECONDS) && (!rocketExtender.isToggled() || rocketExtender.num == -1 || rocketExtender.blockPos == null)) ? false : true;
+                if (hasActiveFirework()) {
                     z = true;
                 }
                 if (z) {
@@ -118,27 +127,27 @@ public final class Fireworks extends Module {
                 if (this.flag && this.onlyFirst.getValue().booleanValue()) {
                     return;
                 }
-                do139();
+                autoUseFirework();
             }
         }
     }
 
-    @Listen(get219= Helper_7.num4)
-    public void do28(MoveEvent moveEvent) {
-        if (this.flight.getValue().booleanValue() && this.num > 1 && is141()) {
+    @Listen(get219= RenderConstants.num4)
+    public void onMove(MoveEvent moveEvent) {
+        if (this.flight.getValue().booleanValue() && this.num > 1 && hasActiveFirework()) {
             do138(moveEvent);
         }
-        if (minecraftClient.player.isFallFlying() && this.await.getValue().booleanValue() && this.autoLaunch.getValue().booleanValue() && !is141()) {
-            moveEvent.do690(new Vec3d(0.0d, 0.0d, 0.0d));
+        if (minecraftClient.player.isFallFlying() && this.await.getValue().booleanValue() && this.autoLaunch.getValue().booleanValue() && !hasActiveFirework()) {
+            moveEvent.setMovement(new Vec3d(0.0d, 0.0d, 0.0d));
         }
     }
 
     @Listen
     public void onPlay(PlayEvent playEvent) {
-        if (this.num <= 0 || playEvent.getSoundInstance1914() == null || playEvent.getSoundInstance1914().getId() == null || !playEvent.getSoundInstance1914().getId().toString().contains("item.armor.equip")) {
+        if (this.num <= 0 || playEvent.getSoundInstance() == null || playEvent.getSoundInstance().getId() == null || !playEvent.getSoundInstance().getId().toString().contains("item.armor.equip")) {
             return;
         }
-        playEvent.do1162();
+        playEvent.cancel();
     }
 
     public void do138(MoveEvent moveEvent) {
@@ -153,43 +162,43 @@ public final class Fireworks extends Module {
             floatValue = MathHelper.clamp(Float.intBitsToFloat(1070386381) + (this.num2 * Float.intBitsToFloat(1036831949)), Float.intBitsToFloat(1070386381), floatValue);
             this.num2++;
         }
-        double[] doubleArray2507 = HoleSnapSearchHelper4_3.getDoubleArray2507(moveEvent, floatValue);
+        double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, floatValue);
         Vec3d vec3d = new Vec3d(doubleArray2507[0], intBitsToFloat, doubleArray2507[1]);
         minecraftClient.player.setVelocity(vec3d);
-        moveEvent.do690(vec3d);
+        moveEvent.setMovement(vec3d);
     }
 
-    public void do139() {
+    public void autoUseFirework() {
         if (this.autoLaunch.getValue().booleanValue() && minecraftClient.player.isFallFlying()) {
-            Hand hand450 = FireworksHelper.getHand450(Items.FIREWORK_ROCKET);
+            Hand hand450 = InventoryUtils.getHandWith(Items.FIREWORK_ROCKET);
             int i = minecraftClient.player.getInventory().selectedSlot;
-            int i2 = FireworksHelper.get443(Items.FIREWORK_ROCKET);
-            int i3 = FireworksHelper.get447(Items.FIREWORK_ROCKET);
+            int i2 = InventoryUtils.findSlot(Items.FIREWORK_ROCKET);
+            int i3 = InventoryUtils.findInHotbar(Items.FIREWORK_ROCKET);
             if (hand450 != null) {
                 minecraftClient.interactionManager.interactItem(minecraftClient.player, hand450);
                 this.stopwatch.reset();
             } else if (i2 != -1) {
                 boolean z = i3 == -1;
-                do140(z ? i2 : i3, z);
+                equipSlot(z ? i2 : i3, z);
                 minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.MAIN_HAND);
                 rocketExtender.vec3d = minecraftClient.player.getPos();
-                do140(z ? i2 : i, z);
+                equipSlot(z ? i2 : i, z);
                 this.stopwatch.reset();
             }
             this.flag = true;
         }
     }
 
-    public void do140(int i, boolean z) {
+    public void equipSlot(int i, boolean z) {
         if (z) {
-            FireworksHelper.do439(i);
+            InventoryUtils.swapToHotbar(i);
         } else {
-            FireworksHelper.do456(i);
+            InventoryUtils.selectSlot(i);
         }
     }
 
-    public boolean is141() {
-        if (!this.stopwatch.is419(500L)) {
+    public boolean hasActiveFirework() {
+        if (!this.stopwatch.hasElapsedMs(500L)) {
             return true;
         }
         for (Entity entity : minecraftClient.world.getEntities()) {
@@ -200,29 +209,29 @@ public final class Fireworks extends Module {
         return false;
     }
 
-    public float get142(boolean z) {
+    public float getBoostFactor(boolean z) {
         if (!isToggled() || !this.boost.getValue().booleanValue()) {
             return 0.0f;
         }
-        if ((z || this.withElytraFly.getValue().booleanValue()) && is141()) {
+        if ((z || this.withElytraFly.getValue().booleanValue()) && hasActiveFirework()) {
             return this.boostFactor.getValue().floatValue();
         }
         return 0.0f;
     }
 
-    public int get143() {
+    public int getRemainingTicks() {
         return this.num;
     }
 
-    public boolean is144() {
-        return (HoleSnapSearchHelper4.is2014(minecraftClient.player) || !isToggled() || !this.fastLaunch.getValue().booleanValue() || minecraftClient.player.isOnGround() || FireworksHelper.get443(Items.ELYTRA) == -1) ? false : true;
+    public boolean shouldFastLaunch() {
+        return (PlayerUtils.hasElytraEquipped(minecraftClient.player) || !isToggled() || !this.fastLaunch.getValue().booleanValue() || minecraftClient.player.isOnGround() || InventoryUtils.findSlot(Items.ELYTRA) == -1) ? false : true;
     }
 
-    public void do145() {
-        int i = FireworksHelper.get447(Items.ELYTRA);
+    public void swapElytraAndFly() {
+        int i = InventoryUtils.findInHotbar(Items.ELYTRA);
         boolean z = i == -1;
         if (i == -1) {
-            i = FireworksHelper.get443(Items.ELYTRA);
+            i = InventoryUtils.findSlot(Items.ELYTRA);
         }
         if (i == -1) {
             return;
@@ -233,7 +242,7 @@ public final class Fireworks extends Module {
             minecraftClient.interactionManager.clickSlot(0, i2, 0, SlotActionType.SWAP, minecraftClient.player);
         }
         minecraftClient.interactionManager.clickSlot(0, 6, i, SlotActionType.SWAP, minecraftClient.player);
-        AutoSignSearchHelper4.do948();
+        PacketSender.sendStartFallFlying();
         minecraftClient.player.startFallFlying();
         minecraftClient.interactionManager.clickSlot(0, 6, i, SlotActionType.SWAP, minecraftClient.player);
         if (z) {

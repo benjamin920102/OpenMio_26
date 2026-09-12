@@ -1,5 +1,43 @@
 package me.mioclient.module;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.event.events.player.MoveSpeedEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.mode.combat.CrystalRotationMode;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.mode.player.AutoCraftMode;
+import me.mioclient.render.shape.BlockHighlightRenderer;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.concurrent.LockedTaskRunner;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.world.BlockRaycastFilter;
+import me.mioclient.util.world.CustomRaycastContext;
+import me.mioclient.util.world.RaycastUtils;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.network.PacketSender;
+import me.mioclient.render.shape.BlockHighlightRenderer;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.world.BlockRaycastFilter;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.world.CustomRaycastContext;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.concurrent.LockedTaskRunner;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.world.RaycastUtils;
+
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -8,36 +46,23 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.AntiPhaseSearchHelper4;
-import me.mioclient.AutoCraftMode;
-import me.mioclient.AutoCrystalMode_6;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BooleanSetting;
-import me.mioclient.ColorSetting;
-import me.mioclient.FireworksHelper;
-import me.mioclient.FreecamHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.HoleSnapHelper;
-import me.mioclient.HoleSnapHelper_2;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4_6;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.NewChunksHelper_4;
-import me.mioclient.NumberSetting;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.mode.player.AutoCraftMode;
+import me.mioclient.mode.combat.CrystalRotationMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.render.RenderConstants;
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.FinishUsingEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.player.FinishUsingEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent_2;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MoveSpeedEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.combat.Offhand;
 import me.mioclient.module.exploit.ChorusControl;
@@ -67,9 +92,9 @@ import net.minecraft.util.math.Vec3i;
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/Delay.class */
 public abstract class Delay extends Module {
-    public static final AntiCheat antiCheat = (AntiCheat) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiCheat.class);
-    public static final ChorusControl chorusControl = (ChorusControl) BaritoneHelper_3.baritoneHelper_4.getModule117(ChorusControl.class);
-    public static final NoSlow noslow = (NoSlow) BaritoneHelper_3.baritoneHelper_4.getModule117(NoSlow.class);
+    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    public static final ChorusControl chorusControl = (ChorusControl) ClientServices.moduleInjector.getModule(ChorusControl.class);
+    public static final NoSlow noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
     public Setting<Integer> setting;
     public Setting<Integer> setting2;
     public Setting<Boolean> setting3;
@@ -118,7 +143,7 @@ public abstract class Delay extends Module {
 
 
 
-        public boolean is497() {
+        public boolean isPlacementEnabled() {
             return this.flag;
         }
 
@@ -136,7 +161,7 @@ public abstract class Delay extends Module {
             this.floatArr = fArr;
         }
 
-        public boolean is984(BlockPos blockPos) {
+        public boolean doesRaycastHitBlock(BlockPos blockPos) {
             HitResult hitResult985 = getHitResult985();
             if (hitResult985.getType() != HitResult.Type.BLOCK) {
                 return false;
@@ -145,50 +170,50 @@ public abstract class Delay extends Module {
         }
 
         public HitResult getHitResult985() {
-            float f = this.floatArr[1] * FreecamHelper.val4;
-            float f2 = (-this.floatArr[0]) * FreecamHelper.val4;
+            float f = this.floatArr[1] * MathConstants.val4;
+            float f2 = (-this.floatArr[0]) * MathConstants.val4;
             float cos = MathHelper.cos(f2);
             float sin = MathHelper.sin(f2);
             float cos2 = MathHelper.cos(f);
             Vec3d vec3d = new Vec3d(sin * cos2, -MathHelper.sin(f), cos * cos2);
-            return HoleSnapSearchHelper4_6.getBlockHitResult2784(new HoleSnapHelper_2.Inner(SearchHelper_4.minecraftClient.player.getEyePos(), SearchHelper_4.minecraftClient.player.getEyePos().add(vec3d.x * Double.longBitsToDouble(4617315517961601024L), vec3d.y * Double.longBitsToDouble(4617315517961601024L), vec3d.z * Double.longBitsToDouble(4617315517961601024L))).getInner1604(HoleSnapHelper.getHoleSnapHelper1677(BaritoneHelper_3.stashFinderSearchHelper4.getMap1552().keySet())).getHoleSnapHelper_21606());
+            return RaycastUtils.performCustomBlockRaycast(new CustomRaycastContext.Inner(ClientAccessor.minecraftClient.player.getEyePos(), ClientAccessor.minecraftClient.player.getEyePos().add(vec3d.x * Double.longBitsToDouble(4617315517961601024L), vec3d.y * Double.longBitsToDouble(4617315517961601024L), vec3d.z * Double.longBitsToDouble(4617315517961601024L))).setFilter(BlockRaycastFilter.createSolidFilter(ClientServices.stashFinderHelper.getTimedBlockMap().keySet())).build());
         }
 
 
 
 
-        public float[] getFloatArray986() {
+        public float[] getLookAngles() {
             return this.floatArr;
         }
     }
 
     public Delay(String str, String str2, Category category, String... strArr) {
         super(str, str2, category, strArr);
-        this.setting = add(new NumberSetting("Delay", 50, 0, 250).getNumberSetting3023("ms"));
+        this.setting = add(new NumberSetting("Delay", 50, 0, 250).setSuffix("ms"));
         this.setting2 = add(new NumberSetting("BPT", 8, 1, 8));
         this.setting3 = add(new BooleanSetting("AirPlace", false));
         this.setting4 = add(new BooleanSetting("StrictDirection", false));
         this.setting5 = add(new BooleanSetting("Raytrace", false));
         this.setting6 = add(new BooleanSetting("Rotate", false));
         this.setting7 = add(new BooleanSetting("Attack", true));
-        this.setting8 = add(new BooleanSetting("AutoDisable", false).getSetting2337());
-        this.setting9 = add(new BooleanSetting("Jump", true).getSetting2342(this.setting8));
-        this.setting10 = add(new BooleanSetting("Chorus", false).getSetting2342(this.setting8));
-        this.setting11 = add(new BooleanSetting("Pearl", false).getSetting2342(this.setting8));
-        this.setting12 = add(new BooleanSetting("RubberBand", false).getSetting2342(this.setting8));
-        this.setting13 = add(new BooleanSetting("Render", false).getSetting2336());
+        this.setting8 = add(new BooleanSetting("AutoDisable", false).setDependent());
+        this.setting9 = add(new BooleanSetting("Jump", true).requiresSettings(this.setting8));
+        this.setting10 = add(new BooleanSetting("Chorus", false).requiresSettings(this.setting8));
+        this.setting11 = add(new BooleanSetting("Pearl", false).requiresSettings(this.setting8));
+        this.setting12 = add(new BooleanSetting("RubberBand", false).requiresSettings(this.setting8));
+        this.setting13 = add(new BooleanSetting("Render", false).setVisible());
         this.setting14 = add(new ColorSetting("Fill", new Color(189, 153, 255, 8), color -> {
-            return this.setting13.is623();
+            return this.setting13.isShown();
         }));
         this.setting15 = add(new ColorSetting("Outline", new Color(189, 153, 255, 91), color2 -> {
-            return this.setting13.is623();
+            return this.setting13.isShown();
         }));
-        this.setting16 = add(new NumberSetting("LineWidth", Float.valueOf(Float.intBitsToFloat(1065353216)), Float.valueOf(Float.intBitsToFloat(1036831949)), Float.valueOf(Float.intBitsToFloat(1077936128))).getSetting2342(this.setting13));
-        this.setting17 = add(new BooleanSetting("Fade", true).getSetting2342(this.setting13));
-        this.setting18 = add(new NumberSetting("FadeTime", Float.valueOf(Float.intBitsToFloat(1065353216)), Float.valueOf(Float.intBitsToFloat(1036831949)), Float.valueOf(Float.intBitsToFloat(1065353216))).getNumberSetting3023("s").getSetting2342(this.setting13, this.setting17));
+        this.setting16 = add(new NumberSetting("LineWidth", Float.valueOf(Float.intBitsToFloat(1065353216)), Float.valueOf(Float.intBitsToFloat(1036831949)), Float.valueOf(Float.intBitsToFloat(1077936128))).requiresSettings(this.setting13));
+        this.setting17 = add(new BooleanSetting("Fade", true).requiresSettings(this.setting13));
+        this.setting18 = add(new NumberSetting("FadeTime", Float.valueOf(Float.intBitsToFloat(1065353216)), Float.valueOf(Float.intBitsToFloat(1036831949)), Float.valueOf(Float.intBitsToFloat(1065353216))).setSuffix("s").requiresSettings(this.setting13, this.setting17));
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
-        BaritoneHelper_3.antiPhaseSearchHelper4.register(new AntiPhaseSearchHelper4.Record(this, this.setting14, this.setting15, this.setting16, this.setting18, () -> {
+        ClientServices.antiPhaseBlockHelper.register(new BlockHighlightRenderer.Record(this, this.setting14, this.setting15, this.setting16, this.setting18, () -> {
             return true;
         }, this.setting17, 450));
     }
@@ -199,7 +224,7 @@ public abstract class Delay extends Module {
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        if (!is1469()) {
+        if (!isNotInGame()) {
             this.val = minecraftClient.player.getY();
         }
         this.num = 0;
@@ -218,13 +243,13 @@ public abstract class Delay extends Module {
         return setting;
     }
 
-    public abstract List<BlockPos> getList876();
+    public abstract List<BlockPos> getPlacePositions();
 
     public boolean is1320(BlockPos blockPos) {
         return true;
     }
 
-    public void do1321(BlockPos blockPos, boolean z) {
+    public void onBlockPlaced(BlockPos blockPos, boolean z) {
     }
 
     public boolean is1322() {
@@ -237,21 +262,21 @@ public abstract class Delay extends Module {
             this.flag6 = false;
             return;
         }
-        if (Offhand.is929() || SpeedMine.is1060() || minecraftClient.player.isSpectator() || !minecraftClient.player.isAlive() || minecraftClient.player.isRiding() || minecraftClient.player.isSleeping() || is1330()) {
+        if (Offhand.is929() || SpeedMine.isSwapLocked() || minecraftClient.player.isSpectator() || !minecraftClient.player.isAlive() || minecraftClient.player.isRiding() || minecraftClient.player.isSleeping() || isPlayerFellTooFar()) {
             return;
         }
-        if (this.flag3 && noslow.is3108()) {
+        if (this.flag3 && noslow.shouldApply()) {
             return;
         }
-        if (this.stopwatch.is419(this.setting.getValue().intValue()) && is1322()) {
-            List<BlockPos> list876 = getList876();
-            int i = get499();
+        if (this.stopwatch.hasElapsedMs(this.setting.getValue().intValue()) && is1322()) {
+            List<BlockPos> list876 = getPlacePositions();
+            int i = getSlotIndex();
             synchronized (list876) {
-                do1331(i, list876);
-                do1324(list876);
+                filterPlaceablePositions(i, list876);
+                sortPositionsBySupport(list876);
                 if (!list876.isEmpty()) {
-                    NewChunksHelper_4.do2149(() -> {
-                        do1325(list876);
+                    LockedTaskRunner.executeLocked(() -> {
+                        executePlacements(list876);
                     });
                 }
             }
@@ -259,31 +284,31 @@ public abstract class Delay extends Module {
         }
     }
 
-    public void do1324(List<BlockPos> list) {
+    public void sortPositionsBySupport(List<BlockPos> list) {
         if (this.setting2.getValue().intValue() > 1) {
             list.sort(Comparator.comparing(blockPos -> {
-                return Integer.valueOf(PhaseESPSearchHelper4_2.getDirection3029(blockPos, this.setting4.getValue().booleanValue()) != null ? -1 : 1);
+                return Integer.valueOf(BlockPlacer.findSupportSide(blockPos, this.setting4.getValue().booleanValue()) != null ? -1 : 1);
             }));
         }
     }
 
-    @Listen(get219= Helper_7.num2)
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
+    @Listen(get219= RenderConstants.num2)
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
         this.vec3d = null;
         this.entity = null;
         do1323();
     }
 
     @Listen
-    public void onMove(MoveEvent_2 moveEvent_2) {
-        if (moveEvent_2.getKeyPearlMode1472() == KeyPearlMode.Post && moveEvent_2.get990() > FreecamHelper.val2 && this.setting9.getValue().booleanValue()) {
+    public void onMoveSpeed(MoveSpeedEvent moveEvent_2) {
+        if (moveEvent_2.getPhase() == KeyPearlMode.Post && moveEvent_2.getSpeed() > MathConstants.val2 && this.setting9.getValue().booleanValue()) {
             disable();
         }
     }
 
     @Listen
     public void onFinishUsing(FinishUsingEvent finishUsingEvent) {
-        if (finishUsingEvent.getItemStack2549().getItem() != Items.CHORUS_FRUIT || minecraftClient.player.isSneaking() || chorusControl.isToggled()) {
+        if (finishUsingEvent.getItemStack().getItem() != Items.CHORUS_FRUIT || minecraftClient.player.isSneaking() || chorusControl.isToggled()) {
             return;
         }
         if (this.setting10.getValue().booleanValue()) {
@@ -294,9 +319,9 @@ public abstract class Delay extends Module {
     }
 
     @Listen
-    public void onChannelRead0(ChannelRead0Event channelRead0Event) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (this.setting7.getValue().booleanValue()) {
-            EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket904()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket904()) : null;
+            EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
             if (packet904 instanceof EntitySpawnS2CPacket) {
                 EntitySpawnS2CPacket entitySpawnS2CPacket = packet904;
                 if (entitySpawnS2CPacket.getEntityType() == EntityType.END_CRYSTAL) {
@@ -304,28 +329,28 @@ public abstract class Delay extends Module {
                         return;
                     }
                     Vec3i ofFloored = BlockPos.ofFloored(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
-                    List<BlockPos> list876 = getList876();
-                    do1331(get499(), list876);
+                    List<BlockPos> list876 = getPlacePositions();
+                    filterPlaceablePositions(getSlotIndex(), list876);
                     Iterator<BlockPos> it = list876.iterator();
                     while (true) {
                         if (!it.hasNext()) {
                             break;
                         }
                         if (it.next().isWithinDistance(ofFloored, Double.longBitsToDouble(4611686018427387904L))) {
-                            if (!BaritoneHelper_3.scaffoldHelper.is1113(entitySpawnS2CPacket.getEntityId(), true)) {
+                            if (!ClientServices.scaffoldHelper.sendAttackPacket(entitySpawnS2CPacket.getEntityId(), true)) {
                                 return;
                             } else {
-                                AutoSignSearchHelper4.do2559(Hand.MAIN_HAND);
+                                PacketSender.sendHandSwing(Hand.MAIN_HAND);
                             }
                         }
                     }
-                    NewChunksHelper_4.do2149(() -> {
-                        do1325(list876);
+                    LockedTaskRunner.executeLocked(() -> {
+                        executePlacements(list876);
                     });
                 }
             }
         }
-        PlayerPositionLookS2CPacket packet9042 = (channelRead0Event.getPacket904()) instanceof PlayerPositionLookS2CPacket ? (PlayerPositionLookS2CPacket) (channelRead0Event.getPacket904()) : null;
+        PlayerPositionLookS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof PlayerPositionLookS2CPacket ? (PlayerPositionLookS2CPacket) (channelRead0Event.getPacket()) : null;
         if (packet9042 instanceof PlayerPositionLookS2CPacket) {
             PlayerPositionLookS2CPacket playerPositionLookS2CPacket = packet9042;
             this.val = playerPositionLookS2CPacket.getY();
@@ -334,21 +359,21 @@ public abstract class Delay extends Module {
                 return;
             }
         }
-        if ((channelRead0Event.getPacket904() instanceof PlayerRespawnS2CPacket) && this.flag2) {
+        if ((channelRead0Event.getPacket() instanceof PlayerRespawnS2CPacket) && this.flag2) {
             disable();
         }
-        OpenScreenS2CPacket packet9043 = (channelRead0Event.getPacket904()) instanceof OpenScreenS2CPacket ? (OpenScreenS2CPacket) (channelRead0Event.getPacket904()) : null;
+        OpenScreenS2CPacket packet9043 = (channelRead0Event.getPacket()) instanceof OpenScreenS2CPacket ? (OpenScreenS2CPacket) (channelRead0Event.getPacket()) : null;
         if (packet9043 instanceof OpenScreenS2CPacket) {
             OpenScreenS2CPacket openScreenS2CPacket = packet9043;
-            if (this.stopwatch.is419(100L)) {
+            if (this.stopwatch.hasElapsedMs(100L)) {
                 return;
             }
-            AutoSignSearchHelper4.do2571(new CloseHandledScreenC2SPacket(openScreenS2CPacket.getSyncId()));
-            channelRead0Event.do1162();
+            PacketSender.sendPacket(new CloseHandledScreenC2SPacket(openScreenS2CPacket.getSyncId()));
+            channelRead0Event.cancel();
         }
     }
 
-    public void do1325(List<BlockPos> list) {
+    public void executePlacements(List<BlockPos> list) {
         if (list.isEmpty()) {
             return;
         }
@@ -358,17 +383,17 @@ public abstract class Delay extends Module {
                 break;
             }
             BlockPos next = it.next();
-            if (this.setting7.getValue().booleanValue() && this.stopwatch2.is419(BaritoneHelper_3.scaffoldHelper.get1115())) {
-                this.entity = PhaseESPSearchHelper4_2.getEntity3046(next, BaritoneHelper_3.scaffoldHelper.get1116());
+            if (this.setting7.getValue().booleanValue() && this.stopwatch2.hasElapsedMs(ClientServices.scaffoldHelper.getAttackDelay())) {
+                this.entity = BlockPlacer.findAndAttackCrystal(next, ClientServices.scaffoldHelper.get1116());
                 if (this.entity != null) {
                     if (this.setting6.getValue().booleanValue()) {
-                        BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2487(SearchHelper4_8.getFloatArray2483(this.entity), antiCheat.get237()), get888() + 1);
+                        ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(this.entity), antiCheat.getYawStep()), getPriority() + 1);
                     }
                     this.stopwatch2.reset();
                 }
             }
         }
-        int i = get499();
+        int i = getSlotIndex();
         int i2 = minecraftClient.player.getInventory().selectedSlot;
         Record_2 record_2 = null;
         Iterator<BlockPos> it2 = list.iterator();
@@ -379,7 +404,7 @@ public abstract class Delay extends Module {
             BlockPos next2 = it2.next();
             if (this.num2 >= 30) {
                 this.num2 = 0;
-                MixinMessageIndicatorHelper.do345(Text.literal(getName()).append(" is out of blocks!"), MixinMessageIndicatorHelper.getMessageSignatureData337(-2), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode);
+                ChatUtils.sendPrefixedMessage(Text.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                 this.num = 1337;
                 disable();
                 break;
@@ -390,15 +415,15 @@ public abstract class Delay extends Module {
             if (this.num >= this.setting2.getValue().intValue()) {
                 break;
             }
-            Record record1326 = getRecord1326(next2);
-            if (record1326.is497()) {
+            Record record1326 = getPlacementRecord(next2);
+            if (record1326.isPlacementEnabled()) {
                 this.num2 = 0;
             }
-            if (record1326.is497() && next2 != list.getLast() && is1329()) {
+            if (record1326.isPlacementEnabled() && next2 != list.getLast() && is1329()) {
                 Record_2 record_2498 = record1326.getRecord_2498();
-                if (record_2 == null || !record_2.is984(next2)) {
-                    if (next2 != list.getFirst() || !new Record_2(new float[]{minecraftClient.player.getYaw(), minecraftClient.player.getPitch()}).is984(next2)) {
-                        AutoSignSearchHelper4.do2563(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), record_2498.getFloatArray986()[0], record_2498.getFloatArray986()[1], minecraftClient.player.isOnGround());
+                if (record_2 == null || !record_2.doesRaycastHitBlock(next2)) {
+                    if (next2 != list.getFirst() || !new Record_2(new float[]{minecraftClient.player.getYaw(), minecraftClient.player.getPitch()}).doesRaycastHitBlock(next2)) {
+                        PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), record_2498.getLookAngles()[0], record_2498.getLookAngles()[1], minecraftClient.player.isOnGround());
                         record_2 = record_2498;
                     }
                 }
@@ -407,73 +432,73 @@ public abstract class Delay extends Module {
         this.num2++;
         if (!this.flag5) {
             this.flag5 = true;
-            BaritoneHelper_3.tooltipsSearchHelper4_2.do164(() -> {
+            ClientServices.tooltipsHelper.schedule(() -> {
                 this.flag5 = false;
             }, 1);
         }
-        if (this.flag4 && is1332()) {
-            AutoSignSearchHelper4.do2568();
+        if (this.flag4 && shouldUseOffhand()) {
+            PacketSender.sendSwapOffhand();
         }
-        FireworksHelper.do456(i2);
+        InventoryUtils.selectSlot(i2);
         this.flag4 = false;
     }
 
-    public Record getRecord1326(BlockPos blockPos) {
+    public Record getPlacementRecord(BlockPos blockPos) {
         boolean z;
         if (Offhand.is929()) {
             return Record.record_;
         }
-        this.direction = PhaseESPSearchHelper4_2.getDirection3030(blockPos, this.setting4.getValue().booleanValue(), this.setting5.getValue().booleanValue());
+        this.direction = BlockPlacer.findSupportSide(blockPos, this.setting4.getValue().booleanValue(), this.setting5.getValue().booleanValue());
         if (this.direction == null && !this.setting3.getValue().booleanValue()) {
             return Record.record_;
         }
-        float[] floatArray2485 = SearchHelper4_8.getFloatArray2485(blockPos.toCenterPos(), this.direction);
+        float[] floatArray2485 = RotationManager.getRotationsToSide(blockPos.toCenterPos(), this.direction);
         boolean booleanValue = this.setting5.getValue().booleanValue();
         if (this.direction != null) {
-            z = booleanValue & (!SearchHelper4_7.is2432(AutoCraftMode.X8.getList900(blockPos.offset(this.direction), this.direction.getOpposite())));
+            z = booleanValue & (!WorldUtils.isAnyPositionVisible(AutoCraftMode.X8.getVisibleFaceCorners(blockPos.offset(this.direction), this.direction.getOpposite())));
         } else {
-            z = booleanValue & (!SearchHelper4_7.is2431((Vec3i) blockPos));
+            z = booleanValue & (!WorldUtils.isPositionVisible((Vec3i) blockPos));
         }
         if (!is1320(blockPos)) {
             return Record.record_;
         }
         boolean z2 = true;
         if (!this.flag4) {
-            FireworksHelper.do456(get499());
-            if (is1332()) {
-                AutoSignSearchHelper4.do2568();
+            InventoryUtils.selectSlot(getSlotIndex());
+            if (shouldUseOffhand()) {
+                PacketSender.sendSwapOffhand();
             }
             this.flag4 = true;
         }
-        if (!z && is1327(blockPos)) {
-            if (SearchHelper4_8.is724() && antiCheat.is238()) {
+        if (!z && tryPlaceBlock(blockPos)) {
+            if (RotationManager.is724() && antiCheat.isF2b2t()) {
                 floatArray2485[0] = (float) (floatArray2485[0] + (Math.random() * Double.longBitsToDouble(4576918229175238656L)));
                 floatArray2485[1] = (float) (floatArray2485[1] + (Math.random() * Double.longBitsToDouble(4576918229175238656L)));
             }
             this.stopwatch.reset();
             if (this.setting13.getValue().booleanValue()) {
-                BaritoneHelper_3.antiPhaseSearchHelper4.do2132(this, blockPos);
+                ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, blockPos);
             }
             this.vec3d = blockPos.toCenterPos();
             if (this.direction != null) {
-                this.vec3d = this.vec3d.offset(this.direction, FreecamHelper.val2);
+                this.vec3d = this.vec3d.offset(this.direction, MathConstants.val2);
             }
             if (this.setting6.getValue().booleanValue()) {
-                BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2487(floatArray2485, antiCheat.get237()), get888());
+                ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(floatArray2485, antiCheat.getYawStep()), getPriority());
             }
             this.num++;
             z2 = false;
         }
-        do1321(blockPos, z2);
+        onBlockPlaced(blockPos, z2);
         return new Record(!z2, new Record_2(floatArray2485));
     }
 
-    public boolean is1327(BlockPos blockPos) {
-        return PhaseESPSearchHelper4_2.is3037(blockPos, this.direction, this.setting3.getValue().booleanValue(), is1332() ? Hand.OFF_HAND : Hand.MAIN_HAND);
+    public boolean tryPlaceBlock(BlockPos blockPos) {
+        return BlockPlacer.placeBlockPacket(blockPos, this.direction, this.setting3.getValue().booleanValue(), shouldUseOffhand() ? Hand.OFF_HAND : Hand.MAIN_HAND);
     }
 
-    public int get499() {
-        return FireworksHelper.get447(Items.OBSIDIAN) == -1 ? FireworksHelper.get448(itemStack -> {
+    public int getSlotIndex() {
+        return InventoryUtils.findInHotbar(Items.OBSIDIAN) == -1 ? InventoryUtils.findInHotbar(itemStack -> {
             BlockItem item = (itemStack.getItem()) instanceof BlockItem ? (BlockItem) (itemStack.getItem()) : null;
             if (item instanceof BlockItem) {
                 BlockItem blockItem = item;
@@ -482,7 +507,7 @@ public abstract class Delay extends Module {
                 }
             }
             return false;
-        }) : FireworksHelper.get447(Items.OBSIDIAN);
+        }) : InventoryUtils.findInHotbar(Items.OBSIDIAN);
     }
 
     public void do1328(BlockPos blockPos) {
@@ -496,10 +521,10 @@ public abstract class Delay extends Module {
     }
 
     public boolean is1329() {
-        return !(antiCheat.movementSync.getValue().booleanValue() && antiCheat.rotations.getValue() == AutoCrystalMode_6.SILENT) && this.setting6.getValue().booleanValue() && this.setting2.getValue().intValue() > 1 && minecraftClient.player.isOnGround() && BaritoneHelper_3.antiPhaseSearchHelper4_2.get2231() > 1 && !this.flag5;
+        return !(antiCheat.movementSync.getValue().booleanValue() && antiCheat.rotations.getValue() == CrystalRotationMode.SILENT) && this.setting6.getValue().booleanValue() && this.setting2.getValue().intValue() > 1 && minecraftClient.player.isOnGround() && ClientServices.antiPhaseHelper.getGroundTicks() > 1 && !this.flag5;
     }
 
-    public boolean is1330() {
+    public boolean isPlayerFellTooFar() {
         double y = minecraftClient.player.getY() - this.val;
         if (minecraftClient.player.isOnGround()) {
             this.val = minecraftClient.player.getY();
@@ -507,11 +532,11 @@ public abstract class Delay extends Module {
         if ((minecraftClient.player.getY() <= this.val + Double.longBitsToDouble(4591870180066957722L) || y < Double.longBitsToDouble(4600877379321698714L) || !this.setting9.getValue().booleanValue()) && !minecraftClient.player.isSleeping()) {
             return false;
         }
-        do495(false);
+        setToggled(false);
         return true;
     }
 
-    public void do1331(int i, List<BlockPos> list) {
+    public void filterPlaceablePositions(int i, List<BlockPos> list) {
         ArrayList arrayList = new ArrayList();
         Block block = null;
         if (i != -1) {
@@ -522,9 +547,9 @@ public abstract class Delay extends Module {
         }
         for (BlockPos blockPos : list) {
             double squaredDistanceTo = minecraftClient.player.getEyePos().squaredDistanceTo(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-            if (!PhaseESPSearchHelper4_2.is3040(blockPos, block, true, this.setting7.getValue().booleanValue()) || squaredDistanceTo > Double.longBitsToDouble(4630263366890291200L)) {
+            if (!BlockPlacer.canPlaceAt(blockPos, block, true, this.setting7.getValue().booleanValue()) || squaredDistanceTo > Double.longBitsToDouble(4630263366890291200L)) {
                 arrayList.add(blockPos);
-            } else if (PhaseESPSearchHelper4_2.getDirection3028(blockPos) == null) {
+            } else if (BlockPlacer.findSupportSide(blockPos) == null) {
                 this.flag = true;
             }
         }
@@ -534,19 +559,19 @@ public abstract class Delay extends Module {
         }
     }
 
-    public boolean is1332() {
-        return antiCheat.is238() && SearchHelper4_8.is724() && this.setting3.getValue().booleanValue() && this.flag;
+    public boolean shouldUseOffhand() {
+        return antiCheat.isF2b2t() && RotationManager.is724() && this.setting3.getValue().booleanValue() && this.flag;
     }
 
-    public BlockPos getBlockPos1333() {
-        return HoleSnapSearchHelper4.getBlockPos1333();
+    public BlockPos getRoundedBlockPos() {
+        return PlayerUtils.getRoundedBlockPos();
     }
 
-    public int get888() {
+    public int getPriority() {
         return 20;
     }
 
-    public void do1334(boolean z) {
+    public void setPlacementEnabled(boolean z) {
         this.flag2 = z;
     }
 

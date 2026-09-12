@@ -1,17 +1,19 @@
 package me.mioclient.module.movement;
 
+import me.mioclient.util.math.Vec3dUtils;
+
+import me.mioclient.render.RenderUtil;
+import me.mioclient.util.math.Vec3dUtils;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
-import me.mioclient.MatrixStackEvent;
-import me.mioclient.MixinLivingEntityHelper_2;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_2;
+import me.mioclient.event.events.render.MatrixStackEvent;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -25,12 +27,14 @@ public class Spiral extends Module {
 
     public Spiral() {
         super("Spiral", Category.MOVEMENT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.list = new ArrayList(5000);
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
+        if (this.setting == null) {
+            return;
+        }
         this.current = 0;
         this.list.clear();
         Vec3d pos = minecraftClient.player.getPos();
@@ -42,22 +46,22 @@ public class Spiral extends Module {
         }
     }
 
-    public Vec3d getVec3d2994(int i) {
+    public Vec3d getWaypoint(int i) {
         return this.list.get(i);
     }
 
     @Listen
-    public void onEvent(MatrixStackEvent.Inner_3 inner_3) {
+    public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
         for (int max = Math.max(this.current, 1); max < Math.max(this.current, 1) + 2; max++) {
-            SearchHelper_2.searchHelper_2.do561(inner_3.getMatrixStack472(), this.list.get(max - 1), this.list.get(max), Color.white);
+            RenderUtil.INSTANCE.drawDebugLine(inner_3.getMatrixStack(), this.list.get(max - 1), this.list.get(max), Color.white);
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        Vec3d vec3d2994 = getVec3d2994(this.current);
-        minecraftClient.player.setYaw(SearchHelper4_8.getFloatArray2484(vec3d2994)[0]);
-        if (MixinLivingEntityHelper_2.get2583(vec3d2994, minecraftClient.player.getPos()) < Float.intBitsToFloat(1077936128)) {
+    public void onTick(TickEvent tickEvent) {
+        Vec3d vec3d2994 = getWaypoint(this.current);
+        minecraftClient.player.setYaw(RotationManager.getRotationsTo(vec3d2994)[0]);
+        if (Vec3dUtils.getHorizontalDistance(vec3d2994, minecraftClient.player.getPos()) < Float.intBitsToFloat(1077936128)) {
             this.current++;
         }
     }

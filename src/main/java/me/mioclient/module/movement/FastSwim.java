@@ -1,65 +1,72 @@
 package me.mioclient.module.movement;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_7;
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+
+import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.player.MoveEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.SpeedMine;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/FastSwim.class */
 public class FastSwim extends Module {
-    public static SpeedMine speedmine = (SpeedMine) BaritoneHelper_3.baritoneHelper_4.getModule117(SpeedMine.class);
-    public Setting<Boolean> water;
-    public Setting<Float> speed;
-    public Setting<Boolean> lava;
-    public Setting<Float> speed2;
-    public Setting<Boolean> vertical;
-    public Setting<Float> vSpeed;
-    public Setting<Float> glide;
-    public Setting<Boolean> accelerate;
-    public Setting<Float> accelMin;
-    public Setting<Float> accelTime;
+    public static SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    public Setting<Boolean> water = add(new BooleanSetting("Water", false).setVisible());
+    public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 3.0f).requiresSettings(this.water));
+    public Setting<Boolean> lava = add(new BooleanSetting("Lava", true).setVisible());
+    public Setting<Float> speed2 = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 3.0f).requiresSettings(this.lava));
+    public Setting<Boolean> vertical = add(new BooleanSetting("Vertical", false).setVisible());
+    public Setting<Float> vSpeed = add(new NumberSetting<>("VSpeed", 1.0f, 0.1f, 2.0f).requiresSettings(this.vertical));
+    public Setting<Float> glide = add(new NumberSetting<>("Glide", 0.05f, 0.0f, 5.0f));
+    public Setting<Boolean> accelerate = add(new BooleanSetting("Accelerate", false).setVisible());
+    public Setting<Float> accelMin = add(new NumberSetting<>("AccelMin", 1.0f, 0.0f, 5.0f).requiresSettings(this.accelerate));
+    public Setting<Float> accelTime = add(new NumberSetting<>("AccelTime", 1.0f, 0.1f, 10.0f).setSuffix("s").requiresSettings(this.accelerate));
     public long num;
     public boolean flag;
 
     public FastSwim() {
         super("FastSwim", "Makes you move faster while in liquids.", Category.MOVEMENT, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.speed.do2329("WaterSpeed");
-        this.speed2.do2329("LavaSpeed");
+        this.speed.setConfigName("WaterSpeed");
+        this.speed2.setConfigName("LavaSpeed");
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (HoleSnapSearchHelper4.is2006(minecraftClient.player) && this.water.getValue().booleanValue())) && !minecraftClient.player.isFallFlying() && minecraftClient.player.isOnGround()) {
+    public void onTick(TickEvent tickEvent) {
+        if (((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (PlayerUtils.isInWater(minecraftClient.player) && this.water.getValue().booleanValue())) && !minecraftClient.player.isFallFlying() && minecraftClient.player.isOnGround()) {
             minecraftClient.player.horizontalSpeed = 0.0f;
         }
     }
 
     @Listen
-    public void do242(MoveEvent moveEvent) {
-        boolean z = speedmine.isToggled() && ((double) speedmine.get1052()) + speedmine.get1046() >= ((double) speedmine.damage.getValue().floatValue()) - Double.longBitsToDouble(4591870180066957722L) && speedmine.getBlockPos1051() != null && SearchHelper4_7.is2435(speedmine.getBlockPos1051());
-        if (!((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (HoleSnapSearchHelper4.is2006(minecraftClient.player) && this.water.getValue().booleanValue())) || minecraftClient.player.isFallFlying() || !BaritoneHelper_3.holeSnapSearchHelper4_4.getStopwatch2615().is419(500L) || z) {
+    public void onMove(MoveEvent moveEvent) {
+        boolean z = speedmine.isToggled() && ((double) speedmine.getMiningProgress()) + speedmine.getCurrentMiningSpeed() >= ((double) speedmine.damage.getValue().floatValue()) - Double.longBitsToDouble(4591870180066957722L) && speedmine.getBreakingPos() != null && WorldUtils.isBreakable(speedmine.getBreakingPos());
+        if (!((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (PlayerUtils.isInWater(minecraftClient.player) && this.water.getValue().booleanValue())) || minecraftClient.player.isFallFlying() || !ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(500L) || z) {
             this.num = System.currentTimeMillis();
             return;
         }
-        if (!HoleSnapSearchHelper4_3.is2181()) {
+        if (!MovementUtils.is2181()) {
             this.num = System.currentTimeMillis();
         }
         float intBitsToFloat = this.vertical.getValue().booleanValue() ? Float.intBitsToFloat(1039516303) * this.vSpeed.getValue().floatValue() : 0.0f;
         float intBitsToFloat2 = Float.intBitsToFloat(1039516303) * this.accelMin.getValue().floatValue();
         double intBitsToFloat3 = Float.intBitsToFloat(1039516303) * this.speed2.getValue().floatValue();
-        if (this.water.getValue().booleanValue() && HoleSnapSearchHelper4.is2006(minecraftClient.player)) {
+        if (this.water.getValue().booleanValue() && PlayerUtils.isInWater(minecraftClient.player)) {
             intBitsToFloat3 = Float.intBitsToFloat(1039516303) * this.speed.getValue().floatValue();
         }
         if (this.accelerate.getValue().booleanValue() && intBitsToFloat2 < intBitsToFloat3) {
@@ -80,7 +87,7 @@ public class FastSwim extends Module {
                 moveEvent.setY(minecraftClient.player.getVelocity().y);
             }
         }
-        double[] doubleArray2507 = HoleSnapSearchHelper4_3.getDoubleArray2507(moveEvent, intBitsToFloat3);
+        double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, intBitsToFloat3);
         minecraftClient.player.setVelocity(doubleArray2507[0], minecraftClient.player.getVelocity().y, doubleArray2507[1]);
     }
 }

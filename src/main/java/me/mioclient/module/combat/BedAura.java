@@ -1,24 +1,34 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.render.shape.BlockHighlightRenderer;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.combat.bedaura.BedDetonationSelector;
+import me.mioclient.module.combat.bedaura.BedPlacement;
+import me.mioclient.module.combat.bedaura.BedPlacementSelector;
+import me.mioclient.network.PacketSender;
+import me.mioclient.render.shape.BlockHighlightRenderer;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.AntiPhaseSearchHelper4;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.BedAuraData;
-import me.mioclient.BedAuraHelper;
-import me.mioclient.BedAuraSearchHelper46;
-import me.mioclient.FireworksHelper;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_8;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import net.minecraft.block.BedBlock;
@@ -33,60 +43,62 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/BedAura.class */
 public final class BedAura extends Module {
-    public static final AntiCheat antiCheat = (AntiCheat) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiCheat.class);
-    public Setting<Boolean> place;
-    public Setting<Integer> delay2;
-    public Setting<Float> range2;
-    public Setting<Boolean> strictDirection;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> liquidPlace;
-    public Setting<Boolean> airPlace;
-    public Setting<Boolean> break_;
-    public Setting<Integer> delay;
-    public Setting<Float> range;
-    public Setting<Boolean> tPSSync;
-    public Setting<Boolean> instant;
-    public Setting<Boolean> extrapolation;
-    public Setting<Integer> ticks;
-    public Setting<Boolean> refill;
-    public Setting<Integer> slot;
-    public Setting<Boolean> render;
-    public Setting<Color> fill;
-    public Setting<Color> outline;
-    public Setting<Boolean> fade;
-    public Setting<Float> fadeTime;
-    public Setting<Boolean> targeting;
-    public Setting<Float> minDamage;
-    public Setting<Float> maxSelfDamage;
-    public Setting<Boolean> antiSucide;
-    public final BedAuraHelper bedAuraHelper;
-    public final BedAuraSearchHelper46 bedAuraSearchHelper46;
+    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    public Setting<Boolean> place = add(new BooleanSetting("Place", true).setVisible());
+    public Setting<Integer> delay2 = add(new NumberSetting<>("Delay", 1, 1, 20).requiresSettings(this.place));
+    public Setting<Float> range2 = add(new NumberSetting<>("Range", 4.0f, 0.1f, 6.0f).requiresSettings(this.place));
+    public Setting<Boolean> strictDirection = add(new BooleanSetting("StrictDirection", false).requiresSettings(this.place));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true).requiresSettings(this.place));
+    public Setting<Boolean> liquidPlace = add(new BooleanSetting("LiquidPlace", false).requiresSettings(this.place));
+    public Setting<Boolean> airPlace = add(new BooleanSetting("AirPlace", false).requiresSettings(this.place));
+    public Setting<Boolean> break_ = add(new BooleanSetting("Break", true).setVisible());
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 1, 1, 20).requiresSettings(this.break_));
+    public Setting<Float> range = add(new NumberSetting<>("Range", 4.0f, 0.1f, 6.0f).requiresSettings(this.break_));
+    public Setting<Boolean> tPSSync = add(new BooleanSetting("TPSSync", false).requiresSettings(this.break_));
+    public Setting<Boolean> instant = add(new BooleanSetting("Instant", true).requiresSettings(this.break_));
+    public Setting<Boolean> extrapolation = add(new BooleanSetting("Extrapolation", false).setVisible());
+    public Setting<Integer> ticks = add(new NumberSetting<>("Ticks", 3, 1, 8).requiresSettings(this.extrapolation));
+    public Setting<Boolean> refill = add(new BooleanSetting("Refill", false).setVisible());
+    public Setting<Integer> slot = add(new NumberSetting<>("Slot", 1, 1, 9).requiresSettings(this.refill));
+    public Setting<Boolean> render = add(new BooleanSetting("Render", true).setVisible());
+    public Setting<Color> fill = add(new ColorSetting("Fill", new Color(1136499199, true)).setThemeSync(true).requiresSettings(this.render));
+    public Setting<Color> outline = add(new ColorSetting("Outline", new Color(-910321153, true)).setThemeSync(true).requiresSettings(this.render));
+    public Setting<Boolean> fade = add(new BooleanSetting("Fade", true).setVisible().requiresSettings(this.render));
+    public Setting<Float> fadeTime = add(new NumberSetting<>("FadeTime", 0.5f, 0.1f, 1.0f).setSuffix("s").requiresSettings(this.render, this.fade));
+    public Setting<Boolean> targeting = add(new BooleanSetting("Targeting", false).setDependent());
+    public Setting<Float> minDamage = add(new NumberSetting<>("MinDamage", 6.0f, 0.0f, 12.0f).requiresSettings(this.targeting));
+    public Setting<Float> maxSelfDamage = add(new NumberSetting<>("MaxSelfDamage", 10.0f, 0.0f, 20.0f).requiresSettings(this.targeting));
+    public Setting<Boolean> antiSucide = add(new BooleanSetting("AntiSucide", true).requiresSettings(this.targeting));
+    public final BedPlacementSelector bedAuraHelper;
+    public final BedDetonationSelector bedAuraSearchHelper46;
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public PlayerEntity playerEntity;
-    public BedAuraData bedAuraData;
+    public BedPlacement bedAuraData;
     public BlockPos blockPos;
 
     public BedAura() {
-        super("BedAura", new ArgumentTypeHelper().getArgumentTypeHelper2919(String.valueOf(Formatting.RED)).getString2921("Blows your enemies up using beds. \n\u0001Doesn't work in the overworld."), Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.bedAuraHelper = new BedAuraHelper(this);
-        this.bedAuraSearchHelper46 = new BedAuraSearchHelper46(this);
+        super("BedAura", new StringTemplate().arg(String.valueOf(Formatting.RED)).format("Blows your enemies up using beds. \n\u0001Doesn't work in the overworld."), Category.COMBAT, new String[0]);
+        this.bedAuraHelper = new BedPlacementSelector(this);
+        this.bedAuraSearchHelper46 = new BedDetonationSelector(this);
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
-        BaritoneHelper_3.antiPhaseSearchHelper4.register(new AntiPhaseSearchHelper4.Record(this, this.fill, this.outline, () -> {
+        ClientServices.antiPhaseBlockHelper.register(new BlockHighlightRenderer.Record(this, this.fill, this.outline, () -> {
             return Float.valueOf(Float.intBitsToFloat(1065353216));
         }, this.fadeTime, () -> {
             return false;
         }, this.fade, 1000));
-        this.range2.do2329("PlaceRange");
-        this.range.do2329("BreakRange");
-        this.delay2.do2329("PlaceDelay");
-        this.delay.do2329("BreakDelay");
+        this.range2.setConfigName("PlaceRange");
+        this.range.setConfigName("BreakRange");
+        this.delay2.setConfigName("PlaceDelay");
+        this.delay.setConfigName("BreakDelay");
     }
 
     @Override // me.mioclient.module.Module
@@ -98,35 +110,35 @@ public final class BedAura extends Module {
     }
 
     @Listen
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
-        this.playerEntity = getPlayerEntity886();
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
+        this.playerEntity = getTargetPlayer();
         if (this.playerEntity == null) {
             this.bedAuraData = null;
         } else {
-            this.bedAuraData = this.bedAuraHelper.getObject970(this.playerEntity);
-            this.blockPos = this.bedAuraSearchHelper46.getObject970(this.playerEntity);
+            this.bedAuraData = this.bedAuraHelper.selectTarget(this.playerEntity);
+            this.blockPos = this.bedAuraSearchHelper46.selectTarget(this.playerEntity);
         }
         if (this.bedAuraData == null) {
             return;
         }
-        do1424();
+        refillBedSlot();
         if (this.break_.getValue().booleanValue()) {
-            if (is1427(this.stopwatch2, this.delay)) {
-                do1423(this.blockPos);
+            if (isDelayElapsed(this.stopwatch2, this.delay)) {
+                detonateBed(this.blockPos);
             }
         }
         if (this.place.getValue().booleanValue()) {
-            if (is1427(this.stopwatch, this.delay2)) {
-                do1421(this.bedAuraData);
+            if (isDelayElapsed(this.stopwatch, this.delay2)) {
+                placeBed(this.bedAuraData);
             }
         }
     }
 
-    public PlayerEntity getPlayerEntity886() {
+    public PlayerEntity getTargetPlayer() {
         PlayerEntity playerEntity = null;
         float intBitsToFloat = Float.intBitsToFloat(1203982208);
         for (PlayerEntity playerEntity2 : minecraftClient.world.getPlayers()) {
-            if (playerEntity2 != minecraftClient.player && !BaritoneHelper_3.searchHelper4_14.is520(playerEntity2)) {
+            if (playerEntity2 != minecraftClient.player && !ClientServices.socialManager.isFriendEntity(playerEntity2)) {
                 if (intBitsToFloat > minecraftClient.player.getEyePos().distanceTo(playerEntity2.getPos())) {
                     playerEntity = playerEntity2;
                     intBitsToFloat = (float) minecraftClient.player.getEyePos().distanceTo(playerEntity2.getPos());
@@ -136,41 +148,41 @@ public final class BedAura extends Module {
         return playerEntity;
     }
 
-    public void do1421(BedAuraData bedAuraData) {
-        int i = FireworksHelper.get448(itemStack -> {
+    public void placeBed(BedPlacement bedAuraData) {
+        int i = InventoryUtils.findInHotbar(itemStack -> {
             return itemStack.getItem() instanceof BedItem;
         });
         int i2 = minecraftClient.player.getInventory().selectedSlot;
         if (i == -1) {
             return;
         }
-        FireworksHelper.do438(i);
+        InventoryUtils.do438(i);
         do1422(bedAuraData);
-        FireworksHelper.do438(i2);
+        InventoryUtils.do438(i2);
     }
 
-    public void do1422(BedAuraData bedAuraData) {
+    public void do1422(BedPlacement bedAuraData) {
         float[] floatArray2486;
-        if (bedAuraData != null && PhaseESPSearchHelper4_2.is3041(bedAuraData.getBlockPos153(), true)) {
+        if (bedAuraData != null && BlockPlacer.isSpaceFree(bedAuraData.getBedPos(), true)) {
             if (this.rotate.getValue().booleanValue()) {
-                floatArray2486 = SearchHelper4_8.getFloatArray2484(bedAuraData.getBlockHitResult157().getPos());
+                floatArray2486 = RotationManager.getRotationsTo(bedAuraData.getHitResult().getPos());
             } else {
-                floatArray2486 = SearchHelper4_8.getFloatArray2486(bedAuraData.getBlockPos153().toCenterPos(), bedAuraData.getBlockPos154().toCenterPos());
+                floatArray2486 = RotationManager.getRotations(bedAuraData.getBedPos().toCenterPos(), bedAuraData.getHeadPos().toCenterPos());
             }
-            BaritoneHelper_3.searchHelper4_8.do2477(floatArray2486, 500);
-            BlockHitResult blockHitResult157 = bedAuraData.getBlockHitResult157();
-            BaritoneHelper_3.antiPhaseSearchHelper4_2.do2227(() -> {
-                AutoSignSearchHelper4.do2556(Hand.MAIN_HAND, blockHitResult157);
+            ClientServices.RotationManager.requestRotations(floatArray2486, 500);
+            BlockHitResult blockHitResult157 = bedAuraData.getHitResult();
+            ClientServices.antiPhaseHelper.withSneakPress(() -> {
+                PacketSender.sendInteractBlock(Hand.MAIN_HAND, blockHitResult157);
             });
             minecraftClient.player.swingHand(Hand.MAIN_HAND);
-            Box enclosing = Box.enclosing(bedAuraData.getBlockPos153(), bedAuraData.getBlockPos154());
+            Box enclosing = Box.enclosing(bedAuraData.getBedPos(), bedAuraData.getHeadPos());
             Box expand = enclosing.withMaxY(enclosing.minY + Double.longBitsToDouble(4603241769126068224L)).expand(Double.longBitsToDouble(4566758108763783168L));
             if (this.render.getValue().booleanValue()) {
-                BaritoneHelper_3.antiPhaseSearchHelper4.do2133(this, expand);
+                ClientServices.antiPhaseBlockHelper.addHighlight(this, expand);
             }
             if (this.instant.getValue().booleanValue()) {
-                BaritoneHelper_3.antiPhaseSearchHelper4_2.do2226(() -> {
-                    AutoSignSearchHelper4.do2556(Hand.MAIN_HAND, new BlockHitResult(bedAuraData.getBlockPos153().toCenterPos(), getDirection1425(bedAuraData.getBlockPos153(), Direction.UP), bedAuraData.getBlockPos153(), false));
+                ClientServices.antiPhaseHelper.withSneakRelease(() -> {
+                    PacketSender.sendInteractBlock(Hand.MAIN_HAND, new BlockHitResult(bedAuraData.getBedPos().toCenterPos(), getInteractDirection(bedAuraData.getBedPos(), Direction.UP), bedAuraData.getBedPos(), false));
                     minecraftClient.player.swingHand(Hand.MAIN_HAND);
                 });
             }
@@ -178,12 +190,12 @@ public final class BedAura extends Module {
         }
     }
 
-    public void do1423(BlockPos blockPos) {
+    public void detonateBed(BlockPos blockPos) {
         if (blockPos == null) {
             return;
         }
-        BlockHitResult blockHitResult = new BlockHitResult(blockPos.toCenterPos(), getDirection1425(blockPos, Direction.UP), blockPos, false);
-        BaritoneHelper_3.antiPhaseSearchHelper4_2.do2226(() -> {
+        BlockHitResult blockHitResult = new BlockHitResult(blockPos.toCenterPos(), getInteractDirection(blockPos, Direction.UP), blockPos, false);
+        ClientServices.antiPhaseHelper.withSneakRelease(() -> {
             minecraftClient.interactionManager.interactBlock(minecraftClient.player, Hand.MAIN_HAND, blockHitResult);
             minecraftClient.player.swingHand(Hand.MAIN_HAND);
         });
@@ -194,49 +206,49 @@ public final class BedAura extends Module {
             }
             BlockPos offset = blockPos.offset((Direction) it.next());
             if (minecraftClient.world.getBlockState(offset).getBlock() instanceof BedBlock) {
-                BaritoneHelper_3.stashFinderSearchHelper4.do1549(offset);
+                ClientServices.stashFinderHelper.breakBlockWithSnapshot(offset);
                 break;
             }
         }
-        BaritoneHelper_3.stashFinderSearchHelper4.do1549(blockPos);
+        ClientServices.stashFinderHelper.breakBlockWithSnapshot(blockPos);
         this.stopwatch2.reset();
     }
 
-    public void do1424() {
+    public void refillBedSlot() {
         int i;
         if (this.refill.getValue().booleanValue()) {
             int intValue = this.slot.getValue().intValue() - 1;
-            if ((minecraftClient.player.getInventory().getStack(intValue).getItem() instanceof BedItem) || (i = FireworksHelper.get445(itemStack -> {
+            if ((minecraftClient.player.getInventory().getStack(intValue).getItem() instanceof BedItem) || (i = InventoryUtils.findInInventory(itemStack -> {
                 return itemStack.getItem() instanceof BedItem;
             }, true)) == -1) {
                 return;
             }
-            FireworksHelper.do440(i, FireworksHelper.get453(intValue));
+            InventoryUtils.swapSlots(i, InventoryUtils.toNetworkSlot(intValue));
         }
     }
 
-    public Direction getDirection1425(BlockPos blockPos, Direction direction) {
-        List<Direction> list3031 = PhaseESPSearchHelper4_2.getList3031(blockPos);
+    public Direction getInteractDirection(BlockPos blockPos, Direction direction) {
+        List<Direction> list3031 = BlockPlacer.getInteractableSides(blockPos);
         if (!list3031.isEmpty()) {
             list3031.getFirst();
         }
         return direction;
     }
 
-    public boolean is1426(BlockPos blockPos, BedPart bedPart) {
+    public boolean isBedPartAt(BlockPos blockPos, BedPart bedPart) {
         BlockState blockState = minecraftClient.world.getBlockState(blockPos);
         return (blockState.getBlock() instanceof BedBlock) && blockState.get(BedBlock.PART) == bedPart;
     }
 
-    public boolean is1427(Stopwatch stopwatch, Setting<Integer> setting) {
-        return stopwatch.is419((long) (((float) (50 * setting.getValue().intValue())) * (this.tPSSync.getValue().booleanValue() ? BaritoneHelper_3.holeSnapSearchHelper4_4.get2621() : Float.intBitsToFloat(1065353216))));
+    public boolean isDelayElapsed(Stopwatch stopwatch, Setting<Integer> setting) {
+        return stopwatch.hasElapsedMs((long) (((float) (50 * setting.getValue().intValue())) * (this.tPSSync.getValue().booleanValue() ? ClientServices.holeSnapRenderHelper.getTickRateFactor() : Float.intBitsToFloat(1065353216))));
     }
 
-    public Box getBox1428(LivingEntity livingEntity) {
+    public Box getPredictedBox(LivingEntity livingEntity) {
         if (livingEntity instanceof PlayerEntity) {
             PlayerEntity playerEntity = (PlayerEntity) livingEntity;
             if (this.extrapolation.getValue().booleanValue()) {
-                return BaritoneHelper_3.mainhandHelper_2.getBox1109(playerEntity, this.ticks.getValue().intValue());
+                return ClientServices.mainhandHelper.getPredictedBox(playerEntity, this.ticks.getValue().intValue());
             }
         }
         return livingEntity.getBoundingBox();

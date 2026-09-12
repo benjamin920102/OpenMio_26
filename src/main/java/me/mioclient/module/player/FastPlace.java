@@ -1,11 +1,10 @@
 package me.mioclient.module.player;
 
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.event.TickPostEvent;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.module.Module;
 import net.minecraft.component.DataComponentTypes;
@@ -14,26 +13,27 @@ import net.minecraft.item.ExperienceBottleItem;
 import net.minecraft.item.FireworkRocketItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/FastPlace.class */
 public class FastPlace extends Module {
-    public Setting<Integer> delay;
-    public Setting<Boolean> exp;
-    public Setting<Boolean> rockets;
-    public Setting<Boolean> blocks;
-    public Setting<Boolean> enderChests;
-    public Setting<Boolean> all;
-    public Setting<Boolean> autoPlace;
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 2, 0, 4));
+    public Setting<Boolean> exp = add(new BooleanSetting("Exp", true));
+    public Setting<Boolean> rockets = add(new BooleanSetting("Rockets", false));
+    public Setting<Boolean> blocks = add(new BooleanSetting("Blocks", false));
+    public Setting<Boolean> enderChests = add(new BooleanSetting("EnderChests", true));
+    public Setting<Boolean> all = add(new BooleanSetting("All", false));
+    public Setting<Boolean> autoPlace = add(new BooleanSetting("AutoPlace", false));
 
     public FastPlace() {
         super("FastPlace", "Removes the right-click delay for some items.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         setDrawn(false);
     }
 
     @Listen
-    public void do32(TickPostEvent tickPostEvent) {
+    public void onTickPost(TickPostEvent tickPostEvent) {
         DuckMinecraftClient duckMinecraftClient = (DuckMinecraftClient)(minecraftClient);
         if (!minecraftClient.player.getMainHandStack().contains(DataComponentTypes.FOOD) && this.autoPlace.getValue().booleanValue() && duckMinecraftClient.getItemUseCooldown() == 0) {
             duckMinecraftClient.interact();
@@ -41,8 +41,8 @@ public class FastPlace extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (is1469()) {
+    public void onTick(TickEvent tickEvent) {
+        if (isNotInGame()) {
             return;
         }
         Item item = minecraftClient.player.getMainHandStack().getItem();

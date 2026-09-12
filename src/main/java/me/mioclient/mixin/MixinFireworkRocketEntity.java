@@ -1,7 +1,12 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.PingSpoofHelper;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.math.MathUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.math.MathUtils;
+
 import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.movement.Fireworks;
 import net.minecraft.client.MinecraftClient;
@@ -22,7 +27,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({FireworkRocketEntity.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinFireworkRocketEntity.class */
 public abstract class MixinFireworkRocketEntity extends Entity {
-    private static Fireworks fireworks = (Fireworks) BaritoneHelper_3.baritoneHelper_4.getModule117(Fireworks.class);
+    private static Fireworks fireworks;
+
+    private static Fireworks getFireworks() {
+
+        if (fireworks == null && ClientServices.moduleInjector != null) {
+
+            try { fireworks = (Fireworks) ClientServices.moduleInjector.getModule(Fireworks.class); } catch (Exception e) {}
+
+        }
+
+        return fireworks;
+
+    }
 
     @Shadow
     @Nullable
@@ -44,17 +61,21 @@ public abstract class MixinFireworkRocketEntity extends Entity {
 
     @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;setVelocity(Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.AFTER)})
     private void tick(CallbackInfo callbackInfo) {
-        if (fireworks.flag3) {
+        Fireworks fireworks_lcl = getFireworks();
+
+        if (fireworks_lcl == null) return;
+
+        if (fireworks_lcl.flag3) {
             this.age = 1;
-            fireworks.flag3 = false;
+            fireworks_lcl.flag3 = false;
         }
-        float f = fireworks.get142(true);
+        float f = fireworks_lcl.getBoostFactor(true);
         if (this.field_7616 == MinecraftClient.getInstance().player && f != 0.0f) {
-            float f2 = PingSpoofHelper.get373(this.field_7616.getYaw());
+            float f2 = MathUtils.getRadians(this.field_7616.getYaw());
             if (f > 0.5d) {
                 f = MathHelper.clamp(0.2f + (0.3f * this.age), 0.0f, f);
             }
-            if (fireworks.get143() > 0) {
+            if (fireworks_lcl.getRemainingTicks() > 0) {
                 this.field_7616.addVelocity(this.field_7616.getRotationVec(1.0f).multiply(f));
             } else {
                 this.field_7616.addVelocity(MathHelper.sin(f2) * (-f), 0.0d, MathHelper.cos(f2) * f);

@@ -10,7 +10,7 @@
 - MixinExtras 0.4.1（include + AP）
 - Discord Rich Presence 传递依赖：`net.lenni0451:Reflect:1.4.0`、`com.kohlschutter.junixsocket:junixsocket-core:2.10.1`
 - `src/main/resources/mio.accesswidener`（**named** 命名空间，62 条，开放 MC 私有字段/构造器供反混淆代码直接访问）
-- 入口：`nick.Loader`(main) / `nick.Plugin`(preLaunch)；mixins：`mio.mixins.json`
+- 入口：`nick.Loader`(main) / `nick.PreLaunchPlugin`(preLaunch)；mixins：`mio.mixins.json`
 
 ## 源码来源（1347 个 .java）—— 全部为真实反编译逻辑，**0 空桩**
 | 来源 | 数量 | 说明 |

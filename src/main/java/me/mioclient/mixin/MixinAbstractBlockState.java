@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MixinAbstractBlockState {
     @Inject(method = {"getAmbientOcclusionLightLevel"}, at = {@At("HEAD")}, cancellable = true)
     private void getAmbientOcclusionLightLevelHook(BlockView blockView, BlockPos blockPos, CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (Xray.getXray3073().isToggled()) {
+        if (Xray.getInstance().isToggled()) {
             callbackInfoReturnable.cancel();
             callbackInfoReturnable.setReturnValue(Float.valueOf(1.0f));
         }

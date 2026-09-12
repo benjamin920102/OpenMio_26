@@ -1,8 +1,10 @@
 package me.mioclient.mixin;
 
+import me.mioclient.util.anim.AnimationProgress;
+
 import java.util.function.Supplier;
-import me.mioclient.SignatureHelper;
-import me.mioclient.feature.Progress;
+import me.mioclient.ducks.DuckChatHudLineVisible;
+import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.misc.BetterChat;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
@@ -20,10 +22,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /* compiled from: 0.java */
 @Mixin({ChatHudLine.Visible.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinChatHudLine.class */
-public class MixinChatHudLine implements SignatureHelper {
+public class MixinChatHudLine implements DuckChatHudLineVisible {
 
     @Unique
-    private Progress progress = null;
+    private AnimationProgress progress = null;
 
     @Unique
     private MessageSignatureData signature;
@@ -38,46 +40,46 @@ public class MixinChatHudLine implements SignatureHelper {
 
     @Inject(method = {"<init>"}, at = {@At("RETURN")})
     private void onInit(int i, OrderedText orderedText, MessageIndicator messageIndicator, boolean z, CallbackInfo callbackInfo) {
-        getProgress().do2140(false);
+        getProgress().setToggledImmediate(false);
         this.mio$addTime = System.currentTimeMillis();
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public MessageSignatureData getSignature() {
         return this.signature;
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public void setSignature(MessageSignatureData messageSignatureData) {
         this.signature = messageSignatureData;
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public OrderedText getContent() {
         return this.comp_896;
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public void setContent(OrderedText orderedText) {
         this.comp_896 = orderedText;
     }
 
-    @Override // me.mioclient.SignatureHelper
-    public Progress getProgress() {
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
+    public AnimationProgress getProgress() {
         if (this.progress == null) {
-            this.progress = new Progress((Supplier<Float>) () -> {
+            this.progress = new AnimationProgress((Supplier<Float>) () -> {
                 return Float.valueOf(BetterChat.getBetterChat678().speed.getValue().floatValue() * 2.0f);
             }, true);
         }
         return this.progress;
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public long mio$getAddTime() {
         return this.mio$addTime;
     }
 
-    @Override // me.mioclient.SignatureHelper
+    @Override // me.mioclient.ducks.DuckChatHudLineVisible
     public void mio$setAddTime(long j) {
         this.mio$addTime = j;
     }

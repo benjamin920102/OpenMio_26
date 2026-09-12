@@ -1,14 +1,20 @@
 package me.mioclient.module.player;
 
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.util.Iterator;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.client.gui.screen.ingame.SmithingScreen;
 import net.minecraft.item.ArmorItem;
@@ -21,13 +27,17 @@ import net.minecraft.recipe.Ingredient;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import me.mioclient.module.Armor;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoUpgrade.class */
 public class AutoUpgrade extends Module {
-    public Setting<AutoUpgradeMode> items;
-    public Setting<Integer> delay;
-    public Setting<Boolean> safe;
+    public Setting<AutoUpgradeMode> items = add(new EnumSetting<>("Items", AutoUpgradeMode.ANY));
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 100, 0, 1000).setSuffix("ms"));
+    public Setting<Boolean> safe = add(new BooleanSetting("Safe", true));
     public final Stopwatch stopwatch;
     public static final int num4 = 3;
     public static final int num3 = 2;
@@ -37,7 +47,7 @@ public class AutoUpgrade extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoUpgrade$AutoUpgradeMode.class */
-    public enum AutoUpgradeMode implements EnumSettingHelper {
+    public enum AutoUpgradeMode implements NamedValue {
         ANY("Any"),
         TOOLS("Tools"),
         ARMOR("Armor");
@@ -48,7 +58,7 @@ public class AutoUpgrade extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -56,7 +66,6 @@ public class AutoUpgrade extends Module {
 
     public AutoUpgrade() {
         super("AutoUpgrade", "Automatically upgrades diamond items to netherite.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
     }
 
@@ -64,8 +73,8 @@ public class AutoUpgrade extends Module {
     public void onTickPost(TickPostEvent tickPostEvent) {
         ScreenHandler screenHandler = minecraftClient.player.currentScreenHandler;
         if (minecraftClient.currentScreen instanceof SmithingScreen) {
-            if (this.stopwatch.is419(this.delay.getValue().intValue())) {
-                if (get731(screenHandler, item) > 1 || !this.safe.getValue().booleanValue()) {
+            if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
+                if (countItemInContainer(screenHandler, item) > 1 || !this.safe.getValue().booleanValue()) {
                     if (!screenHandler.getSlot(3).getStack().isEmpty()) {
                         minecraftClient.interactionManager.clickSlot(screenHandler.syncId, 3, 0, SlotActionType.QUICK_MOVE, minecraftClient.player);
                         this.stopwatch.reset();
@@ -75,7 +84,7 @@ public class AutoUpgrade extends Module {
                     if (stack.isEmpty() || (stack.isOf(item) && stack.getCount() == 1)) {
                         for (int i = 4; i < 40; i++) {
                             if (screenHandler.getSlot(i).getStack().isOf(item)) {
-                                FireworksHelper.do441(i, 0);
+                                InventoryUtils.swapStacks(i, 0);
                                 this.stopwatch.reset();
                                 return;
                             }
@@ -83,18 +92,18 @@ public class AutoUpgrade extends Module {
                         return;
                     }
                     if (screenHandler.getSlot(1).getStack().isEmpty()) {
-                        int i2 = get732(screenHandler);
+                        int i2 = findUpgradeableSlot(screenHandler);
                         if (i2 == -1) {
                             return;
                         }
-                        FireworksHelper.do441(i2, 1);
+                        InventoryUtils.swapStacks(i2, 1);
                         this.stopwatch.reset();
                         return;
                     }
                     if (screenHandler.getSlot(2).getStack().isEmpty()) {
                         for (int i3 = 4; i3 < 40; i3++) {
                             if (screenHandler.getSlot(i3).getStack().isOf(Items.NETHERITE_INGOT)) {
-                                FireworksHelper.do441(i3, 2);
+                                InventoryUtils.swapStacks(i3, 2);
                                 this.stopwatch.reset();
                                 return;
                             }
@@ -105,7 +114,7 @@ public class AutoUpgrade extends Module {
         }
     }
 
-    public int get731(ScreenHandler screenHandler, Item item2) {
+    public int countItemInContainer(ScreenHandler screenHandler, Item item2) {
         int i = 0;
         Iterator it = screenHandler.slots.iterator();
         while (it.hasNext()) {
@@ -117,7 +126,7 @@ public class AutoUpgrade extends Module {
         return i;
     }
 
-    public int get732(ScreenHandler screenHandler) {
+    public int findUpgradeableSlot(ScreenHandler screenHandler) {
         boolean z = this.items.getValue() == AutoUpgradeMode.TOOLS;
         boolean z2 = this.items.getValue() == AutoUpgradeMode.ARMOR;
         for (int i = 4; i < 40; i++) {
@@ -125,7 +134,7 @@ public class AutoUpgrade extends Module {
             if (!z) {
                 ArmorItem item2 = (stack.getItem()) instanceof ArmorItem ? (ArmorItem) (stack.getItem()) : null;
                 if (item2 instanceof ArmorItem) {
-                    if (is733((Ingredient) ((ArmorMaterial) item2.getMaterial().value()).repairIngredient().get())) {
+                    if (isDiamondIngredient((Ingredient) ((ArmorMaterial) item2.getMaterial().value()).repairIngredient().get())) {
                         return i;
                     }
                 }
@@ -133,7 +142,7 @@ public class AutoUpgrade extends Module {
             if (!z2) {
                 ToolItem item3 = (stack.getItem()) instanceof ToolItem ? (ToolItem) (stack.getItem()) : null;
                 if (item3 instanceof ToolItem) {
-                    if (is733(item3.getMaterial().getRepairIngredient())) {
+                    if (isDiamondIngredient(item3.getMaterial().getRepairIngredient())) {
                         return i;
                     }
                 } else {
@@ -144,7 +153,7 @@ public class AutoUpgrade extends Module {
         return -1;
     }
 
-    public boolean is733(Ingredient ingredient) {
+    public boolean isDiamondIngredient(Ingredient ingredient) {
         for (ItemStack itemStack : ingredient.getMatchingStacks()) {
             if (itemStack.isOf(Items.DIAMOND)) {
                 return true;

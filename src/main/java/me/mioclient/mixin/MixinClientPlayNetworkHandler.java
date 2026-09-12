@@ -1,10 +1,13 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.ChunkDeltaUpdateEvent;
-import me.mioclient.event.ExplosionVelocityEvent;
-import me.mioclient.event.UpdateSelectedSlotEvent;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.event.events.network.ChunkDeltaUpdateEvent;
+import me.mioclient.event.events.network.ExplosionVelocityEvent;
+import me.mioclient.event.events.network.UpdateSelectedSlotEvent;
 import me.mioclient.mixin.ducks.DuckExplosionS2CPacket;
 import me.mioclient.module.movement.Velocity;
 import me.mioclient.module.render.NoRender;
@@ -25,33 +28,65 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({ClientPlayNetworkHandler.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientPlayNetworkHandler.class */
 public class MixinClientPlayNetworkHandler {
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
-    private static Velocity velocity = (Velocity) BaritoneHelper_3.baritoneHelper_4.getModule117(Velocity.class);
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
+    private static Velocity velocity;
+
+    private static Velocity getVelocity() {
+
+        if (velocity == null && ClientServices.moduleInjector != null) {
+
+            try { velocity = (Velocity) ClientServices.moduleInjector.getModule(Velocity.class); } catch (Exception e) {}
+
+        }
+
+        return velocity;
+
+    }
 
     @Inject(method = {"onExplosion"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V", shift = At.Shift.AFTER)}, cancellable = true)
     private void onExplosionVelocity(ExplosionS2CPacket explosionS2CPacket, CallbackInfo callbackInfo) {
         ExplosionVelocityEvent explosionVelocityEvent = new ExplosionVelocityEvent(explosionS2CPacket);
-        SearchHelper_4.baritoneHelper.getObject1794(explosionVelocityEvent);
-        if (explosionVelocityEvent.is2403()) {
+        ClientAccessor.eventBus.fireEvent(explosionVelocityEvent);
+        if (explosionVelocityEvent.isCancelled()) {
             callbackInfo.cancel();
             return;
         }
         DuckExplosionS2CPacket duckExplosionS2CPacket = (DuckExplosionS2CPacket) explosionS2CPacket;
-        duckExplosionS2CPacket.setX(explosionVelocityEvent.get767());
-        duckExplosionS2CPacket.setY(explosionVelocityEvent.get769());
-        duckExplosionS2CPacket.setZ(explosionVelocityEvent.get771());
+        duckExplosionS2CPacket.setX(explosionVelocityEvent.getPlayerVelocityX());
+        duckExplosionS2CPacket.setY(explosionVelocityEvent.getPlayerVelocityY());
+        duckExplosionS2CPacket.setZ(explosionVelocityEvent.getPlayerVelocityZ());
     }
 
     @Inject(method = {"onEntityVelocityUpdate"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V", shift = At.Shift.AFTER)}, cancellable = true)
     private void onEntityVelocityUpdate(EntityVelocityUpdateS2CPacket entityVelocityUpdateS2CPacket, CallbackInfo callbackInfo) {
-        if (velocity.is1893() && entityVelocityUpdateS2CPacket.getEntityId() == MinecraftClient.getInstance().player.getId()) {
+        Velocity velocity_lcl = getVelocity();
+
+        if (velocity_lcl == null) return;
+
+        if (velocity_lcl.isPacketVelocity() && entityVelocityUpdateS2CPacket.getEntityId() == MinecraftClient.getInstance().player.getId()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"onEntitySpawn"}, at = {@At("HEAD")}, cancellable = true)
     private void onEntitySpawn(EntitySpawnS2CPacket entitySpawnS2CPacket, CallbackInfo callbackInfo) {
-        if (norender.isToggled() && entitySpawnS2CPacket != null && entitySpawnS2CPacket.getEntityType() != null && norender.is1993(entitySpawnS2CPacket.getEntityType()) && norender.removal.getValue() == NoRender.NoRenderMode.FULL) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled() && entitySpawnS2CPacket != null && entitySpawnS2CPacket.getEntityType() != null && norender_lcl.isEntityTypeHidden(entitySpawnS2CPacket.getEntityType()) && norender_lcl.removal.getValue() == NoRender.NoRenderMode.FULL) {
             callbackInfo.cancel();
         }
     }
@@ -59,19 +94,19 @@ public class MixinClientPlayNetworkHandler {
     @Inject(method = {"onUpdateSelectedSlot"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V", shift = At.Shift.AFTER)}, cancellable = true)
     private void onUpdateSelectedSlot(UpdateSelectedSlotS2CPacket updateSelectedSlotS2CPacket, CallbackInfo callbackInfo) {
         UpdateSelectedSlotEvent updateSelectedSlotEvent = new UpdateSelectedSlotEvent(updateSelectedSlotS2CPacket.getSlot());
-        SearchHelper_4.baritoneHelper.getObject1794(updateSelectedSlotEvent);
-        if (updateSelectedSlotEvent.is2403()) {
+        ClientAccessor.eventBus.fireEvent(updateSelectedSlotEvent);
+        if (updateSelectedSlotEvent.isCancelled()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"onBlockUpdate"}, at = {@At("TAIL")})
     private void onBlockUpdateHook(BlockUpdateS2CPacket blockUpdateS2CPacket, CallbackInfo callbackInfo) {
-        SearchHelper_4.baritoneHelper.getObject1794(new ChunkDeltaUpdateEvent());
+        ClientAccessor.eventBus.fireEvent(new ChunkDeltaUpdateEvent());
     }
 
     @Inject(method = {"onChunkDeltaUpdate"}, at = {@At("TAIL")})
     private void onChunkDeltaUpdateHook(ChunkDeltaUpdateS2CPacket chunkDeltaUpdateS2CPacket, CallbackInfo callbackInfo) {
-        SearchHelper_4.baritoneHelper.getObject1794(new ChunkDeltaUpdateEvent());
+        ClientAccessor.eventBus.fireEvent(new ChunkDeltaUpdateEvent());
     }
 }

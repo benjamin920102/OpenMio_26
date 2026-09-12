@@ -1,14 +1,21 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.module.combat.anvilaura.AnvilAuraMode;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.combat.anvilaura.AnvilTarget;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.PlayerUtils;
+
 import java.util.ArrayList;
 import java.util.List;
-import me.mioclient.AnvilAuraData;
-import me.mioclient.AnvilAuraMode;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FireworksHelper;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
+import me.mioclient.module.combat.anvilaura.AnvilAuraMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Delay;
@@ -18,61 +25,62 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AnvilAura.class */
 public class AnvilAura extends Delay {
     public static final BlockPos.Mutable mutable = new BlockPos.Mutable();
-    public Setting<Float> targetRange;
-    public Setting<Boolean> ignoreNakeds;
+    public Setting<Float> targetRange = add(new NumberSetting<>("TargetRange", 4.0f, 1.0f, 6.0f).setSuffix("m"));
+    public Setting<Boolean> ignoreNakeds = add(new BooleanSetting("IgnoreNakeds", false));
     public boolean flag;
 
     public AnvilAura() {
         super("AnvilAura", "Drops anvils on your enemies.", Category.COMBAT, "autoanvil");
-        PhaseESPHelper.do1351(this);
         unregister((Setting<?>) this.setting10);
     }
 
     @Override // me.mioclient.module.Delay
-    public List<BlockPos> getList876() {
+    public List<BlockPos> getPlacePositions() {
         ArrayList arrayList = new ArrayList();
         this.flag = false;
-        AnvilAuraData anvilAuraData1909 = getAnvilAuraData1909();
+        AnvilTarget anvilAuraData1909 = getAnvilTarget();
         if (anvilAuraData1909 == null) {
             return arrayList;
         }
-        if (anvilAuraData1909.getAnvilAuraMode2248() == AnvilAuraMode.CAGE) {
+        if (anvilAuraData1909.getAuraMode() == AnvilAuraMode.CAGE) {
             for (int i = 0; i < 3; i++) {
-                arrayList.add(HoleSnapSearchHelper4.getBlockPos2008(anvilAuraData1909.getPlayerEntity2247()).offset(anvilAuraData1909.getDirection842()).up(i));
+                arrayList.add(PlayerUtils.getRoundedBlockPos(anvilAuraData1909.getPlayerEntity()).offset(anvilAuraData1909.getDirection()).up(i));
             }
         } else {
-            arrayList.add(HoleSnapSearchHelper4.getBlockPos2008(anvilAuraData1909.getPlayerEntity2247()).up(2));
+            arrayList.add(PlayerUtils.getRoundedBlockPos(anvilAuraData1909.getPlayerEntity()).up(2));
             this.flag = true;
         }
         return arrayList;
     }
 
     @Override // me.mioclient.module.Delay
-    public int get499() {
-        return this.flag ? FireworksHelper.get447(Items.ANVIL) : super.get499();
+    public int getSlotIndex() {
+        return this.flag ? InventoryUtils.findInHotbar(Items.ANVIL) : super.getSlotIndex();
     }
 
-    public AnvilAuraData getAnvilAuraData1909() {
-        AnvilAuraData anvilAuraData;
+    public AnvilTarget getAnvilTarget() {
+        AnvilTarget anvilAuraData;
         double longBitsToDouble = Double.longBitsToDouble(9218868437227405311L);
-        AnvilAuraData anvilAuraData2 = null;
+        AnvilTarget anvilAuraData2 = null;
         for (LivingEntity livingEntity : minecraftClient.world.getPlayers()) {
-            if (((AbstractClientPlayerEntity) livingEntity).isAlive() && minecraftClient.player != livingEntity && !BaritoneHelper_3.searchHelper4_14.is520((PlayerEntity) livingEntity) && (!this.ignoreNakeds.getValue().booleanValue() || HoleSnapSearchHelper4.is2013(livingEntity))) {
-                BlockPos up = HoleSnapSearchHelper4.getBlockPos2008(livingEntity).up(2);
+            if (((AbstractClientPlayerEntity) livingEntity).isAlive() && minecraftClient.player != livingEntity && !ClientServices.socialManager.isFriendEntity((PlayerEntity) livingEntity) && (!this.ignoreNakeds.getValue().booleanValue() || PlayerUtils.hasArmor(livingEntity))) {
+                BlockPos up = PlayerUtils.getRoundedBlockPos(livingEntity).up(2);
                 double distanceTo = minecraftClient.player.getEyePos().distanceTo(((AbstractClientPlayerEntity) livingEntity).getPos());
                 if (distanceTo <= this.targetRange.getValue().floatValue()) {
-                    if (minecraftClient.world.getBlockState(up.down()).isReplaceable() && PhaseESPSearchHelper4_2.is3041(up, false)) {
-                        if (PhaseESPSearchHelper4_2.getDirection3029(up, this.setting4.getValue().booleanValue()) != null) {
-                            anvilAuraData = new AnvilAuraData((PlayerEntity) livingEntity, AnvilAuraMode.ANVIL, null);
+                    if (minecraftClient.world.getBlockState(up.down()).isReplaceable() && BlockPlacer.isSpaceFree(up, false)) {
+                        if (BlockPlacer.findSupportSide(up, this.setting4.getValue().booleanValue()) != null) {
+                            anvilAuraData = new AnvilTarget((PlayerEntity) livingEntity, AnvilAuraMode.ANVIL, null);
                         } else {
                             Direction direction1910 = getDirection1910(up);
                             if (direction1910 != null) {
-                                anvilAuraData = new AnvilAuraData((PlayerEntity) livingEntity, AnvilAuraMode.CAGE, direction1910);
+                                anvilAuraData = new AnvilTarget((PlayerEntity) livingEntity, AnvilAuraMode.CAGE, direction1910);
                             } else {
                                 continue;
                             }
@@ -89,7 +97,7 @@ public class AnvilAura extends Delay {
     }
 
     public Direction getDirection1910(BlockPos blockPos) {
-        List<Direction> list3031 = PhaseESPSearchHelper4_2.getList3031(blockPos);
+        List<Direction> list3031 = BlockPlacer.getInteractableSides(blockPos);
         int i = 1337;
         Direction direction = null;
         for (Direction direction2 : Direction.values()) {

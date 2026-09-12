@@ -1,5 +1,16 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.gui.screen.CategorySelectScreen;
+import me.mioclient.gui.widget.ScrollState;
+import me.mioclient.util.math.MathConstants;
+
+import me.mioclient.command.ClientCommandRegistry;
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.RenderUtil;
+import me.mioclient.util.math.MathConstants;
+
 import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.context.ParsedCommandNode;
@@ -13,13 +24,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ChatFilterSearchHelper4_2;
-import me.mioclient.FreecamHelper;
-import me.mioclient.SearchHelper_2;
-import me.mioclient.SignatureHelper;
-import me.mioclient.feature.Category;
-import me.mioclient.feature.Scroll;
+import me.mioclient.ducks.DuckChatHudLineVisible;
+import me.mioclient.gui.screen.CategorySelectScreen;
+import me.mioclient.gui.widget.ScrollState;
 import me.mioclient.mixin.ducks.DuckSuggestionWindow;
 import me.mioclient.module.client.HUD;
 import me.mioclient.module.client.IRC;
@@ -43,15 +50,64 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import me.mioclient.mixin.ducks.DuckChatInputSuggester;
 
 /* compiled from: 0.java */
 @Mixin({ChatScreen.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinChatScreen.class */
 public class MixinChatScreen extends Screen {
-    private static final BetterChat betterchat = (BetterChat) BaritoneHelper_3.baritoneHelper_4.getModule117(BetterChat.class);
-    private static final IRC irc = (IRC) BaritoneHelper_3.baritoneHelper_4.getModule117(IRC.class);
-    private static HUD hud = (HUD) BaritoneHelper_3.baritoneHelper_4.getModule117(HUD.class);
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
+    private static BetterChat betterchat;
+
+    private static BetterChat getBetterchat() {
+
+        if (betterchat == null && ClientServices.moduleInjector != null) {
+
+            try { betterchat = (BetterChat) ClientServices.moduleInjector.getModule(BetterChat.class); } catch (Exception e) {}
+
+        }
+
+        return betterchat;
+
+    }
+    private static IRC irc;
+
+    private static IRC getIrc() {
+
+        if (irc == null && ClientServices.moduleInjector != null) {
+
+            try { irc = (IRC) ClientServices.moduleInjector.getModule(IRC.class); } catch (Exception e) {}
+
+        }
+
+        return irc;
+
+    }
+    private static HUD hud;
+
+    private static HUD getHud() {
+
+        if (hud == null && ClientServices.moduleInjector != null) {
+
+            try { hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class); } catch (Exception e) {}
+
+        }
+
+        return hud;
+
+    }
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
 
     @Shadow
     protected TextFieldWidget field_2382;
@@ -60,7 +116,7 @@ public class MixinChatScreen extends Screen {
     ChatInputSuggestor field_21616;
 
     @Unique
-    private Scroll scroll;
+    private ScrollState scroll;
 
     protected MixinChatScreen(Text text) {
         super(text);
@@ -68,46 +124,65 @@ public class MixinChatScreen extends Screen {
 
     @Inject(method = {"init"}, at = {@At("HEAD")})
     private void initHook(CallbackInfo callbackInfo) {
-        this.scroll = new Scroll();
-        if (betterchat.always.getValue().booleanValue() && betterchat.is677()) {
-            for (SignatureHelper signatureHelper : (java.util.List<SignatureHelper>)(java.util.List) MinecraftClient.getInstance().inGameHud.getChatHud().visibleMessages) {
-                signatureHelper.getProgress().do2140(false);
+        BetterChat betterchat_lcl = getBetterchat();
+
+        if (betterchat_lcl == null) return;
+
+        this.scroll = new ScrollState();
+        if (betterchat_lcl.always.getValue().booleanValue() && betterchat_lcl.isAnimationEnabled()) {
+            for (DuckChatHudLineVisible signatureHelper : (java.util.List<DuckChatHudLineVisible>)(java.util.List) MinecraftClient.getInstance().inGameHud.getChatHud().visibleMessages) {
+                signatureHelper.getProgress().setToggledImmediate(false);
                 signatureHelper.mio$setAddTime(System.currentTimeMillis());
             }
         }
     }
 
     @Inject(method = {"render"}, at = {@At("RETURN")})
-    private void renderHook1(DrawContext drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
-        boolean startsWith = this.field_2382.getText().startsWith(ChatFilterSearchHelper4_2.getString2982());
-        if (irc.isToggled() && irc.chat.getValue().booleanValue() && this.field_2382.getText().startsWith(irc.prefix.getValue())) {
+    private void drawCommandIndicator(DrawContext drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
+        HUD hud_lcl = getHud();
+        IRC irc_lcl = getIrc();
+
+        if (hud_lcl == null) return;
+
+        if (irc_lcl == null) return;
+
+        boolean startsWith = this.field_2382.getText().startsWith(ClientCommandRegistry.getPrefix());
+        if (irc_lcl.isToggled() && irc_lcl.chat.getValue().booleanValue() && this.field_2382.getText().startsWith(irc_lcl.prefix.getValue())) {
             startsWith = true;
         }
         Color value = UI.uI.color.getValue();
         if (startsWith) {
-            SearchHelper_2.searchHelper_2.do539(drawContext.getMatrices(), 1.0f, (this.height - 2) - hud.get734(), this.width - 2, this.height - 2, value);
+            RenderUtil.INSTANCE.drawRectOutline(drawContext.getMatrices(), 1.0f, (this.height - 2) - hud_lcl.getBottomOffsetTarget(), this.width - 2, this.height - 2, value);
         }
     }
 
     @WrapWithCondition(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;fill(IIIII)V")})
-    private boolean renderHook2(DrawContext drawContext, int i, int i2, int i3, int i4, int i5) {
-        SearchHelper_2.searchHelper_2.do546(drawContext.getMatrices(), i, i2 + ((i4 - i2) * (1.0f - (hud.get734() / 13.5f))), i3, i4, new Color(i5, true));
+    private boolean suppressIndicatorBg(DrawContext drawContext, int i, int i2, int i3, int i4, int i5) {
+        HUD hud_lcl = getHud();
+
+        if (hud_lcl == null) return true;
+
+        RenderUtil.INSTANCE.drawFilledRectColor(drawContext.getMatrices(), i, i2 + ((i4 - i2) * (1.0f - (hud_lcl.getBottomOffsetTarget() / 13.5f))), i3, i4, new Color(i5, true));
         return false;
     }
 
     @Redirect(method = {"render"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/widget/TextFieldWidget;render(Lnet/minecraft/client/gui/DrawContext;IIF)V"))
-    private void renderHook3(TextFieldWidget textFieldWidget, DrawContext drawContext, int i, int i2, float f) {
-        if (hud.get734() / 13.5f > FreecamHelper.val3) {
+    private void renderChatInput(TextFieldWidget textFieldWidget, DrawContext drawContext, int i, int i2, float f) {
+        HUD hud_lcl = getHud();
+
+        if (hud_lcl == null) return;
+
+        if (hud_lcl.getBottomOffsetTarget() / 13.5f > MathConstants.val3) {
             textFieldWidget.render(drawContext, i, i2, f);
         }
     }
 
     @Inject(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/widget/TextFieldWidget;render(Lnet/minecraft/client/gui/DrawContext;IIF)V", shift = At.Shift.BEFORE)})
     private void renderHook4(DrawContext drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
-        if (this.field_2382.getText().startsWith(ChatFilterSearchHelper4_2.getString2982())) {
+        if (this.field_2382.getText().startsWith(ClientCommandRegistry.getPrefix())) {
             DuckSuggestionWindow window = (me.mioclient.mixin.ducks.DuckSuggestionWindow)(Object) ((me.mioclient.mixin.ducks.DuckChatInputSuggester)(Object) this.field_21616).getWindow();
             CompletableFuture<Suggestions> suggestion = ((me.mioclient.mixin.ducks.DuckChatInputSuggester)(Object) this.field_21616).getSuggestion();
-            if (suggestion != null && suggestion.isDone() && this.field_2382.getText().startsWith(ChatFilterSearchHelper4_2.getString2982())) {
+            if (suggestion != null && suggestion.isDone() && this.field_2382.getText().startsWith(ClientCommandRegistry.getPrefix())) {
                 String str = "";
                 Suggestions join = suggestion.join();
                 ParseResults<CommandSource> parse = ((me.mioclient.mixin.ducks.DuckChatInputSuggester)(Object) this.field_21616).getParse();
@@ -134,12 +209,16 @@ public class MixinChatScreen extends Screen {
     }
 
     @WrapWithCondition(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawOrderedTooltip(Lnet/minecraft/client/font/TextRenderer;Ljava/util/List;II)V")})
-    private boolean renderHook5(DrawContext drawContext, TextRenderer textRenderer, List<? extends OrderedText> list, int i, int i2) {
-        return (norender.isToggled() && norender.messageIndicator.getValue().booleanValue()) ? false : true;
+    private boolean shouldSuppressTooltipRender(DrawContext drawContext, TextRenderer textRenderer, List<? extends OrderedText> list, int i, int i2) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return true;
+
+        return (norender_lcl.isToggled() && norender_lcl.messageIndicator.getValue().booleanValue()) ? false : true;
     }
 
     public void filesDragged(List<Path> list) {
-        Category.is2716(this, list);
+        CategorySelectScreen.tryOpenForDroppedFiles(this, list);
     }
 
     private List<String> getStrings(Collection<CommandNode<CommandSource>> collection) {

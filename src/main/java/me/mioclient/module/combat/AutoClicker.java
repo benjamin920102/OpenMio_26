@@ -1,39 +1,51 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.util.math.MathUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.math.MathUtils;
+
 import java.util.ArrayList;
 import java.util.List;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.MatrixStackEvent;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PingSpoofHelper;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.exploit.MultiTask;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoClicker.class */
 public class AutoClicker extends Module {
-    public static final MultiTask multitask = (MultiTask) BaritoneHelper_3.baritoneHelper_4.getModule117(MultiTask.class);
-    public Setting<AutoClickerMode> mode;
-    public Setting<Integer> cps;
-    public Setting<Float> delay;
-    public Setting<Boolean> friendProtect;
+    public static final MultiTask multitask = (MultiTask) ClientServices.moduleInjector.getModule(MultiTask.class);
+    public Setting<AutoClickerMode> mode = add(new EnumSetting<>("Mode", AutoClickerMode.LEFT));
+    public Setting<Integer> cps = add(new NumberSetting<>("CPS", 8, 1, 20));
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 1.0f, 1.0f, 3.0f).setSuffix("x").setHoleSnapConfig("Off", HoleSnapMode.MIN));
+    public Setting<Boolean> friendProtect = add(new BooleanSetting("FriendProtect", true));
     public final Stopwatch stopwatch;
     public float val;
     public final List<Long> list;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoClicker$AutoClickerMode.class */
-    public enum AutoClickerMode implements EnumSettingHelper {
+    public enum AutoClickerMode implements NamedValue {
         LEFT("Left"),
         RIGHT("Right");
 
@@ -43,19 +55,19 @@ public class AutoClicker extends Module {
             this.name = str;
         }
 
-        public void do2025() {
+        public void executeClickAction() {
             if (this == LEFT) {
-                ((DuckMinecraftClient)(Object) SearchHelper_4.minecraftClient).attack();
+                ((DuckMinecraftClient)(Object) ClientAccessor.minecraftClient).attack();
             } else {
-                ((DuckMinecraftClient)(Object) SearchHelper_4.minecraftClient).interact();
+                ((DuckMinecraftClient)(Object) ClientAccessor.minecraftClient).interact();
             }
         }
 
         public KeyBinding getKeyBinding2026() {
-            return this == LEFT ? SearchHelper_4.minecraftClient.options.attackKey : SearchHelper_4.minecraftClient.options.useKey;
+            return this == LEFT ? ClientAccessor.minecraftClient.options.attackKey : ClientAccessor.minecraftClient.options.useKey;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -63,7 +75,6 @@ public class AutoClicker extends Module {
 
     public AutoClicker() {
         super("AutoClicker", "Spams attack as you hold down the attack button.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.val = Float.intBitsToFloat(1065353216);
         this.list = new ArrayList();
@@ -75,31 +86,31 @@ public class AutoClicker extends Module {
     }
 
     @Listen
-    public void onEvent(MatrixStackEvent.Inner inner) {
+    public void onRenderWorldPre(MatrixStackEvent.Inner inner) {
         this.list.removeIf(l -> {
             return System.currentTimeMillis() - l.longValue() >= 1000;
         });
         long intValue = 1000 / this.cps.getValue().intValue();
-        if (!this.delay.is2327()) {
+        if (!this.delay.isAtMinimum()) {
             intValue = (long) (((float) intValue) * this.val);
         }
-        if (this.stopwatch.is419(intValue)) {
-            do1074();
+        if (this.stopwatch.hasElapsedMs(intValue)) {
+            performClick();
             this.list.add(Long.valueOf(System.currentTimeMillis()));
             this.stopwatch.reset();
-            this.val = PingSpoofHelper.get370(Float.intBitsToFloat(1065353216), this.delay.getValue().floatValue());
+            this.val = MathUtils.randomFloat(Float.intBitsToFloat(1065353216), this.delay.getValue().floatValue());
         }
     }
 
     public boolean is1073(Entity entity) {
-        return isToggled() && this.friendProtect.getValue().booleanValue() && (entity instanceof PlayerEntity) && BaritoneHelper_3.searchHelper4_14.is520((PlayerEntity) entity);
+        return isToggled() && this.friendProtect.getValue().booleanValue() && (entity instanceof PlayerEntity) && ClientServices.socialManager.isFriendEntity((PlayerEntity) entity);
     }
 
-    public void do1074() {
+    public void performClick() {
         if (!multitask.isToggled() || (!minecraftClient.player.isUsingItem() && minecraftClient.currentScreen == null)) {
             KeyBinding.onKeyPressed(this.mode.getValue().getKeyBinding2026().boundKey);
         } else {
-            this.mode.getValue().do2025();
+            this.mode.getValue().executeClickAction();
         }
     }
 }

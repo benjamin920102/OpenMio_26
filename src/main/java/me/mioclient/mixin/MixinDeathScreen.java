@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.misc.CustomDeathText;
 import net.minecraft.client.gui.screen.DeathScreen;
 import net.minecraft.text.Text;
@@ -16,7 +19,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({DeathScreen.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinDeathScreen.class */
 public class MixinDeathScreen {
-    private static CustomDeathText customdeath = (CustomDeathText) BaritoneHelper_3.baritoneHelper_4.getModule117(CustomDeathText.class);
+    private static CustomDeathText customdeath;
+
+    private static CustomDeathText getCustomdeath() {
+
+        if (customdeath == null && ClientServices.moduleInjector != null) {
+
+            try { customdeath = (CustomDeathText) ClientServices.moduleInjector.getModule(CustomDeathText.class); } catch (Exception e) {}
+
+        }
+
+        return customdeath;
+
+    }
 
     @Mutable
     @Shadow
@@ -25,9 +40,9 @@ public class MixinDeathScreen {
 
     @Inject(method = {"<init>"}, at = {@At("RETURN")})
     public void mio$init(Text text, boolean z, CallbackInfo callbackInfo) {
-        if (customdeath == null || !customdeath.isToggled()) {
+        if (customdeath == null || !getCustomdeath().isToggled()) {
             return;
         }
-        this.field_2450 = customdeath.getText327();
+        this.field_2450 = getCustomdeath().getText327();
     }
 }

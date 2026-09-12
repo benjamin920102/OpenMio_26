@@ -1,17 +1,24 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.math.Vec3dUtils;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerTickDriver;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.network.PacketSender;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerTickDriver;
+import me.mioclient.util.math.Vec3dUtils;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import me.mioclient.AutoCrystalHelper_4;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.Feature_14;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.MixinLivingEntityHelper;
-import me.mioclient.MixinLivingEntityHelper_2;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.GetStatusEffectEvent;
-import me.mioclient.event.TickPreEvent;
-import me.mioclient.feature.Event_3;
+import me.mioclient.ducks.DuckLivingEntityServerDead;
+import me.mioclient.command.FakePlayerCommand;
+import me.mioclient.event.events.player.GetStatusEffectEvent;
+import me.mioclient.event.events.player.TickPreEvent;
+import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.module.misc.Swing;
 import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.movement.FastLadder;
@@ -44,7 +51,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /* compiled from: 0.java */
 @Mixin({LivingEntity.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinLivingEntity.class */
-public abstract class MixinLivingEntity extends Entity implements AutoCrystalHelper_4 {
+public abstract class MixinLivingEntity extends Entity implements DuckLivingEntityServerDead {
 
     @Shadow
     private int field_6228;
@@ -53,7 +60,7 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
     private TickPreEvent mio$moveEvent;
 
     @Unique
-    private Event_3 event;
+    private RotationEvent event;
 
     @Unique
     private boolean serverDead;
@@ -69,13 +76,97 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @Unique
     private long prevTime;
-    private static ElytraFly efly = (ElytraFly) BaritoneHelper_3.baritoneHelper_4.getModule117(ElytraFly.class);
-    private static NoJumpDelay njd = (NoJumpDelay) BaritoneHelper_3.baritoneHelper_4.getModule117(NoJumpDelay.class);
-    private static Jesus jesus = (Jesus) BaritoneHelper_3.baritoneHelper_4.getModule117(Jesus.class);
-    private static Swing swing = (Swing) BaritoneHelper_3.baritoneHelper_4.getModule117(Swing.class);
-    private static final Speed speed = (Speed) BaritoneHelper_3.baritoneHelper_4.getModule117(Speed.class);
-    private static final Fireworks fireworks = (Fireworks) BaritoneHelper_3.baritoneHelper_4.getModule117(Fireworks.class);
-    private static final FastLadder fastladder = (FastLadder) BaritoneHelper_3.baritoneHelper_4.getModule117(FastLadder.class);
+    private static ElytraFly efly;
+
+    private static ElytraFly getEfly() {
+
+        if (efly == null && ClientServices.moduleInjector != null) {
+
+            try { efly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class); } catch (Exception e) {}
+
+        }
+
+        return efly;
+
+    }
+    private static NoJumpDelay njd;
+
+    private static NoJumpDelay getNjd() {
+
+        if (njd == null && ClientServices.moduleInjector != null) {
+
+            try { njd = (NoJumpDelay) ClientServices.moduleInjector.getModule(NoJumpDelay.class); } catch (Exception e) {}
+
+        }
+
+        return njd;
+
+    }
+    private static Jesus jesus;
+
+    private static Jesus getJesus() {
+
+        if (jesus == null && ClientServices.moduleInjector != null) {
+
+            try { jesus = (Jesus) ClientServices.moduleInjector.getModule(Jesus.class); } catch (Exception e) {}
+
+        }
+
+        return jesus;
+
+    }
+    private static Swing swing;
+
+    private static Swing getSwing() {
+
+        if (swing == null && ClientServices.moduleInjector != null) {
+
+            try { swing = (Swing) ClientServices.moduleInjector.getModule(Swing.class); } catch (Exception e) {}
+
+        }
+
+        return swing;
+
+    }
+    private static Speed speed;
+
+    private static Speed getSpeed() {
+
+        if (speed == null && ClientServices.moduleInjector != null) {
+
+            try { speed = (Speed) ClientServices.moduleInjector.getModule(Speed.class); } catch (Exception e) {}
+
+        }
+
+        return speed;
+
+    }
+    private static Fireworks fireworks;
+
+    private static Fireworks getFireworks() {
+
+        if (fireworks == null && ClientServices.moduleInjector != null) {
+
+            try { fireworks = (Fireworks) ClientServices.moduleInjector.getModule(Fireworks.class); } catch (Exception e) {}
+
+        }
+
+        return fireworks;
+
+    }
+    private static FastLadder fastladder;
+
+    private static FastLadder getFastladder() {
+
+        if (fastladder == null && ClientServices.moduleInjector != null) {
+
+            try { fastladder = (FastLadder) ClientServices.moduleInjector.getModule(FastLadder.class); } catch (Exception e) {}
+
+        }
+
+        return fastladder;
+
+    }
 
     public MixinLivingEntity(EntityType<?> entityType, World world) {
         super(entityType, world);
@@ -93,10 +184,17 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @Inject(method = {"getHandSwingDuration"}, at = {@At("HEAD")}, cancellable = true)
     private void getHandSwingDurationHook(CallbackInfoReturnable<Integer> callbackInfoReturnable) {
-        if (swing.isToggled()) {
+        Swing swing_lcl = getSwing();
+        Speed speed_lcl = getSpeed();
+
+        if (swing_lcl == null) return;
+
+        if (speed_lcl == null) return;
+
+        if (swing_lcl.isToggled()) {
             LivingEntity livingEntity = (LivingEntity)(Object) this;
             callbackInfoReturnable.cancel();
-            int doubleValue = (int) ((swing.type.getValue() == Swing.MixinLivingEntityMode.ONE_EIGHT ? 7 : 6) / swing.speed.getValue().doubleValue());
+            int doubleValue = (int) ((swing_lcl.type.getValue() == Swing.MixinLivingEntityMode.ONE_EIGHT ? 7 : 6) / swing_lcl.speed.getValue().doubleValue());
             if (StatusEffectUtil.hasHaste(livingEntity)) {
                 callbackInfoReturnable.setReturnValue(Integer.valueOf(doubleValue - (1 + StatusEffectUtil.getHasteAmplifier(livingEntity))));
             } else {
@@ -107,12 +205,19 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @Inject(method = {"isFallFlying"}, at = {@At("HEAD")}, cancellable = true)
     private void isFallFlyingHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (SearchHelper_4.is1470(this)) {
-            if (fireworks.isToggled() && fireworks.fastLaunch.getValue().booleanValue() && fireworks.get143() > 0) {
+        Fireworks fireworks_lcl = getFireworks();
+        ElytraFly efly_lcl = getEfly();
+
+        if (fireworks_lcl == null) return;
+
+        if (efly_lcl == null) return;
+
+        if (ClientAccessor.isLocalPlayer(this)) {
+            if (fireworks_lcl.isToggled() && fireworks_lcl.fastLaunch.getValue().booleanValue() && fireworks_lcl.getRemainingTicks() > 0) {
                 callbackInfoReturnable.cancel();
                 callbackInfoReturnable.setReturnValue(true);
             }
-            if (efly.is949() || efly.is956()) {
+            if (efly_lcl.isPacketFlyActive() || efly_lcl.shouldSwapElytra()) {
                 callbackInfoReturnable.setReturnValue(false);
                 callbackInfoReturnable.cancel();
             }
@@ -121,7 +226,11 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @Inject(method = {"canWalkOnFluid"}, at = {@At("HEAD")}, cancellable = true)
     private void canWalkOnFluidHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (((Object) this) == MinecraftClient.getInstance().player && jesus.isToggled() && jesus.is240() && !MinecraftClient.getInstance().player.isTouchingWater()) {
+        Jesus jesus_lcl = getJesus();
+
+        if (jesus_lcl == null) return;
+
+        if (((Object) this) == MinecraftClient.getInstance().player && jesus_lcl.isToggled() && jesus_lcl.canJesus() && !MinecraftClient.getInstance().player.isTouchingWater()) {
             callbackInfoReturnable.setReturnValue(true);
         }
     }
@@ -134,11 +243,11 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
         ElytraFly.flag = true;
         this.prevLookYaw = getYaw(1.0f);
         this.prevLookPitch = getPitch();
-        this.event = new Event_3(this.prevLookYaw, this.prevLookPitch, false);
-        SearchHelper_4.baritoneHelper.getObject1794(this.event);
-        if (this.event.is2403()) {
-            setYaw(this.event.get751());
-            setPitch(this.event.get752());
+        this.event = new RotationEvent(this.prevLookYaw, this.prevLookPitch, false);
+        ClientAccessor.eventBus.fireEvent(this.event);
+        if (this.event.isCancelled()) {
+            setYaw(this.event.getYaw());
+            setPitch(this.event.getPitch());
         }
     }
 
@@ -148,7 +257,7 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
             return;
         }
         ElytraFly.flag = false;
-        if (this.event.is2403()) {
+        if (this.event.isCancelled()) {
             setYaw(this.prevLookYaw);
             setPitch(this.prevLookPitch);
         }
@@ -156,64 +265,75 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @ModifyExpressionValue(method = {"jump"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;getYaw()F")})
     private float jumpFix(float f) {
-        this.event = new Event_3(getYaw(), getPitch(), true);
-        SearchHelper_4.baritoneHelper.getObject1794(this.event);
-        return this.event.is2403() ? this.event.get751() : f;
+        this.event = new RotationEvent(getYaw(), getPitch(), true);
+        ClientAccessor.eventBus.fireEvent(this.event);
+        return this.event.isCancelled() ? this.event.getYaw() : f;
     }
 
     @Inject(method = {"shouldSpawnConsumptionEffects"}, at = {@At("HEAD")}, cancellable = true)
     private void shouldSpawnConsumptionEffects(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (MixinLivingEntityHelper.is870()) {
+        if (PlayerTickDriver.is870()) {
             callbackInfoReturnable.setReturnValue(false);
         }
     }
 
     @ModifyExpressionValue(method = {"damage"}, at = {@At(value = "FIELD", target = "Lnet/minecraft/world/World;isClient:Z")})
     private boolean damageHook(boolean z) {
-        if (((Object) this) instanceof Feature_14.OtherClientPlayerEntity) {
+        if (((Object) this) instanceof FakePlayerCommand.OtherClientPlayerEntity) {
             return false;
         }
         return z;
     }
 
-    @Override // me.mioclient.AutoCrystalHelper_4
+    @Override // me.mioclient.ducks.DuckLivingEntityServerDead
     public void setServerSideDead(boolean z) {
         this.serverDead = z;
     }
 
-    @Override // me.mioclient.AutoCrystalHelper_4
+    @Override // me.mioclient.ducks.DuckLivingEntityServerDead
     public boolean isServerSideDead() {
         return this.serverDead;
     }
 
     @Inject(method = {"tickMovement"}, at = {@At("HEAD")})
     public void reduceCooldown(CallbackInfo callbackInfo) {
+        NoJumpDelay njd_lcl = getNjd();
+        ElytraFly efly_lcl = getEfly();
+
+        if (njd_lcl == null) return;
+
+        if (efly_lcl == null) return;
+
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        if (efly.isToggled() && efly.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && equals(minecraftClient.player) && this.field_6228 > 2) {
+        if (efly_lcl.isToggled() && efly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && equals(minecraftClient.player) && this.field_6228 > 2) {
             this.field_6228 = 2;
-        } else if (njd.isToggled() && equals(minecraftClient.player) && !minecraftClient.player.isFallFlying()) {
+        } else if (njd_lcl.isToggled() && equals(minecraftClient.player) && !minecraftClient.player.isFallFlying()) {
             this.field_6228 = 0;
         }
     }
 
     @Inject(method = {"isFallFlying"}, at = {@At("TAIL")}, cancellable = true)
     public void onRecast(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
+        ElytraFly efly_lcl = getEfly();
+
+        if (efly_lcl == null) return;
+
         if (((Object) this) != MinecraftClient.getInstance().player) {
             return;
         }
-        if (efly.is956()) {
+        if (efly_lcl.shouldSwapElytra()) {
             callbackInfoReturnable.setReturnValue(false);
             return;
         }
         long currentTimeMillis = System.currentTimeMillis();
         if (currentTimeMillis - this.prevTime >= 12) {
-            if (efly.isToggled() && efly.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE) {
+            if (efly_lcl.isToggled() && efly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE) {
                 boolean booleanValue = ((Boolean) callbackInfoReturnable.getReturnValue()).booleanValue();
                 if (this.prevFlying && !booleanValue) {
-                    if (efly.is950()) {
-                        AutoSignSearchHelper4.do948();
+                    if (efly_lcl.tryStartFallFlying()) {
+                        PacketSender.sendStartFallFlying();
                     }
-                    callbackInfoReturnable.setReturnValue(Boolean.valueOf(efly.is950()));
+                    callbackInfoReturnable.setReturnValue(Boolean.valueOf(efly_lcl.tryStartFallFlying()));
                 }
                 this.prevFlying = booleanValue;
             }
@@ -225,8 +345,8 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
     private void hasStatusEffectHook(RegistryEntry<StatusEffect> registryEntry, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         if (equals(MinecraftClient.getInstance().player)) {
             GetStatusEffectEvent getStatusEffectEvent = new GetStatusEffectEvent(registryEntry);
-            SearchHelper_4.baritoneHelper.getObject1794(getStatusEffectEvent);
-            if (getStatusEffectEvent.is2403()) {
+            ClientAccessor.eventBus.fireEvent(getStatusEffectEvent);
+            if (getStatusEffectEvent.isCancelled()) {
                 callbackInfoReturnable.cancel();
                 callbackInfoReturnable.setReturnValue(false);
             }
@@ -237,8 +357,8 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
     private void getStatusEffectHook(RegistryEntry<StatusEffect> registryEntry, CallbackInfoReturnable<StatusEffectInstance> callbackInfoReturnable) {
         if (equals(MinecraftClient.getInstance().player)) {
             GetStatusEffectEvent getStatusEffectEvent = new GetStatusEffectEvent(registryEntry);
-            SearchHelper_4.baritoneHelper.getObject1794(getStatusEffectEvent);
-            if (getStatusEffectEvent.is2403()) {
+            ClientAccessor.eventBus.fireEvent(getStatusEffectEvent);
+            if (getStatusEffectEvent.isCancelled()) {
                 callbackInfoReturnable.cancel();
                 callbackInfoReturnable.setReturnValue(null);
             }
@@ -247,31 +367,42 @@ public abstract class MixinLivingEntity extends Entity implements AutoCrystalHel
 
     @Inject(method = {"jump"}, at = {@At("HEAD")}, cancellable = true)
     private void jumpHook(CallbackInfo callbackInfo) {
-        if (!speed.is130() && speed.isToggled() && speed.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode2 && HoleSnapSearchHelper4_3.is2181()) {
+        Speed speed_lcl = getSpeed();
+
+        if (speed_lcl == null) return;
+
+        if (!speed_lcl.shouldPause() && speed_lcl.isToggled() && speed_lcl.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode2 && MovementUtils.is2181()) {
             callbackInfo.cancel();
         }
     }
 
     @ModifyConstant(method = {"applyMovementInput"}, constant = {@Constant(doubleValue = 0.2d)})
     private double applyMovementInputHook(double d) {
-        return fastladder.isToggled() ? fastladder.speed.getValue().floatValue() : d;
+        FastLadder fastladder_lcl = getFastladder();
+        Speed speed_lcl = getSpeed();
+
+        if (fastladder_lcl == null) return d;
+
+        if (speed_lcl == null) return d;
+
+        return fastladder_lcl.isToggled() ? fastladder_lcl.speed.getValue().floatValue() : d;
     }
 
     @Inject(method = {"applyMovementInput"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.BEFORE)})
     private void tickPre(Vec3d vec3d, float f, CallbackInfoReturnable<Vec3d> callbackInfoReturnable) {
-        if (TickPreEvent.is1301(this)) {
+        if (TickPreEvent.isPlayerVehicle(this)) {
             this.mio$moveEvent = new TickPreEvent(getVelocity());
-            SearchHelper_4.baritoneHelper.getObject1794(this.mio$moveEvent);
-            MixinLivingEntityHelper_2.do2581(getVelocity(), this.mio$moveEvent.get515(), this.mio$moveEvent.get692(), this.mio$moveEvent.get516());
+            ClientAccessor.eventBus.fireEvent(this.mio$moveEvent);
+            Vec3dUtils.setVectorComponents(getVelocity(), this.mio$moveEvent.getX(), this.mio$moveEvent.getY(), this.mio$moveEvent.getZ());
         }
     }
 
     @Inject(method = {"travel"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.BEFORE)})
     private void tickPre(Vec3d vec3d, CallbackInfo callbackInfo) {
-        if (TickPreEvent.is1301(this)) {
+        if (TickPreEvent.isPlayerVehicle(this)) {
             this.mio$moveEvent = new TickPreEvent(getVelocity());
-            SearchHelper_4.baritoneHelper.getObject1794(this.mio$moveEvent);
-            MixinLivingEntityHelper_2.do2581(getVelocity(), this.mio$moveEvent.get515(), this.mio$moveEvent.get692(), this.mio$moveEvent.get516());
+            ClientAccessor.eventBus.fireEvent(this.mio$moveEvent);
+            Vec3dUtils.setVectorComponents(getVelocity(), this.mio$moveEvent.getX(), this.mio$moveEvent.getY(), this.mio$moveEvent.getZ());
         }
     }
 }

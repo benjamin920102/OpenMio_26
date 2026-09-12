@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.render.NoRender;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.toast.SystemToast;
@@ -17,7 +20,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = {"net/minecraft/client/toast/ToastManager$Entry"})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinToastManagerEntry.class */
 public class MixinToastManagerEntry {
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
 
     @Shadow
     @Final
@@ -25,8 +40,12 @@ public class MixinToastManagerEntry {
 
     @Inject(method = {"draw"}, at = {@At("HEAD")}, cancellable = true)
     public void draw(int i, DrawContext drawContext, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (norender.isToggled()) {
-            if ((this.field_2241.getType() == SystemToast.Type.UNSECURE_SERVER_WARNING && norender.unsecureServer.getValue().booleanValue()) || ((this.field_2241 instanceof TutorialToast) && norender.tutorialToast.getValue().booleanValue())) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled()) {
+            if ((this.field_2241.getType() == SystemToast.Type.UNSECURE_SERVER_WARNING && norender_lcl.unsecureServer.getValue().booleanValue()) || ((this.field_2241 instanceof TutorialToast) && norender_lcl.tutorialToast.getValue().booleanValue())) {
                 callbackInfoReturnable.setReturnValue(true);
             }
         }

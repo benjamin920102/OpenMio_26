@@ -1,6 +1,6 @@
 package me.mioclient.mixin;
 
-import me.mioclient.MixinPalettedContainerHelper;
+import me.mioclient.ducks.DuckPalettedContainerData;
 import net.minecraft.util.collection.PaletteStorage;
 import net.minecraft.world.chunk.Palette;
 import org.spongepowered.asm.mixin.Final;
@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Shadow;
 /* compiled from: 0.java */
 @Mixin(targets = {"net.minecraft.world.chunk.PalettedContainer$Data"})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinPalettedData.class */
-public class MixinPalettedData<T> implements MixinPalettedContainerHelper<T> {
+public class MixinPalettedData<T> implements DuckPalettedContainerData<T> {
 
     @Shadow
     @Final
@@ -20,12 +20,12 @@ public class MixinPalettedData<T> implements MixinPalettedContainerHelper<T> {
     @Final
     Palette<T> comp_119;
 
-    @Override // me.mioclient.MixinPalettedContainerHelper
+    @Override // me.mioclient.ducks.DuckPalettedContainerData
     public PaletteStorage mio$storage() {
         return this.comp_118;
     }
 
-    @Override // me.mioclient.MixinPalettedContainerHelper
+    @Override // me.mioclient.ducks.DuckPalettedContainerData
     public Palette<T> mio$palette() {
         return this.comp_119;
     }

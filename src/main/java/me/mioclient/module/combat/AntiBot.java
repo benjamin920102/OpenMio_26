@@ -1,34 +1,36 @@
 package me.mioclient.module.combat;
 
-import me.mioclient.Feature_14;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.command.FakePlayerCommand;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import me.mioclient.setting.BooleanSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AntiBot.class */
 public class AntiBot extends Module {
-    public Setting<Boolean> illegalChars;
-    public Setting<Boolean> illegalNames;
+    public Setting<Boolean> illegalChars = add(new BooleanSetting("IllegalChars", false));
+    public Setting<Boolean> illegalNames = add(new BooleanSetting("IllegalNames", false));
 
     public AntiBot() {
         super("AntiBot", "Removes the bots that will be spawned by some anti cheats.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         PlayerEntity playerEntity = null;
         synchronized (minecraftClient.world.getPlayers()) {
             for (PlayerEntity playerEntity2 : minecraftClient.world.getPlayers()) {
-                if (is867(playerEntity2)) {
+                if (isBot(playerEntity2)) {
                     playerEntity = playerEntity2;
                 }
             }
@@ -38,8 +40,8 @@ public class AntiBot extends Module {
         }
     }
 
-    public boolean is867(PlayerEntity playerEntity) {
-        if (minecraftClient.player == playerEntity || (playerEntity instanceof Feature_14.OtherClientPlayerEntity)) {
+    public boolean isBot(PlayerEntity playerEntity) {
+        if (minecraftClient.player == playerEntity || (playerEntity instanceof FakePlayerCommand.OtherClientPlayerEntity)) {
             return false;
         }
         String string = playerEntity.getName().getString();
@@ -48,7 +50,7 @@ public class AntiBot extends Module {
         }
         if (this.illegalChars.getValue().booleanValue()) {
             for (char c : string.toLowerCase().toCharArray()) {
-                if (!FontsSearchHelper4.is1685("1234567890_qwertyuiopasdfghjklzxcvbnm", c)) {
+                if (!ClientTextRenderer.containsChar("1234567890_qwertyuiopasdfghjklzxcvbnm", c)) {
                     return true;
                 }
             }

@@ -1,190 +1,194 @@
 package me.mioclient.api;
 
+import me.mioclient.setting.EnumJsonConverter;
+
+import me.mioclient.mode.setting.HoleSnapMode;
+
+
 import java.util.Objects;
 import java.util.function.Predicate;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingConverter;
-import me.mioclient.Helper_10;
-import me.mioclient.HoleSnapMode;
-import me.mioclient.PresetHelper_7;
+import me.mioclient.setting.EnumJsonConverter;
+import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.module.Feature;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/api/Setting.class */
-public abstract class Setting<T> extends Feature implements Helper_10<T>, PresetHelper_7 {
-    public T object;
+public abstract class Setting<T> extends Feature implements ValueProvider<T>, JsonConfigurable {
+    public T defaultValue;
     public boolean flag;
     public boolean flag2;
     public boolean flag3;
     public boolean flag4;
+    public boolean flag5;
+    public boolean flag6;
     public Predicate<T> predicate;
     public String configName;
     public String string;
     public Runnable runnable;
     public T value;
-    public T object2;
-    public T object3;
-    public T object4;
-    public T object5;
-    public boolean flag5;
-    public boolean flag6;
+    public T currentValue;
+    public T minValue;
+    public T maxValue;
+    public T previousValue;
+    public boolean hasBounds;
+    public boolean isHovered;
     public HoleSnapMode holeSnapMode;
 
     public Setting(String str, T t, T t2, T t3, Predicate<T> predicate) {
         super(str);
         this.configName = getName();
         this.string = "";
-        this.object = t;
-        this.object3 = t2;
-        this.object4 = t3;
+        this.defaultValue = t;
+        this.minValue = t2;
+        this.maxValue = t3;
         this.predicate = predicate;
         this.value = t;
-        this.object2 = t;
-        this.object5 = t;
-        this.flag5 = true;
+        this.currentValue = t;
+        this.previousValue = t;
+        this.hasBounds = true;
     }
 
     public Setting(String str, T t, Predicate<T> predicate) {
         super(str);
         this.configName = getName();
         this.string = "";
-        this.object = t;
+        this.defaultValue = t;
         this.predicate = predicate;
         this.value = t;
-        this.object2 = t;
-        this.object5 = t;
+        this.currentValue = t;
+        this.previousValue = t;
     }
 
     public Setting(String str, T t, T t2, T t3) {
         super(str);
         this.configName = getName();
         this.string = "";
-        this.object = t;
-        this.object3 = t2;
-        this.object4 = t3;
+        this.defaultValue = t;
+        this.minValue = t2;
+        this.maxValue = t3;
         this.value = t;
-        this.object2 = t;
-        this.object5 = t;
-        this.flag5 = true;
+        this.currentValue = t;
+        this.previousValue = t;
+        this.hasBounds = true;
     }
 
     public Setting(String str, T t) {
         super(str);
         this.configName = getName();
         this.string = "";
-        this.object = t;
+        this.defaultValue = t;
         this.value = t;
-        this.object2 = t;
-        this.object5 = t;
+        this.currentValue = t;
+        this.previousValue = t;
     }
 
     public T getValue() {
         return this.value;
     }
 
-    public T getObject2322() {
-        return this.object2;
+    public T getCurrentValue() {
+        return this.currentValue;
     }
 
-    public void do2323(T t) {
-        this.object2 = t;
+    public void setCurrentValue(T t) {
+        this.currentValue = t;
     }
 
-    public T getObject2324() {
-        return this.object;
+    public T getDefaultValue() {
+        return this.defaultValue;
     }
 
-    public T getObject2325() {
-        return this.object3;
+    public T getMinValue() {
+        return this.minValue;
     }
 
-    public T getObject2326() {
-        return this.object4;
+    public T getMaxValue() {
+        return this.maxValue;
     }
 
-    public boolean is2327() {
-        return getObject2325().equals(getValue());
+    public boolean isAtMinimum() {
+        return getMinValue().equals(getValue());
     }
 
-    public boolean is2328() {
-        return getObject2326().equals(getValue());
+    public boolean isAtMaximum() {
+        return getMaxValue().equals(getValue());
     }
 
-    @Override // me.mioclient.PresetHelper_7
+    @Override // me.mioclient.api.JsonConfigurable
     public String getConfigName() {
         return this.configName;
     }
 
-    public void do2329(String str) {
+    public void setConfigName(String str) {
         this.configName = str;
     }
 
-    public String getString2330() {
-        return EnumSettingConverter.getString913((Enum) this.object2);
+    public String getCurrentValueString() {
+        return EnumJsonConverter.getEnumDisplayName((Enum) this.currentValue);
     }
 
-    public String getString2331() {
+    public String getHoleSnapString() {
         return this.string;
     }
 
-    public <T> String getString2332(T t) {
+    public <T> String getTypeName(T t) {
         return t.getClass().getSimpleName();
     }
 
     public void reset() {
-        do2333(this.object);
+        setValue(this.defaultValue);
     }
 
-    public abstract void do134(String str);
+    public abstract void loadFromString(String str);
 
     /* JADX WARN: Multi-variable type inference failed */
-    public void do2333(T t) {
-        do2323(t);
-        if (this.flag5) {
-            if (((Number) this.object3).floatValue() > ((Number) t).floatValue()) {
-                do2323(this.object3);
+    public void setValue(T t) {
+        setCurrentValue(t);
+        if (this.hasBounds) {
+            if (((Number) this.minValue).floatValue() > ((Number) t).floatValue()) {
+                setCurrentValue(this.minValue);
             }
-            if (((Number) this.object4).floatValue() < ((Number) t).floatValue()) {
-                do2323(this.object4);
+            if (((Number) this.maxValue).floatValue() < ((Number) t).floatValue()) {
+                setCurrentValue(this.maxValue);
             }
         }
-        this.value = this.object2;
-        if (this.value != this.object5) {
-            do2340();
+        this.value = this.currentValue;
+        if (this.value != this.previousValue) {
+            fireChangeCallback();
         }
-        this.object5 = this.value;
+        this.previousValue = this.value;
     }
 
-    public void do2334(T t) {
-        this.object = t;
+    public void setDefaultValue(T t) {
+        this.defaultValue = t;
     }
 
-    public T getObject2335() {
-        return this.object5;
+    public T getPreviousValue() {
+        return this.previousValue;
     }
 
-    public Setting<T> getSetting2336() {
+    public Setting<T> setVisible() {
         this.flag2 = true;
         return this;
     }
 
-    public Setting<T> getSetting2337() {
+    public Setting<T> setDependent() {
         this.flag4 = true;
-        getSetting2336();
+        setVisible();
         return this;
     }
 
-    public Setting<T> getSetting2338(String str, HoleSnapMode holeSnapMode) {
+    public Setting<T> setHoleSnapConfig(String str, HoleSnapMode holeSnapMode) {
         this.string = str;
         this.holeSnapMode = holeSnapMode;
         return this;
     }
 
-    public void do2339(Runnable runnable) {
+    public void setChangeCallback(Runnable runnable) {
         this.runnable = runnable;
     }
 
-    public void do2340() {
+    public void fireChangeCallback() {
         if (this.runnable == null) {
             return;
         }
@@ -194,17 +198,17 @@ public abstract class Setting<T> extends Feature implements Helper_10<T>, Preset
         }
     }
 
-    public Setting<T> getSetting2341() {
+    public Setting<T> setDisabled() {
         this.flag3 = true;
         return this;
     }
 
     @SafeVarargs
-    public final Setting<T> getSetting2342(Setting<Boolean>... settingArr) {
-        do2343(obj -> {
+    public final Setting<T> requiresSettings(Setting<Boolean>... settingArr) {
+        addVisibilityPredicate(obj -> {
             for (Setting setting : settingArr) {
                 if (setting.flag4 || setting.flag2) {
-                    if (!setting.is623()) {
+                    if (!setting.isShown()) {
                         return false;
                     }
                 } else if (!((Boolean) setting.getValue()).booleanValue()) {
@@ -216,7 +220,7 @@ public abstract class Setting<T> extends Feature implements Helper_10<T>, Preset
         return this;
     }
 
-    public void do2343(Predicate<T> predicate) {
+    public void addVisibilityPredicate(Predicate<T> predicate) {
         if (this.predicate == null) {
             this.predicate = predicate;
         } else {
@@ -224,57 +228,57 @@ public abstract class Setting<T> extends Feature implements Helper_10<T>, Preset
         }
     }
 
-    public void do2344() {
-        do2343(obj -> {
-            return BaritoneHelper_3.obstaclePasserHelper.is709();
+    public void requireBaritone() {
+        addVisibilityPredicate(obj -> {
+            return ClientServices.obstaclePasserHelper.isBaritoneLoaded();
         });
     }
 
-    public boolean is2345() {
+    public boolean isNumber() {
         return this.value instanceof Number;
     }
 
-    public boolean is2346() {
+    public boolean isEnum() {
         return this.value instanceof Enum;
     }
 
-    public boolean is2347() {
+    public boolean isString() {
         return this.value instanceof String;
     }
 
-    public boolean is2348() {
-        return is2345() && !this.string.isEmpty() && this.holeSnapMode.is220(this);
+    public boolean isHoleSnapConfigured() {
+        return isNumber() && !this.string.isEmpty() && this.holeSnapMode.isAtExtremum(this);
     }
 
-    public boolean is2349() {
+    public boolean isVisible() {
         if (this.predicate == null) {
             return true;
         }
         return this.predicate.test(getValue());
     }
 
-    public boolean is623() {
+    public boolean isShown() {
         return this.flag && this.flag2;
     }
 
-    public boolean is2350() {
-        return this.flag5;
+    public boolean hasBounds() {
+        return this.hasBounds;
     }
 
-    public void do2351() {
-        this.flag5 = false;
+    public void removeBounds() {
+        this.hasBounds = false;
     }
 
-    public boolean is2352() {
+    public boolean isDependent() {
         return this.flag4;
     }
 
-    public void do2353(boolean z) {
-        this.flag6 = z;
+    public void setHovered(boolean z) {
+        this.isHovered = z;
     }
 
-    public boolean is2354() {
-        return this.flag6;
+    public boolean isHovered() {
+        return this.isHovered;
     }
 
     @Override // me.mioclient.module.Feature

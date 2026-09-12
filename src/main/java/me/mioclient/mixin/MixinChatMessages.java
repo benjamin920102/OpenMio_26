@@ -1,11 +1,17 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.render.font.AdvanceGlyph;
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.font.ClientTextRenderer;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import java.awt.Color;
 import java.util.Optional;
-import me.mioclient.AdvanceGlyph;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FontsSearchHelper4;
+import me.mioclient.render.font.AdvanceGlyph;
 import me.mioclient.module.client.Fonts;
 import me.mioclient.module.misc.BetterChat;
 import net.minecraft.client.MinecraftClient;
@@ -24,20 +30,44 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin({ChatMessages.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinChatMessages.class */
 public class MixinChatMessages {
-    private static final Fonts fonts = (Fonts) BaritoneHelper_3.baritoneHelper_4.getModule117(Fonts.class);
+    private static Fonts fonts;
+
+    private static Fonts getFonts() {
+
+        if (fonts == null && ClientServices.moduleInjector != null) {
+
+            try { fonts = (Fonts) ClientServices.moduleInjector.getModule(Fonts.class); } catch (Exception e) {}
+
+        }
+
+        return fonts;
+
+    }
 
     @Unique
-    private static final BetterChat betterchat = (BetterChat) BaritoneHelper_3.baritoneHelper_4.getModule117(BetterChat.class);
+    private static BetterChat betterchat;
+
+    private static BetterChat getBetterchat() {
+
+        if (betterchat == null && ClientServices.moduleInjector != null) {
+
+            try { betterchat = (BetterChat) ClientServices.moduleInjector.getModule(BetterChat.class); } catch (Exception e) {}
+
+        }
+
+        return betterchat;
+
+    }
 
     @ModifyExpressionValue(method = {"breakRenderedChatMessageLines"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/font/TextRenderer;getTextHandler()Lnet/minecraft/client/font/TextHandler;")})
     private static TextHandler mio$breakRenderedChatMessageLines(TextHandler textHandler) {
-        AdvanceGlyph advanceGlyph1686 = FontsSearchHelper4.fontsSearchHelper4.getAdvanceGlyph1686();
-        return (advanceGlyph1686 != null && fonts.isToggled() && fonts.chat.getValue().booleanValue()) ? advanceGlyph1686.getTextHandler2776() : textHandler;
+        AdvanceGlyph advanceGlyph1686 = ClientTextRenderer.INSTANCE.getAdvanceGlyph();
+        return (advanceGlyph1686 != null && getFonts().isToggled() && getFonts().chat.getValue().booleanValue()) ? advanceGlyph1686.getTextHandler() : textHandler;
     }
 
     @ModifyVariable(method = {"breakRenderedChatMessageLines"}, at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private static StringVisitable mio$breakRenderedChatMessageLines(StringVisitable stringVisitable) {
-        if (!betterchat.isToggled() || !betterchat.highlight.getValue().booleanValue()) {
+        if (!getBetterchat().isToggled() || !getBetterchat().highlight.getValue().booleanValue()) {
             return stringVisitable;
         }
         String username = MinecraftClient.getInstance().getSession().getUsername();
@@ -46,7 +76,7 @@ public class MixinChatMessages {
             if (str.contains(username)) {
                 for (String part : str.split("((?=%s)|(?<=%s))".formatted(username, username))) {
                     if (part.equals(username)) {
-                        Color value = betterchat.color.getValue();
+                        Color value = getBetterchat().color.getValue();
                         MutableText styled = Text.literal(part).styled(st -> {
                             return st.withColor(new Color(value.getRed(), value.getGreen(), value.getBlue(), 255).getRGB());
                         });

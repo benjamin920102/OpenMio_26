@@ -1,17 +1,24 @@
 package me.mioclient.module.player;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.player.ScaffoldMode_2;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.MovementUtils;
+
 import java.util.List;
 import java.util.Set;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FireworksHelper;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.ScaffoldMode_2;
+import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.exploit.XCarry;
@@ -22,36 +29,40 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.collection.DefaultedList;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EntityListObjectSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import net.minecraft.registry.Registries;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/Replenish.class */
 public class Replenish extends Module {
-    public static XCarry xCarry = (XCarry) BaritoneHelper_3.baritoneHelper_4.getModule117(XCarry.class);
-    public static AutoCrystal autoCrystal = (AutoCrystal) BaritoneHelper_3.baritoneHelper_4.getModule117(AutoCrystal.class);
-    public Setting<Set<Item>> items;
-    public Setting<ScaffoldMode_2> selection;
-    public Setting<Integer> delay;
-    public Setting<Integer> threshold;
-    public Setting<Boolean> sort;
-    public Setting<Boolean> unstackable;
-    public Setting<Boolean> limit;
-    public Setting<Boolean> motion;
-    public Setting<Boolean> falling;
+    public static XCarry xCarry = (XCarry) ClientServices.moduleInjector.getModule(XCarry.class);
+    public static AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+    public Setting<Set<Item>> items = add(new EntityListObjectSetting<>("Items", Registries.ITEM));
+    public Setting<ScaffoldMode_2> selection = add(new EnumSetting<>("Selection", ScaffoldMode_2.ANY));
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 50, 0, 500).setSuffix("ms"));
+    public Setting<Integer> threshold = add(new NumberSetting<>("Threshold", 32, 16, 63));
+    public Setting<Boolean> sort = add(new BooleanSetting("Sort", false));
+    public Setting<Boolean> unstackable = add(new BooleanSetting("Unstackable", false));
+    public Setting<Boolean> limit = add(new BooleanSetting("Limit", true).setDependent());
+    public Setting<Boolean> motion = add(new BooleanSetting("Motion", false, v -> this.limit.isShown()));
+    public Setting<Boolean> falling = add(new BooleanSetting("Falling", false, v -> this.limit.isShown()));
     public final List<Item> list;
     public final Stopwatch stopwatch;
 
     public Replenish() {
         super("Replenish", "Replenishes your hotbar.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.list = DefaultedList.ofSize(9, Items.AIR);
         this.stopwatch = new Stopwatch();
         setDrawn(false);
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (this.stopwatch.is419(this.delay.getValue().intValue()) && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
-            if (HoleSnapSearchHelper4_3.is2181() && this.motion.getValue().booleanValue()) {
+    public void onTick(TickEvent tickEvent) {
+        if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue()) && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+            if (MovementUtils.is2181() && this.motion.getValue().booleanValue()) {
                 return;
             }
             if (minecraftClient.player.getVelocity().getY() <= 0.0d || !this.falling.getValue().booleanValue()) {
@@ -60,7 +71,7 @@ public class Replenish extends Module {
                     ItemStack stack = minecraftClient.player.getInventory().getStack(i);
                     Item item = this.list.get(i);
                     if (this.unstackable.getValue().booleanValue() && stack.isEmpty() && item != Items.AIR && !z) {
-                        if (is2849(item, i)) {
+                        if (shouldReplenishItem(item, i)) {
                             this.stopwatch.reset();
                             return;
                         }
@@ -79,16 +90,16 @@ public class Replenish extends Module {
         }
     }
 
-    public boolean is2849(Item item, int i) {
-        if (!this.selection.getValue().is1391(item, this.items.getValue())) {
+    public boolean shouldReplenishItem(Item item, int i) {
+        if (!this.selection.getValue().isAllowed(item, this.items.getValue())) {
             return false;
         }
         boolean z = autoCrystal.isToggled() && autoCrystal.forceSuicide.getValue().booleanValue();
-        int i2 = FireworksHelper.get444(item, itemStack -> {
+        int i2 = InventoryUtils.findSlot(item, itemStack -> {
             return (itemStack == minecraftClient.player.getOffHandStack() || (z && itemStack.getItem() == Items.TOTEM_OF_UNDYING)) ? false : true;
         }, true);
         if (i2 == -1 && item == Items.TOTEM_OF_UNDYING && !z) {
-            i2 = FireworksHelper.get445(itemStack2 -> {
+            i2 = InventoryUtils.findInInventory(itemStack2 -> {
                 return is2851(itemStack2.getItem()) && itemStack2 != minecraftClient.player.getOffHandStack();
             }, true);
         }
@@ -96,7 +107,7 @@ public class Replenish extends Module {
             return false;
         }
         if (!is2850(i)) {
-            FireworksHelper.do441(i2, FireworksHelper.get453(i));
+            InventoryUtils.swapStacks(i2, InventoryUtils.toNetworkSlot(i));
             return true;
         }
         minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, i2, 0, SlotActionType.QUICK_MOVE, minecraftClient.player);
@@ -120,7 +131,7 @@ public class Replenish extends Module {
 
     public boolean is2852(int i) {
         ItemStack stack = minecraftClient.player.getInventory().getStack(i);
-        if (!this.selection.getValue().is1391(stack.getItem(), this.items.getValue())) {
+        if (!this.selection.getValue().isAllowed(stack.getItem(), this.items.getValue())) {
             return false;
         }
         float intValue = this.threshold.getValue().intValue() / Float.intBitsToFloat(1115684864);
@@ -152,18 +163,18 @@ public class Replenish extends Module {
         }
         int i6 = minecraftClient.player.currentScreenHandler.syncId;
         if (!this.sort.getValue().booleanValue() || i3 == 1 || stack.getMaxCount() - stack.getCount() <= i3) {
-            if (!FireworksHelper.is455()) {
-                FireworksHelper.do441(i2, FireworksHelper.get453(i));
+            if (!InventoryUtils.isHotbarFull()) {
+                InventoryUtils.swapStacks(i2, InventoryUtils.toNetworkSlot(i));
                 return true;
             }
             minecraftClient.interactionManager.clickSlot(i6, i2, 0, SlotActionType.QUICK_MOVE, minecraftClient.player);
             return true;
         }
-        BaritoneHelper_3.fireworksHelperSearchHelper4.do2630(true);
+        ClientServices.fireworksHelper.setSyncBatching(true);
         minecraftClient.interactionManager.clickSlot(i6, i2, 0, SlotActionType.PICKUP, minecraftClient.player);
         minecraftClient.interactionManager.clickSlot(i6, i2, 1, SlotActionType.PICKUP, minecraftClient.player);
-        minecraftClient.interactionManager.clickSlot(i6, FireworksHelper.get453(i), 0, SlotActionType.PICKUP, minecraftClient.player);
-        BaritoneHelper_3.fireworksHelperSearchHelper4.do2630(false);
+        minecraftClient.interactionManager.clickSlot(i6, InventoryUtils.toNetworkSlot(i), 0, SlotActionType.PICKUP, minecraftClient.player);
+        ClientServices.fireworksHelper.setSyncBatching(false);
         return true;
     }
 }

@@ -1,47 +1,54 @@
 package me.mioclient.module;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.render.hud.ResizableHudElement;
+import me.mioclient.util.anim.AnimationProgress;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.font.ClientTextRenderer;
+
 import java.awt.Color;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ColorSetting;
-import me.mioclient.FontsSearchHelper4;
+import me.mioclient.setting.ColorSetting;
 import me.mioclient.api.Setting;
-import me.mioclient.feature.Progress;
-import me.mioclient.feature.Size;
+import me.mioclient.util.anim.AnimationProgress;
+import me.mioclient.render.hud.ResizableHudElement;
 import net.minecraft.client.gui.DrawContext;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/Lag.class */
-public class Lag extends me.mioclient.ModuleList {
+public class Lag extends me.mioclient.module.HudModule {
     public Setting<Color> setting;
-    public final Progress progress;
+    public final AnimationProgress progress;
 
     public Lag() {
         super("Lag'O'Meter", "lag", "lagometer");
         this.setting = add(new ColorSetting("Color", Color.gray));
-        this.progress = new Progress(Float.intBitsToFloat(1065353216));
-        do3019(new Size(this));
+        this.progress = new AnimationProgress(Float.intBitsToFloat(1065353216));
+        setElement(new ResizableHudElement(this));
     }
 
-    @Override // me.mioclient.ModuleList
-    public void do364(DrawContext drawContext) {
-        String string773 = getString773();
-        this.progress.do2139(string773 != null);
+    @Override // me.mioclient.module.HudModule
+    public void renderContent(DrawContext drawContext) {
+        String string773 = getBindString();
+        this.progress.animateToggle(string773 != null);
         if (string773 == null) {
             return;
         }
-        FontsSearchHelper4.fontsSearchHelper4.do1691(drawContext, string773, 0.0f, (Float.intBitsToFloat(1065353216) - this.progress.get172()) * (-FontsSearchHelper4.fontsSearchHelper4.get93()), this.setting.getValue());
+        ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, string773, 0.0f, (Float.intBitsToFloat(1065353216) - this.progress.getValue()) * (-ClientTextRenderer.INSTANCE.getFontHeight()), this.setting.getValue());
     }
 
-    @Override // me.mioclient.ModuleList
-    public float[] getFloatArray365() {
-        String string773 = getString773();
-        return string773 == null ? new float[]{0.0f, 0.0f} : new float[]{FontsSearchHelper4.fontsSearchHelper4.get1316(string773), FontsSearchHelper4.fontsSearchHelper4.get93() + 1};
+    @Override // me.mioclient.module.HudModule
+    public float[] getSize() {
+        String string773 = getBindString();
+        return string773 == null ? new float[]{0.0f, 0.0f} : new float[]{ClientTextRenderer.INSTANCE.getStringWidth(string773), ClientTextRenderer.INSTANCE.getFontHeight() + 1};
     }
 
-    public String getString773() {
-        if ((Math.max(System.currentTimeMillis() - BaritoneHelper_3.holeSnapSearchHelper4_4.get2618(), 0L) <= 1000 || minecraftClient.isInSingleplayer()) && !is3017()) {
+    public String getBindString() {
+        if ((Math.max(System.currentTimeMillis() - ClientServices.holeSnapRenderHelper.getLastPacketTime(), 0L) <= 1000 || minecraftClient.isInSingleplayer()) && !isInHudEditor()) {
             return null;
         }
-        return "The server is not responding for %.1fs".formatted(Float.valueOf(((float) (System.currentTimeMillis() - BaritoneHelper_3.holeSnapSearchHelper4_4.get2618())) / Float.intBitsToFloat(1148846080)));
+        return "The server is not responding for %.1fs".formatted(Float.valueOf(((float) (System.currentTimeMillis() - ClientServices.holeSnapRenderHelper.getLastPacketTime())) / Float.intBitsToFloat(1148846080)));
     }
 }

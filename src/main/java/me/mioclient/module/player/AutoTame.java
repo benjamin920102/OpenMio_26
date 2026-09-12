@@ -1,21 +1,29 @@
 package me.mioclient.module.player;
 
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.MotionEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MotionEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.CatEntity;
@@ -26,53 +34,56 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoTame.class */
 public class AutoTame extends Module {
-    public Setting<AutoTameMode> action;
-    public Setting<Float> range;
-    public Setting<Integer> frequency;
-    public Setting<Float> delay;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> targets;
-    public Setting<Boolean> dogs;
-    public Setting<Boolean> cats;
-    public Setting<Boolean> parrots;
+    public Setting<AutoTameMode> action = add(new EnumSetting<>("Action", AutoTameMode.autoTameMode));
+    public Setting<Float> range = add(new NumberSetting<>("Range", 3.0f, 1.0f, 6.0f).setSuffix("m"));
+    public Setting<Integer> frequency = add(new NumberSetting<>("Frequency", 1, 1, 8));
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 0.1f, 0.1f, 5.0f).setSuffix("s"));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true));
+    public Setting<Boolean> targets = add(new BooleanSetting("Targets", false).setDependent());
+    public Setting<Boolean> dogs = add(new BooleanSetting("Dogs", true, v -> this.targets.isShown()));
+    public Setting<Boolean> cats = add(new BooleanSetting("Cats", true, v -> this.targets.isShown()));
+    public Setting<Boolean> parrots = add(new BooleanSetting("Parrots", true, v -> this.targets.isShown()));
     public final Stopwatch stopwatch;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoTame$AutoTameMode.class */
-    private static enum AutoTameMode implements EnumSettingHelper {
+    private static enum AutoTameMode implements NamedValue {
         autoTameMode("Tame") {
             @Override
-            public Vec3d getVec3d650(TameableEntity tameableEntity) {
+            public Vec3d getActionTarget(TameableEntity tameableEntity) {
                 int i;
-                if (tameableEntity.getOwner() != null || (i = FireworksHelper.get448(AutoTame.getPredicate1845(tameableEntity))) == -1) {
+                if (tameableEntity.getOwner() != null || (i = InventoryUtils.findInHotbar(AutoTame.getPredicate1845(tameableEntity))) == -1) {
                     return null;
                 }
-                FireworksHelper.do456(i);
-                PhaseESPSearchHelper4_2.do3049((Entity) tameableEntity, Hand.MAIN_HAND);
+                InventoryUtils.selectSlot(i);
+                BlockPlacer.interactWithEntity((Entity) tameableEntity, Hand.MAIN_HAND);
                 return tameableEntity.getBoundingBox().getCenter();
             }
         },
         autoTameMode2("Sit") {
             @Override
-            public Vec3d getVec3d650(TameableEntity tameableEntity) {
-                if (tameableEntity.isInSittingPose() || tameableEntity.isSitting() || SearchHelper_4.minecraftClient.player != tameableEntity.getOwner() || tameableEntity.isBreedingItem(SearchHelper_4.minecraftClient.player.getMainHandStack())) {
+            public Vec3d getActionTarget(TameableEntity tameableEntity) {
+                if (tameableEntity.isInSittingPose() || tameableEntity.isSitting() || ClientAccessor.minecraftClient.player != tameableEntity.getOwner() || tameableEntity.isBreedingItem(ClientAccessor.minecraftClient.player.getMainHandStack())) {
                     return null;
                 }
-                PhaseESPSearchHelper4_2.do3049((Entity) tameableEntity, Hand.MAIN_HAND);
+                BlockPlacer.interactWithEntity((Entity) tameableEntity, Hand.MAIN_HAND);
                 return tameableEntity.getBoundingBox().getCenter();
             }
         },
         autoTameMode3("Stand") {
             @Override
-            public Vec3d getVec3d650(TameableEntity tameableEntity) {
-                if ((!tameableEntity.isInSittingPose() && !tameableEntity.isSitting()) || SearchHelper_4.minecraftClient.player != tameableEntity.getOwner() || tameableEntity.isBreedingItem(SearchHelper_4.minecraftClient.player.getMainHandStack())) {
+            public Vec3d getActionTarget(TameableEntity tameableEntity) {
+                if ((!tameableEntity.isInSittingPose() && !tameableEntity.isSitting()) || ClientAccessor.minecraftClient.player != tameableEntity.getOwner() || tameableEntity.isBreedingItem(ClientAccessor.minecraftClient.player.getMainHandStack())) {
                     return null;
                 }
-                PhaseESPSearchHelper4_2.do3049((Entity) tameableEntity, Hand.MAIN_HAND);
+                BlockPlacer.interactWithEntity((Entity) tameableEntity, Hand.MAIN_HAND);
                 return tameableEntity.getBoundingBox().getCenter();
             }
         };
@@ -83,37 +94,36 @@ public class AutoTame extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public Vec3d getVec3d650(TameableEntity tameableEntity) {
+        public Vec3d getActionTarget(TameableEntity tameableEntity) {
             return null;
         }
     }
 
     public AutoTame() {
         super("AutoTame", "Automatically interacts with tame-able entities.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
     }
 
     @Listen
-    public void do388(MotionEvent motionEvent) {
+    public void onMotion(MotionEvent motionEvent) {
         Vec3d vec3d650;
-        if (motionEvent.getKeyPearlMode1472() == KeyPearlMode.Post) {
+        if (motionEvent.getPhase() == KeyPearlMode.Post) {
             return;
         }
-        if (this.stopwatch.is418(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
+        if (this.stopwatch.hasElapsed(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
             int i = 0;
             for (Entity entity : minecraftClient.world.getEntities()) {
                 if (entity instanceof TameableEntity) {
                     TameableEntity tameableEntity = (TameableEntity) entity;
-                    if (is1844(tameableEntity) && entity.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue() && (vec3d650 = this.action.getValue().getVec3d650(tameableEntity)) != null) {
+                    if (isAllowedAnimal(tameableEntity) && entity.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue() && (vec3d650 = this.action.getValue().getActionTarget(tameableEntity)) != null) {
                         i++;
                         if (this.rotate.getValue().booleanValue()) {
-                            motionEvent.do2257(SearchHelper4_8.getFloatArray2484(vec3d650));
+                            motionEvent.setRotation(RotationManager.getRotationsTo(vec3d650));
                         }
                         if (i >= this.frequency.getValue().intValue()) {
                             break;
@@ -125,7 +135,7 @@ public class AutoTame extends Module {
         }
     }
 
-    public boolean is1844(TameableEntity tameableEntity) {
+    public boolean isAllowedAnimal(TameableEntity tameableEntity) {
         return ((tameableEntity instanceof CatEntity) && this.cats.getValue().booleanValue()) || ((tameableEntity instanceof WolfEntity) && this.dogs.getValue().booleanValue()) || ((tameableEntity instanceof ParrotEntity) && this.parrots.getValue().booleanValue());
     }
 

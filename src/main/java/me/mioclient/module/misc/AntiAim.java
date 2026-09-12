@@ -1,20 +1,32 @@
 package me.mioclient.module.misc;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FreecamHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.HoleSnapSearchHelper4_6;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.event.events.network.PacketSendEvent;
+
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.world.RaycastUtils;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.math.MathConstants;
+import me.mioclient.util.world.RaycastUtils;
+
+import me.mioclient.render.RenderConstants;
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.mob.EndermanEntity;
@@ -28,22 +40,25 @@ import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim.class */
 public class AntiAim extends Module {
-    public Setting<Boolean> yaw2;
-    public Setting<AntiAimPredicateMode> yaw;
-    public Setting<Float> speed;
-    public Setting<Float> static_2;
-    public Setting<Float> flip;
-    public Setting<Float> jitterRange;
-    public Setting<Float> base;
-    public Setting<Boolean> pitch;
-    public Setting<AntiAimMode> pitch2;
-    public Setting<Float> static_;
-    public Setting<Boolean> enderman;
-    public Setting<AntiAimMode_2> look;
+    public Setting<Boolean> yaw2 = add(new BooleanSetting("Yaw", false).setVisible());
+    public Setting<AntiAimPredicateMode> yaw = add(new EnumSetting<>("Yaw", AntiAimPredicateMode.antiAimPredicateMode).requiresSettings(this.yaw2));
+    public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 90.0f));
+    public Setting<Float> static_2 = add(new NumberSetting<>("Static", 0.0f, 0.0f, 360.0f));
+    public Setting<Float> flip = add(new NumberSetting<>("Flip", 0.0f, 0.0f, 90.0f));
+    public Setting<Float> jitterRange = add(new NumberSetting<>("JitterRange", 0.0f, 0.0f, 180.0f));
+    public Setting<Float> base = add(new NumberSetting<>("Base", 0.0f, 0.0f, 360.0f));
+    public Setting<Boolean> pitch = add(new BooleanSetting("Pitch", false).setVisible());
+    public Setting<AntiAimMode> pitch2 = add(new EnumSetting<>("Pitch", AntiAimMode.antiAimMode).requiresSettings(this.pitch));
+    public Setting<Float> static_ = add(new NumberSetting<>("Static", 0.0f, -90.0f, 90.0f));
+    public Setting<Boolean> enderman = add(new BooleanSetting("Enderman", false).setVisible());
+    public Setting<AntiAimMode_2> look = add(new EnumSetting<>("Look", AntiAimMode_2.AVOID).requiresSettings(this.enderman));
     public boolean flag;
     public float val;
     public int num;
@@ -53,17 +68,17 @@ public class AntiAim extends Module {
     /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimMode.class */
-    public enum AntiAimMode implements EnumSettingHelper {
+    public enum AntiAimMode implements NamedValue {
         antiAimMode("Static") {
             @Override
-            public float get579(AntiAim antiAim, float f) {
+            public float computePitchAngle(AntiAim antiAim, float f) {
                 return antiAim.static_.getValue().floatValue();
             }
         },
         antiAimMode2("Random") {
             @Override
-            public float get579(AntiAim antiAim, float f) {
-                return (float) ((Math.random() * 180.0d) - FreecamHelper.num2);
+            public float computePitchAngle(AntiAim antiAim, float f) {
+                return (float) ((Math.random() * 180.0d) - MathConstants.num2);
             }
         };
 
@@ -73,19 +88,19 @@ public class AntiAim extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public float get579(AntiAim antiAim, float f) {
+        public float computePitchAngle(AntiAim antiAim, float f) {
             return 0.0f;
         }
     }
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimMode_2.class */
-    public enum AntiAimMode_2 implements EnumSettingHelper {
+    public enum AntiAimMode_2 implements NamedValue {
         AVOID("Avoid"),
         STARE("Stare");
 
@@ -95,7 +110,7 @@ public class AntiAim extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -106,36 +121,36 @@ public class AntiAim extends Module {
     /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimPredicateMode.class */
-    public enum AntiAimPredicateMode implements EnumSettingHelper {
+    public enum AntiAimPredicateMode implements NamedValue {
         antiAimPredicateMode("Jitter") {
             @Override
-            public float get2644(AntiAim antiAim, float f) {
+            public float computeYawAngle(AntiAim antiAim, float f) {
                 return (float) MathHelper.wrapDegrees((((Math.random() * antiAim.jitterRange.getValue().floatValue()) * 2.0d) - antiAim.jitterRange.getValue().floatValue()) + antiAim.base.getValue().floatValue());
             }
         },
         antiAimPredicateMode2("Spin") {
             @Override
-            public float get2644(AntiAim antiAim, float f) {
+            public float computeYawAngle(AntiAim antiAim, float f) {
                 antiAim.val += antiAim.speed.getValue().floatValue();
                 return MathHelper.wrapDegrees(antiAim.val);
             }
         },
-        antiAimPredicateMode3("Flip") {
+        RANDOMIRECTION("Flip") {
             @Override
-            public float get2644(AntiAim antiAim, float f) {
-                return MathHelper.wrapDegrees(antiAim.base.getValue().floatValue() + (SearchHelper_4.minecraftClient.player.age % 2 == 0 ? -antiAim.flip.getValue().floatValue() : antiAim.flip.getValue().floatValue()));
+            public float computeYawAngle(AntiAim antiAim, float f) {
+                return MathHelper.wrapDegrees(antiAim.base.getValue().floatValue() + (ClientAccessor.minecraftClient.player.age % 2 == 0 ? -antiAim.flip.getValue().floatValue() : antiAim.flip.getValue().floatValue()));
             }
         },
         antiAimPredicateMode4("Static") {
             @Override
-            public float get2644(AntiAim antiAim, float f) {
+            public float computeYawAngle(AntiAim antiAim, float f) {
                 return antiAim.static_2.getValue().floatValue();
             }
         },
         antiAimPredicateMode5("Random") {
             @Override
-            public float get2644(AntiAim antiAim, float f) {
-                return (float) (Math.random() * FreecamHelper.num3);
+            public float computeYawAngle(AntiAim antiAim, float f) {
+                return (float) (Math.random() * MathConstants.num3);
             }
         };
 
@@ -145,63 +160,62 @@ public class AntiAim extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public float get2644(AntiAim antiAim, float f) {
+        public float computeYawAngle(AntiAim antiAim, float f) {
             return 0.0f;
         }
     }
 
     public AntiAim() {
         super("AntiAim", "Sets your rotations server-side.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
-        this.yaw.do2329("YawMode");
-        this.pitch2.do2329("PitchMode");
+        this.yaw.setConfigName("YawMode");
+        this.pitch2.setConfigName("PitchMode");
     }
 
-    @Listen(get219= Helper_7.num4)
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
+    @Listen(get219= RenderConstants.num4)
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
         EndermanEntity endermanEntity852;
         this.flag = false;
-        if (BaritoneHelper_3.searchHelper4_8.getElytraFlyData2475() != null) {
+        if (ClientServices.RotationManager.getActiveRequest() != null) {
             return;
         }
         if (this.num > 0) {
             this.num--;
             return;
         }
-        float f = holeSnapEvent.get751();
-        float f2 = holeSnapEvent.get752();
+        float f = holeSnapEvent.getYaw();
+        float f2 = holeSnapEvent.getPitch();
         if (this.yaw2.getValue().booleanValue()) {
-            f = this.yaw.getValue().get2644(this, minecraftClient.player.getYaw());
-            do857();
+            f = this.yaw.getValue().computeYawAngle(this, minecraftClient.player.getYaw());
+            markRotationModified();
         }
         if (this.pitch.getValue().booleanValue()) {
-            f2 = this.pitch2.getValue().get579(this, minecraftClient.player.getPitch());
-            do857();
+            f2 = this.pitch2.getValue().computePitchAngle(this, minecraftClient.player.getPitch());
+            markRotationModified();
         }
         if (this.enderman.getValue().booleanValue() && (endermanEntity852 = getEndermanEntity852()) != null) {
             if (this.look.getValue() == AntiAimMode_2.AVOID) {
                 f2 = Float.intBitsToFloat(1119092736);
-                do857();
+                markRotationModified();
             }
             if (this.look.getValue() == AntiAimMode_2.STARE) {
-                float[] floatArray2484 = SearchHelper4_8.getFloatArray2484(endermanEntity852.getEyePos());
+                float[] floatArray2484 = RotationManager.getRotationsTo(endermanEntity852.getEyePos());
                 f = floatArray2484[0];
                 f2 = floatArray2484[1];
-                do857();
+                markRotationModified();
             }
         }
         if (this.flag) {
-            BaritoneHelper_3.searchHelper4_8.do2478(new float[]{f, f2}, -999, true);
+            ClientServices.RotationManager.requestRotations(new float[]{f, f2}, -999, true);
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         Item item = minecraftClient.player.getMainHandStack().getItem();
         if (((item instanceof RangedWeaponItem) || (item instanceof TridentItem)) && minecraftClient.player.isUsingItem()) {
             this.num = 2;
@@ -209,14 +223,14 @@ public class AntiAim extends Module {
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        PlayerInteractItemC2SPacket packet904 = (sendImmediatelyEvent.getPacket904()) instanceof PlayerInteractItemC2SPacket ? (PlayerInteractItemC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        PlayerInteractItemC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractItemC2SPacket ? (PlayerInteractItemC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if (packet904 instanceof PlayerInteractItemC2SPacket) {
-            do854(packet904.getHand());
+            handleItemUse(packet904.getHand());
         }
-        PlayerInteractBlockC2SPacket packet9042 = (sendImmediatelyEvent.getPacket904()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+        PlayerInteractBlockC2SPacket packet9042 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if (packet9042 instanceof PlayerInteractBlockC2SPacket) {
-            do854(packet9042.getHand());
+            handleItemUse(packet9042.getHand());
         }
     }
 
@@ -224,8 +238,8 @@ public class AntiAim extends Module {
         for (Entity entity : minecraftClient.world.getEntities()) {
             if (entity instanceof EndermanEntity) {
                 EndermanEntity endermanEntity = (EndermanEntity) entity;
-                if (!endermanEntity.isAngry() && endermanEntity.isAlive() && (this.look.getValue() != AntiAimMode_2.AVOID || is853(endermanEntity))) {
-                    if (HoleSnapSearchHelper4_6.is2788(entity)) {
+                if (!endermanEntity.isAngry() && endermanEntity.isAlive() && (this.look.getValue() != AntiAimMode_2.AVOID || isEndermanInCrosshairFOV(endermanEntity))) {
+                    if (RaycastUtils.hasLineOfSight(entity)) {
                         return endermanEntity;
                     }
                 }
@@ -234,13 +248,13 @@ public class AntiAim extends Module {
         return null;
     }
 
-    public boolean is853(EndermanEntity endermanEntity) {
+    public boolean isEndermanInCrosshairFOV(EndermanEntity endermanEntity) {
         Vec3d normalize = minecraftClient.player.getRotationVec(Float.intBitsToFloat(1065353216)).normalize();
         Vec3d vec3d = new Vec3d(endermanEntity.getX() - minecraftClient.player.getX(), endermanEntity.getEyeY() - minecraftClient.player.getEyeY(), endermanEntity.getZ() - minecraftClient.player.getZ());
         return normalize.dotProduct(vec3d.normalize()) > Double.longBitsToDouble(4607182418800017408L) - (Double.longBitsToDouble(4582862980812216730L) / vec3d.length());
     }
 
-    public void do854(Hand hand) {
+    public void handleItemUse(Hand hand) {
         if (minecraftClient.player == null) {
             return;
         }
@@ -249,20 +263,20 @@ public class AntiAim extends Module {
             return;
         }
         Item item = stackInHand.getItem();
-        if ((item instanceof BlockItem) || PhaseESPSearchHelper4_2.is3053(item)) {
+        if ((item instanceof BlockItem) || BlockPlacer.isThrowableItem(item)) {
             this.num = 2;
         }
     }
 
-    public boolean is855() {
+    public boolean hasModifiedRotation() {
         return this.flag;
     }
 
-    public void do856() {
+    public void resetActionTicks() {
         this.num = 2;
     }
 
-    public void do857() {
+    public void markRotationModified() {
         this.flag = true;
     }
 }

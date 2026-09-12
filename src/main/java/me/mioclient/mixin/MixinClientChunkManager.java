@@ -1,9 +1,10 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientAccessor;
+
 import com.llamalad7.mixinextras.sugar.Local;
 import java.util.function.Consumer;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.LoadChunkFromPacketEvent;
+import me.mioclient.event.events.network.LoadChunkFromPacketEvent;
 import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
@@ -20,6 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MixinClientChunkManager {
     @Inject(method = {"loadChunkFromPacket"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/world/ClientWorld;resetChunkColor(Lnet/minecraft/util/math/ChunkPos;)V", shift = At.Shift.BEFORE)})
     private void loadChunkFromPacketHook(int i, int i2, PacketByteBuf packetByteBuf, NbtCompound nbtCompound, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfoReturnable<WorldChunk> callbackInfoReturnable, @Local WorldChunk worldChunk) {
-        SearchHelper_4.baritoneHelper.getObject1794(new LoadChunkFromPacketEvent(worldChunk));
+        ClientAccessor.eventBus.fireEvent(new LoadChunkFromPacketEvent(worldChunk));
     }
 }

@@ -1,8 +1,11 @@
 package me.mioclient.mixin;
 
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.FinishUsingEvent;
-import me.mioclient.feature.Items;
+import me.mioclient.manager.ItemListConfig;
+
+import me.mioclient.api.ClientAccessor;
+
+import me.mioclient.event.events.player.FinishUsingEvent;
+import me.mioclient.manager.ItemListConfig;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.Item;
@@ -24,13 +27,13 @@ public abstract class MixinItemStack {
     @Inject(method = {"finishUsing"}, at = {@At("HEAD")})
     private void finishUsing(World world, LivingEntity livingEntity, CallbackInfoReturnable<ItemStack> callbackInfoReturnable) {
         if (livingEntity instanceof ClientPlayerEntity) {
-            SearchHelper_4.baritoneHelper.getObject1794(new FinishUsingEvent((ItemStack)(Object) this));
+            ClientAccessor.eventBus.fireEvent(new FinishUsingEvent((ItemStack)(Object) this));
         }
     }
 
     @Inject(method = {"hasGlint"}, at = {@At("HEAD")}, cancellable = true)
     private void hasGlintHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (Items.is1124(method_7909())) {
+        if (ItemListConfig.isConfiguredItem(method_7909())) {
             callbackInfoReturnable.setReturnValue(true);
             callbackInfoReturnable.cancel();
         }

@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.movement.NoSlow;
 import net.minecraft.block.HoneyBlock;
 import net.minecraft.entity.Entity;
@@ -14,7 +17,19 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin({HoneyBlock.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinHoneyBlock.class */
 public class MixinHoneyBlock {
-    private static NoSlow noslow = (NoSlow) BaritoneHelper_3.baritoneHelper_4.getModule117(NoSlow.class);
+    private static NoSlow noslow;
+
+    private static NoSlow getNoslow() {
+
+        if (noslow == null && ClientServices.moduleInjector != null) {
+
+            try { noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class); } catch (Exception e) {}
+
+        }
+
+        return noslow;
+
+    }
 
     @Shadow
     private boolean method_23356(BlockPos blockPos, Entity entity) {
@@ -23,7 +38,11 @@ public class MixinHoneyBlock {
 
     @Redirect(method = {"onEntityCollision"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/block/HoneyBlock;isSliding(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/entity/Entity;)Z"))
     private boolean onEntityCollisionHook(HoneyBlock honeyBlock, BlockPos blockPos, Entity entity) {
-        if (noslow.isToggled() && noslow.honey.getValue().booleanValue()) {
+        NoSlow noslow_lcl = getNoslow();
+
+        if (noslow_lcl == null) return false;
+
+        if (noslow_lcl.isToggled() && noslow_lcl.honey.getValue().booleanValue()) {
             return false;
         }
         return method_23356(blockPos, entity);

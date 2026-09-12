@@ -1,6 +1,6 @@
 package me.mioclient.mixin;
 
-import me.mioclient.ArrowsHelper;
+import me.mioclient.ducks.DuckStatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /* compiled from: 0.java */
 @Mixin({StatusEffectInstance.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinStatusEffectInstance.class */
-public class MixinStatusEffectInstance implements ArrowsHelper {
+public class MixinStatusEffectInstance implements DuckStatusEffectInstance {
 
     @Shadow
     private int field_5895;
@@ -38,7 +38,7 @@ public class MixinStatusEffectInstance implements ArrowsHelper {
         this.mio$initialDuration = this.field_5895;
     }
 
-    @Override // me.mioclient.ArrowsHelper
+    @Override // me.mioclient.ducks.DuckStatusEffectInstance
     public float mio$getDurationRation() {
         return this.field_5895 / this.mio$initialDuration;
     }

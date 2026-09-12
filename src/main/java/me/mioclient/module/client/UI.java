@@ -1,78 +1,103 @@
 package me.mioclient.module.client;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.event.events.client.ClientTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.util.client.SoundIdentifier;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.gui.screen.AbstractClickGuiScreen;
+import me.mioclient.gui.screen.ClickGuiScreen;
+import me.mioclient.mode.client.CursorType;
+import me.mioclient.mode.client.Season;
+import me.mioclient.mode.misc.KeybindMode;
+
+import me.mioclient.command.ClientCommandRegistry;
+import me.mioclient.api.ClientServices;
+import me.mioclient.gui.screen.AbstractClickGuiScreen;
+import me.mioclient.gui.screen.ClickGuiScreen;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.event.EventBus;
+
 import java.awt.Color;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ChatFilterSearchHelper4_2;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FontsEvent;
-import me.mioclient.FontsSearchHelper4_2;
-import me.mioclient.MixinTitleScreenSearchHelper4;
-import me.mioclient.Mode_10;
-import me.mioclient.Mode_5;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchIdentifier;
+import me.mioclient.event.events.client.ClientTickEvent;
+import me.mioclient.mode.client.Season;
+import me.mioclient.mode.client.CursorType;
+import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Keybind;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ChannelRead0Event;
+import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
 import org.lwjgl.glfw.GLFW;
+import me.mioclient.mode.misc.KeybindMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.setting.StringSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/client/UI.class */
 public final class UI extends Module {
     public static UI uI;
     public final AtomicBoolean atomicBoolean;
-    public Setting<Boolean> reset;
-    public Setting<String> prefix;
-    public Setting<Mode> msaa;
-    public Setting<Boolean> descriptions;
-    public Setting<Integer> delay;
-    public Setting<Boolean> constantReset;
-    public Setting<Integer> buttonHeight;
-    public Setting<Integer> frameWidth;
-    public Setting<Integer> modulePadding;
-    public Setting<Float> animSpeed;
-    public Setting<Float> guiScale;
-    public Setting<Boolean> snow;
-    public Setting<Boolean> elements;
-    public Setting<Boolean> line;
-    public Setting<Boolean> binds;
-    public Setting<Boolean> gear;
-    public Setting<Boolean> windowShadow;
-    public Setting<Color> shadowColor;
-    public Setting<Float> shadowSize;
-    public Setting<Boolean> sounds;
-    public Setting<Boolean> hover;
-    public Setting<SearchIdentifier> sound2;
-    public Setting<Float> volume;
-    public Setting<Boolean> leftClick;
-    public Setting<SearchIdentifier> sound3;
-    public Setting<Float> volume3;
-    public Setting<Boolean> rightClick;
-    public Setting<SearchIdentifier> sound;
-    public Setting<Float> volume2;
-    public Setting<Boolean> text;
-    public Setting<Boolean> bounce;
-    public Setting<Color> textColor;
-    public Setting<Color> enabledColor;
-    public Setting<Boolean> colors;
-    public Setting<Color> color;
-    public Setting<Color> bgColor;
-    public Setting<Color> bgButton;
-    public Setting<Color> bgEnabled;
-    public Setting<Color> tint;
-    public Setting<Color> gradientColor;
+    public Setting<Boolean> reset = add(new BooleanSetting("Reset", false));
+    public Setting<String> prefix = add(new StringSetting("Prefix", ";"));
+    public Setting<Mode> msaa = add(new EnumSetting<>("MSAA", Mode.NONE));
+    public Setting<Boolean> descriptions = add(new BooleanSetting("Descriptions", true).setVisible());
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 0, 0, 3000, v -> this.descriptions.isShown()).setSuffix("ms"));
+    public Setting<Boolean> constantReset = add(new BooleanSetting("ConstantReset", false, v -> this.descriptions.isShown() && this.delay.getValue().intValue() > 0));
+    public Setting<Integer> buttonHeight = add(new NumberSetting<>("ButtonHeight", 2, 0, 5));
+    public Setting<Integer> frameWidth = add(new NumberSetting<>("FrameWidth", 6, -10, 20));
+    public Setting<Integer> modulePadding = add(new NumberSetting<>("ModulePadding", 3, 1, 8));
+    public Setting<Float> animSpeed = add(new NumberSetting<>("AnimSpeed", 1.0f, 0.2f, 2.5f));
+    public Setting<Float> guiScale = add(new NumberSetting<>("GuiScale", 1.0f, 0.1f, 2.0f));
+    public Setting<Boolean> snow = add(new BooleanSetting("Snow", true));
+    public Setting<Boolean> elements = add(new BooleanSetting("Elements", true).setDependent());
+    public Setting<Boolean> line = add(new BooleanSetting("Line", true, v -> this.elements.isShown()));
+    public Setting<Boolean> binds = add(new BooleanSetting("Binds", false, v -> this.elements.isShown()));
+    public Setting<Boolean> gear = add(new BooleanSetting("Gear", true, v -> this.elements.isShown()));
+    public Setting<Boolean> windowShadow = add(new BooleanSetting("WindowShadow", false, v -> this.elements.isShown()).setVisible());
+    public Setting<Color> shadowColor = add(new ColorSetting("ShadowColor", new Color(1174405120, true), v -> this.elements.isShown() && this.windowShadow.isShown()).setThemeSync(true));
+    public Setting<Float> shadowSize = add(new NumberSetting<>("ShadowSize", 10.0f, 1.0f, 20.0f, v -> this.elements.isShown() && this.windowShadow.isShown()));
+    public Setting<Boolean> sounds = add(new BooleanSetting("Sounds", true).setDependent());
+    public Setting<Boolean> hover = add(new BooleanSetting("Hover", true, v -> this.sounds.isShown()).setVisible());
+    public Setting<SoundIdentifier> sound2 = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "hover")).requiresSettings(this.sounds, this.hover));
+    public Setting<Float> volume = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f).requiresSettings(this.sounds, this.hover));
+    public Setting<Boolean> leftClick = add(new BooleanSetting("LeftClick", true, v -> this.sounds.isShown()).setVisible());
+    public Setting<SoundIdentifier> sound3 = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "click")).requiresSettings(this.sounds, this.leftClick));
+    public Setting<Float> volume3 = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f).requiresSettings(this.sounds, this.leftClick));
+    public Setting<Boolean> rightClick = add(new BooleanSetting("RightClick", true, v -> this.sounds.isShown()).setVisible());
+    public Setting<SoundIdentifier> sound = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "rclick")).requiresSettings(this.sounds, this.rightClick));
+    public Setting<Float> volume2 = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f).requiresSettings(this.sounds, this.rightClick));
+    public Setting<Boolean> text = add(new BooleanSetting("Text", false).setDependent());
+    public Setting<Boolean> bounce = add(new BooleanSetting("Bounce", true, v -> this.text.isShown()));
+    public Setting<Color> textColor = add(new ColorSetting("TextColor", new Color(-396033, true), v -> this.text.isShown()));
+    public Setting<Color> enabledColor = add(new ColorSetting("EnabledColor", new Color(-2242049, true), v -> this.text.isShown()));
+    public Setting<Boolean> colors = add(new BooleanSetting("Colors", false).setDependent());
+    public Setting<Color> color = add(new ColorSetting("Color", new Color(1941805567, true), v -> this.colors.isShown()).setThemeSync(true));
+    public Setting<Color> bgColor = add(new ColorSetting("BgColor", new Color(1996619784, true), v -> this.colors.isShown()));
+    public Setting<Color> bgButton = add(new ColorSetting("BgButton", new Color(715096283, true), v -> this.colors.isShown()).setThemeSync(true));
+    public Setting<Color> bgEnabled = add(new ColorSetting("BgEnabled", new Color(1941805567, true), v -> this.colors.isShown()).setThemeSync(true));
+    public Setting<Color> tint = add(new ColorSetting("Tint", new Color(627064397, true), v -> this.colors.isShown()));
+    public Setting<Color> gradientColor = add(new ColorSetting("GradientColor", new Color(583181052, true), v -> this.colors.isShown()).setThemeSync(true));
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/client/UI$Mode.class */
-    public enum Mode implements EnumSettingHelper {
+    public enum Mode implements NamedValue {
         NONE("None", 0),
         X2("X2", 2),
         X4("X4", 4),
@@ -86,12 +111,12 @@ public final class UI extends Module {
             this.num = i;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public int get150() {
+        public int getMsaaMultiplier() {
             return this.num;
         }
     }
@@ -99,100 +124,99 @@ public final class UI extends Module {
     public UI() {
         super("UI", "Displays the client's click gui.", Category.CLIENT, new String[0]);
         this.atomicBoolean = new AtomicBoolean(false);
-        PhaseESPHelper.do1351(this);
-        baritoneHelper.do1797(UI.class);
+        eventBus.registerStatic(UI.class);
         setDrawn(false);
-        this.reset.do2339(() -> {
+        this.reset.setChangeCallback(() -> {
             if (this.reset.getValue().booleanValue()) {
-                BaritoneHelper_3.getMixinTitleScreenSearchHelper42216().do2828();
-                this.reset.do2333(false);
+                ClientServices.getClickGui().resetPanelLayout();
+                this.reset.setValue(false);
             }
         });
-        this.frameWidth.do2339(() -> {
+        this.frameWidth.setChangeCallback(() -> {
             this.atomicBoolean.set(true);
         });
         modifyKeybind(keybind -> {
-            return keybind.getKeybind1941(344);
+            return keybind.withKey(344);
         });
         uI = this;
-        this.sound2.do2329("HoverSound");
-        this.volume.do2329("HoverVolume");
-        this.sound3.do2329("LeftClickSound");
-        this.volume3.do2329("LeftClickVolume");
-        this.sound.do2329("RightClickSound");
-        this.volume2.do2329("RightClickVolume");
-        if (!Mode_10.WINTER.is2576(LocalDate.now().getMonthValue())) {
-            this.snow.do2333(false);
+        this.sound2.setConfigName("HoverSound");
+        this.volume.setConfigName("HoverVolume");
+        this.sound3.setConfigName("LeftClickSound");
+        this.volume3.setConfigName("LeftClickVolume");
+        this.sound.setConfigName("RightClickSound");
+        this.volume2.setConfigName("RightClickVolume");
+        if (!Season.WINTER.containsMonth(LocalDate.now().getMonthValue())) {
+            this.snow.setValue(false);
             unregister((Setting<?>) this.snow);
         }
-        this.prefix.do2339(() -> {
-            if (this.prefix.getValue().equals(ChatFilterSearchHelper4_2.getString2982())) {
+        this.prefix.setChangeCallback(() -> {
+            if (this.prefix.getValue().equals(ClientCommandRegistry.getPrefix())) {
                 return;
             }
-            ChatFilterSearchHelper4_2.do2983(this.prefix.getValue());
+            ClientCommandRegistry.setPrefix(this.prefix.getValue());
         });
-        this.prefix.do2353(true);
+        this.prefix.setHovered(true);
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        if (is1469() || (minecraftClient.currentScreen instanceof MixinTitleScreenSearchHelper4)) {
+        if (isNotInGame() || (minecraftClient.currentScreen instanceof ClickGuiScreen)) {
             return;
         }
         if (minecraftClient.currentScreen instanceof ChatScreen) {
-            BaritoneHelper_3.tooltipsSearchHelper4_2.do164(() -> {
-                minecraftClient.setScreen(BaritoneHelper_3.getMixinTitleScreenSearchHelper42216());
+            ClientServices.tooltipsHelper.schedule(() -> {
+                minecraftClient.setScreen(ClientServices.getClickGui());
             }, 0);
         } else {
-            minecraftClient.setScreen(BaritoneHelper_3.getMixinTitleScreenSearchHelper42216());
+            minecraftClient.setScreen(ClientServices.getClickGui());
         }
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (minecraftClient.currentScreen instanceof MixinTitleScreenSearchHelper4) {
-            BaritoneHelper_3.getMixinTitleScreenSearchHelper42216().do1714();
+        if (minecraftClient.currentScreen instanceof ClickGuiScreen) {
+            ClientServices.getClickGui().requestClose();
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (minecraftClient.currentScreen instanceof FontsSearchHelper4_2) {
+    public void onTick(TickEvent tickEvent) {
+        if (minecraftClient.currentScreen instanceof AbstractClickGuiScreen) {
             return;
         }
-        do496();
+        toggle();
     }
 
     @Listen
-    public void onEvent(FontsEvent fontsEvent) {
+    public void onClientTick(ClientTickEvent fontsEvent) {
         if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 0) == 1 || !this.atomicBoolean.get()) {
             return;
         }
-        BaritoneHelper_3.getMixinTitleScreenSearchHelper42216().do2828();
-        this.reset.do2333(false);
+        ClientServices.getClickGui().resetPanelLayout();
+        this.reset.setValue(false);
         this.atomicBoolean.set(false);
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        if (channelRead0Event.getPacket904() instanceof DisconnectS2CPacket) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        if (channelRead0Event.getPacket() instanceof DisconnectS2CPacket) {
             disable();
         }
     }
 
     @Listen
-    public static void onEvent2(FontsEvent fontsEvent) {
-        if (minecraftClient.currentScreen instanceof FontsSearchHelper4_2) {
+    public static void onClientTickCursor(ClientTickEvent fontsEvent) {
+        if (minecraftClient.currentScreen instanceof AbstractClickGuiScreen) {
             return;
         }
-        Mode_5.STANDARD.do935();
+        CursorType.STANDARD.applyCursor();
     }
 
     @Override // me.mioclient.module.Module
     public Keybind getKeybind() {
         Keybind keybind = super.getKeybind();
-        if (keybind.getKeybindMode1946() != Keybind.KeybindMode.TOGGLE) {
-            keybind = keybind.getKeybind1942(Keybind.KeybindMode.TOGGLE);
+        if (keybind.getMode() != Keybind.KeybindMode.TOGGLE) {
+            keybind = keybind.withMode(Keybind.KeybindMode.TOGGLE);
             setKeybind(keybind);
         }
         return keybind;

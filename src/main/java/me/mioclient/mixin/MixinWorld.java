@@ -1,7 +1,10 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import me.mioclient.BaritoneHelper_3;
 import me.mioclient.module.render.Ambience;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
@@ -14,12 +17,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({World.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinWorld.class */
 public class MixinWorld {
-    private static Ambience ambience = (Ambience) BaritoneHelper_3.baritoneHelper_4.getModule117(Ambience.class);
+    private static Ambience ambience;
+
+    private static Ambience getAmbience() {
+        if (ambience == null && ClientServices.moduleInjector != null) {
+            try { ambience = (Ambience) ClientServices.moduleInjector.getModule(Ambience.class); } catch (Exception e) {}
+        }
+        return ambience;
+    }
 
     @Inject(method = {"getRainGradient"}, at = {@At("HEAD")}, cancellable = true)
     private void getRainGradientHook(CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (ambience.worldWeather.getValue().booleanValue() && ambience.isToggled()) {
-            callbackInfoReturnable.setReturnValue(Float.valueOf(ambience.weather.getValue() == Ambience.AmbiencePredicateMode.CLEAR ? 0.0f : 1.0f));
+        Ambience amb = getAmbience();
+        if (amb != null && amb.worldWeather.getValue().booleanValue() && amb.isToggled()) {
+            callbackInfoReturnable.setReturnValue(Float.valueOf(amb.weather.getValue() == Ambience.AmbiencePredicateMode.CLEAR ? 0.0f : 1.0f));
             callbackInfoReturnable.cancel();
         }
     }

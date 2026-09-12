@@ -1,7 +1,10 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.render.SkyColor;
 import net.minecraft.client.world.ClientWorld;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,11 +16,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({ClientWorld.Properties.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinProperties.class */
 public class MixinProperties {
-    private static SkyColor skycolor = (SkyColor) BaritoneHelper_3.baritoneHelper_4.getModule117(SkyColor.class);
+    private static SkyColor skycolor;
+
+    private static SkyColor getSkycolor() {
+
+        if (skycolor == null && ClientServices.moduleInjector != null) {
+
+            try { skycolor = (SkyColor) ClientServices.moduleInjector.getModule(SkyColor.class); } catch (Exception e) {}
+
+        }
+
+        return skycolor;
+
+    }
 
     @Inject(method = {"getHorizonShadingRatio"}, at = {@At("HEAD")}, cancellable = true)
     private void onGetSkyProperties(CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (SearchHelper_4.minecraftClient.world != null && skycolor.isToggled() && skycolor.is3136() && !SearchHelper_4.minecraftClient.world.getRegistryKey().getValue().getPath().contains("over")) {
+        SkyColor skycolor_lcl = getSkycolor();
+
+        if (skycolor_lcl == null) return;
+
+        if (ClientAccessor.minecraftClient.world != null && skycolor_lcl.isToggled() && skycolor_lcl.isDimensionEnabled() && !ClientAccessor.minecraftClient.world.getRegistryKey().getValue().getPath().contains("over")) {
             callbackInfoReturnable.setReturnValue(Float.valueOf(1.0f));
             callbackInfoReturnable.cancel();
         }

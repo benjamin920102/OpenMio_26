@@ -1,20 +1,31 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.mode.player.SpeedMineMode;
+import me.mioclient.util.combat.ExplosionDamageCalculator;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.math.BoxMath;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.network.PacketSender;
+import me.mioclient.util.math.BoxMath;
+import me.mioclient.util.combat.ExplosionDamageCalculator;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.util.Iterator;
-import me.mioclient.ArmorSearchHelper4;
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper;
-import me.mioclient.SearchHelper4_8;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.MotionEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MotionEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.misc.AntiAim;
 import net.minecraft.item.ItemStack;
@@ -22,27 +33,31 @@ import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
+import me.mioclient.mode.player.SpeedMineMode;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoExp.class */
 public class AutoExp extends Module {
-    public Setting<SpeedMineMode> mode;
-    public Setting<Integer> delay;
-    public Setting<Integer> frequency;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> air;
-    public Setting<Boolean> stop;
-    public Setting<Integer> stopAt;
-    public Setting<Boolean> autoDisable;
-    public Setting<Boolean> tools;
-    public static AntiAim antiAim = (AntiAim) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiAim.class);
+    public Setting<SpeedMineMode> mode = add(new EnumSetting<>("Mode", SpeedMineMode.SILENT));
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 2, 0, 5));
+    public Setting<Integer> frequency = add(new NumberSetting<>("Frequency", 1, 1, 4));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", false));
+    public Setting<Boolean> air = add(new BooleanSetting("Air", true));
+    public Setting<Boolean> stop = add(new BooleanSetting("Stop", true).setVisible());
+    public Setting<Integer> stopAt = add(new NumberSetting<>("StopAt", 100, 80, 100, v -> this.stop.isShown()).setSuffix("%"));
+    public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", false).requiresSettings(this.stop));
+    public Setting<Boolean> tools = add(new BooleanSetting("Tools", false).requiresSettings(this.stop));
+    public static AntiAim antiAim = (AntiAim) ClientServices.moduleInjector.getModule(AntiAim.class);
     public final Stopwatch stopwatch;
     public int num;
     public boolean flag;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoExp$SpeedMineMode.class */
-    public enum SpeedMineMode implements EnumSettingHelper {
+    public enum SpeedMineMode implements NamedValue {
         NORMAL("Normal"),
         SILENT("Silent");
 
@@ -52,7 +67,7 @@ public class AutoExp extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -60,31 +75,30 @@ public class AutoExp extends Module {
 
     public AutoExp() {
         super("AutoExp", "Mends your armor for you.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.flag = false;
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
         if (this.rotate.getValue().booleanValue()) {
             this.stopwatch.reset();
         }
         if (antiAim.isToggled() && !this.flag) {
-            antiAim.do856();
+            antiAim.resetActionTicks();
         }
         this.num = minecraftClient.player.getInventory().selectedSlot;
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (is1469() || minecraftClient.player.getInventory().selectedSlot == this.num || this.mode.getValue() != SpeedMineMode.NORMAL) {
+        if (isNotInGame() || minecraftClient.player.getInventory().selectedSlot == this.num || this.mode.getValue() != SpeedMineMode.NORMAL) {
             return;
         }
-        FireworksHelper.do456(this.num);
+        InventoryUtils.selectSlot(this.num);
     }
 
     @Override // me.mioclient.module.Module
@@ -100,14 +114,14 @@ public class AutoExp extends Module {
     }
 
     @Listen(get219= 250)
-    public void do31(MotionEvent motionEvent) {
-        if (!is130() && motionEvent.getKeyPearlMode1472() == KeyPearlMode.Pre) {
-            float[] floatArray2484 = SearchHelper4_8.getFloatArray2484(SearchHelper.getVec3d222(BaritoneHelper_3.mainhandHelper_2.getBox1109(minecraftClient.player, 1)));
+    public void onMotion(MotionEvent motionEvent) {
+        if (!shouldPause() && motionEvent.getPhase() == KeyPearlMode.Pre) {
+            float[] floatArray2484 = RotationManager.getRotationsTo(BoxMath.getBottomCenter(ClientServices.mainhandHelper.getPredictedBox(minecraftClient.player, 1)));
             if (!this.flag && this.rotate.getValue().booleanValue()) {
-                BaritoneHelper_3.searchHelper4_8.do2478(floatArray2484, 4, true);
+                ClientServices.RotationManager.requestRotations(floatArray2484, 4, true);
             }
             boolean isHolding = minecraftClient.player.isHolding(Items.EXPERIENCE_BOTTLE);
-            int i = FireworksHelper.get447(Items.EXPERIENCE_BOTTLE);
+            int i = InventoryUtils.findInHotbar(Items.EXPERIENCE_BOTTLE);
             if (this.stop.getValue().booleanValue()) {
                 boolean z = true;
                 Iterator it = minecraftClient.player.getInventory().armor.iterator();
@@ -115,12 +129,12 @@ public class AutoExp extends Module {
                     if (!it.hasNext()) {
                         break;
                     }
-                    if (is1447((ItemStack) it.next())) {
+                    if (isBelowMendThreshold((ItemStack) it.next())) {
                         z = false;
                         break;
                     }
                 }
-                if ((is1447(minecraftClient.player.getMainHandStack()) || is1447(minecraftClient.player.getOffHandStack())) && this.tools.getValue().booleanValue()) {
+                if ((isBelowMendThreshold(minecraftClient.player.getMainHandStack()) || isBelowMendThreshold(minecraftClient.player.getOffHandStack())) && this.tools.getValue().booleanValue()) {
                     z = false;
                 }
                 if (z || i == -1) {
@@ -133,22 +147,22 @@ public class AutoExp extends Module {
                 }
             }
             if (i != -1 || isHolding) {
-                if (this.stopwatch.is419(this.delay.getValue().intValue() * 50)) {
+                if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue() * 50)) {
                     Hand hand = minecraftClient.player.getOffHandStack().isOf(Items.EXPERIENCE_BOTTLE) ? Hand.OFF_HAND : Hand.MAIN_HAND;
                     this.flag = false;
                     int i2 = minecraftClient.player.getInventory().selectedSlot;
                     if (minecraftClient.player.getMainHandStack().getItem() != Items.EXPERIENCE_BOTTLE && hand == Hand.MAIN_HAND) {
-                        FireworksHelper.do456(i);
+                        InventoryUtils.selectSlot(i);
                     }
                     for (int i3 = 0; i3 < this.frequency.getValue().intValue(); i3++) {
                         if (this.rotate.getValue().booleanValue()) {
-                            AutoSignSearchHelper4.do2558(hand, floatArray2484[0], floatArray2484[1]);
+                            PacketSender.sendInteractItem(hand, floatArray2484[0], floatArray2484[1]);
                         } else {
-                            AutoSignSearchHelper4.do2557(hand);
+                            PacketSender.sendInteractItem(hand);
                         }
                     }
                     if (this.mode.getValue() == SpeedMineMode.SILENT && minecraftClient.player.getInventory().selectedSlot != i2) {
-                        FireworksHelper.do456(i2);
+                        InventoryUtils.selectSlot(i2);
                     }
                     this.stopwatch.reset();
                 }
@@ -156,11 +170,11 @@ public class AutoExp extends Module {
         }
     }
 
-    public boolean is1447(ItemStack itemStack) {
-        return itemStack.isDamageable() && !itemStack.isEmpty() && ArmorSearchHelper4.get1905(itemStack) < this.stopAt.getValue().intValue();
+    public boolean isBelowMendThreshold(ItemStack itemStack) {
+        return itemStack.isDamageable() && !itemStack.isEmpty() && ExplosionDamageCalculator.getClampedDurabilityPercent(itemStack) < this.stopAt.getValue().intValue();
     }
 
-    public boolean is130() {
+    public boolean shouldPause() {
         if (!this.air.getValue().booleanValue()) {
             if (minecraftClient.crosshairTarget.getType() == HitResult.Type.MISS) {
                 return true;

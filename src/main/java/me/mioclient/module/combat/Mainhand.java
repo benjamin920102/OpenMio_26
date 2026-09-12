@@ -1,19 +1,28 @@
 package me.mioclient.module.combat;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EntityControlSearchHelper4;
-import me.mioclient.FireworksHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.MainhandHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchHelper_3;
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.util.client.InputState;
+import me.mioclient.util.combat.CrystalThreatDetector;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.combat.CrystalThreatDetector;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.client.InputState;
+
+import me.mioclient.render.RenderConstants;
+import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.RenderEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.render.RenderEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.NoInteract;
 import net.minecraft.component.DataComponentTypes;
@@ -21,46 +30,47 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Mainhand.class */
 public class Mainhand extends Module {
-    public static final NoInteract noInteract = (NoInteract) BaritoneHelper_3.baritoneHelper_4.getModule117(NoInteract.class);
-    public Setting<Integer> slot;
-    public Setting<Integer> delay;
-    public Setting<Boolean> autoSelect;
-    public Setting<Integer> delay2;
-    public Setting<Boolean> lethal;
-    public Setting<Float> health;
-    public Setting<Boolean> gappleBind;
-    public Setting<Float> safe;
+    public static final NoInteract noInteract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class);
+    public Setting<Integer> slot = add(new NumberSetting<>("Slot", 1, 1, 9));
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 25, 0, 500).setSuffix("ms"));
+    public Setting<Boolean> autoSelect = add(new BooleanSetting("AutoSelect", false).setVisible());
+    public Setting<Integer> delay2 = add(new NumberSetting<>("Delay", 25, 0, 500).setSuffix("ms").requiresSettings(this.autoSelect));
+    public Setting<Boolean> lethal = add(new BooleanSetting("Lethal", true).requiresSettings(this.autoSelect));
+    public Setting<Float> health = add(new NumberSetting<>("Health", 8.0f, 0.0f, 36.0f).setSuffix("hp").requiresSettings(this.autoSelect));
+    public Setting<Boolean> gappleBind = add(new BooleanSetting("GappleBind", true).setVisible());
+    public Setting<Float> safe = add(new NumberSetting<>("Safe", 8.0f, 0.0f, 36.0f).setSuffix("hp").requiresSettings(this.gappleBind));
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public final Stopwatch stopwatch3;
     public boolean flag;
     public int num;
-    public final MainhandHelper mainhandHelper;
+    public final CrystalThreatDetector mainhandHelper;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Mainhand$Inner.class */
-    class Inner extends MainhandHelper {
+    class Inner extends CrystalThreatDetector {
         public Inner() {
         }
 
-        @Override // me.mioclient.MainhandHelper
-        public boolean is465() {
+        @Override // me.mioclient.util.combat.CrystalThreatDetector
+        public boolean isEnabled() {
             return Mainhand.this.lethal.getValue().booleanValue() && Mainhand.this.autoSelect.getValue().booleanValue();
         }
     }
 
     public Mainhand() {
         super("Mainhand", "Auto totem for main hand.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
         this.stopwatch3 = new Stopwatch();
         this.mainhandHelper = new Inner();
-        this.delay2.do2329("SwapDelay");
+        this.delay2.setConfigName("SwapDelay");
     }
 
     @Override // me.mioclient.module.Module
@@ -71,7 +81,7 @@ public class Mainhand extends Module {
     @Override // me.mioclient.module.Module
     public String getInfo() {
         return String.valueOf(minecraftClient.player.getInventory().main.stream().filter(itemStack -> {
-            return itemStack.getItem() == getItem581();
+            return itemStack.getItem() == getDesiredItem();
         }).mapToInt((v0) -> {
             return v0.getCount();
         }).sum());
@@ -79,31 +89,31 @@ public class Mainhand extends Module {
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (!((!SearchHelper4_7.is2450(interactBlockEvent.getBlockHitResult2585()) || minecraftClient.player.isSneaking() || noInteract.isToggled()) ? false : true) || interactBlockEvent.is2403()) {
+        if (!((!WorldUtils.isInteractableHit(interactBlockEvent.getHitResult()) || minecraftClient.player.isSneaking() || noInteract.isToggled()) ? false : true) || interactBlockEvent.isCancelled()) {
             return;
         }
         this.stopwatch3.reset();
     }
 
-    @Listen(get219= Helper_7.num2)
+    @Listen(get219= RenderConstants.num2)
     public void onRender(RenderEvent renderEvent) {
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
-        this.flag = renderEvent.is168();
-        this.mainhandHelper.do466();
+        this.flag = renderEvent.isThirdPerson();
+        this.mainhandHelper.recalculateLayout();
         if (minecraftClient.player.currentScreenHandler != minecraftClient.player.playerScreenHandler) {
             return;
         }
-        do2116();
-        Item item581 = getItem581();
-        if (item581 != minecraftClient.player.getInventory().getStack(get2118()).getItem() && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
-            do2115(item581);
+        tryAutoSelectMainhand();
+        Item item581 = getDesiredItem();
+        if (item581 != minecraftClient.player.getInventory().getStack(getSelectedSlotIndex()).getItem() && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+            swapItemToMainhand(item581);
         }
     }
 
-    public void do2115(Item item) {
-        int i = FireworksHelper.get445(itemStack -> {
+    public void swapItemToMainhand(Item item) {
+        int i = InventoryUtils.findInInventory(itemStack -> {
             return itemStack.isOf(item);
         }, true);
         if (this.num != -1) {
@@ -114,26 +124,26 @@ public class Mainhand extends Module {
         if (i != -1 && i < minecraftClient.player.currentScreenHandler.slots.size()) {
             ItemStack stack = minecraftClient.player.currentScreenHandler.getSlot(i).getStack();
             if (!stack.contains(DataComponentTypes.FOOD) || this.flag) {
-                if (this.stopwatch.is420(this.delay.getValue().intValue()) && this.stopwatch3.is419(200L)) {
-                    FireworksHelper.do440(i, get2118());
+                if (this.stopwatch.hasElapsedAndResetMs(this.delay.getValue().intValue()) && this.stopwatch3.hasElapsedMs(200L)) {
+                    InventoryUtils.swapSlots(i, getSelectedSlotIndex());
                     this.num = i;
                 }
-                if (EntityControlSearchHelper4.is1538(minecraftClient.options.useKey) && stack.contains(DataComponentTypes.FOOD)) {
+                if (InputState.isKeyBindingActive(minecraftClient.options.useKey) && stack.contains(DataComponentTypes.FOOD)) {
                     minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.OFF_HAND);
                 }
             }
         }
     }
 
-    public void do2116() {
+    public void tryAutoSelectMainhand() {
         if (this.autoSelect.getValue().booleanValue()) {
-            if (minecraftClient.player.getInventory().getStack(get2118()).getItem() == Items.TOTEM_OF_UNDYING) {
+            if (minecraftClient.player.getInventory().getStack(getSelectedSlotIndex()).getItem() == Items.TOTEM_OF_UNDYING) {
                 if (minecraftClient.player.isUsingItem() && minecraftClient.player.getActiveHand() == Hand.MAIN_HAND) {
                     return;
                 }
-                if (this.mainhandHelper.is467() || SearchHelper_3.get643() <= this.health.getValue().floatValue()) {
-                    if (this.stopwatch2.is420(this.delay2.getValue().intValue())) {
-                        FireworksHelper.do456(get2118());
+                if (this.mainhandHelper.isThreatActive() || EntityUtil.getPlayerHealth() <= this.health.getValue().floatValue()) {
+                    if (this.stopwatch2.hasElapsedAndResetMs(this.delay2.getValue().intValue())) {
+                        InventoryUtils.selectSlot(getSelectedSlotIndex());
                     }
                 }
             }
@@ -147,13 +157,13 @@ public class Mainhand extends Module {
     /*
         Code decompiled incorrectly, please refer to instructions dump.
     */
-    public Item getItem581() {
-        boolean z = SearchHelper4_7.is2450(minecraftClient.crosshairTarget) && !minecraftClient.player.isSneaking() && !noInteract.isToggled()
+    public Item getDesiredItem() {
+        boolean z = WorldUtils.isInteractableHit(minecraftClient.crosshairTarget) && !minecraftClient.player.isSneaking() && !noInteract.isToggled()
                 && minecraftClient.player.isUsingItem() && minecraftClient.player.getActiveHand() == Hand.MAIN_HAND;
-        return (minecraftClient.player.getInventory().selectedSlot == get2118() || !this.gappleBind.getValue().booleanValue() || !minecraftClient.options.useKey.isPressed() || !is2117() || z || SearchHelper_3.get643() < this.safe.getValue().floatValue()) ? Items.TOTEM_OF_UNDYING : Items.ENCHANTED_GOLDEN_APPLE;
+        return (minecraftClient.player.getInventory().selectedSlot == getSelectedSlotIndex() || !this.gappleBind.getValue().booleanValue() || !minecraftClient.options.useKey.isPressed() || !mainhandHasTotemOrGapple() || z || EntityUtil.getPlayerHealth() < this.safe.getValue().floatValue()) ? Items.TOTEM_OF_UNDYING : Items.ENCHANTED_GOLDEN_APPLE;
     }
 
-    public boolean is2117() {
+    public boolean mainhandHasTotemOrGapple() {
         ItemStack mainHandStack = minecraftClient.player.getMainHandStack();
         if (minecraftClient.player.getOffHandStack().contains(DataComponentTypes.FOOD)) {
             return false;
@@ -161,7 +171,7 @@ public class Mainhand extends Module {
         return mainHandStack.isOf(Items.TOTEM_OF_UNDYING) || mainHandStack.isOf(Items.ENCHANTED_GOLDEN_APPLE);
     }
 
-    public int get2118() {
+    public int getSelectedSlotIndex() {
         return this.slot.getValue().intValue() - 1;
     }
 }

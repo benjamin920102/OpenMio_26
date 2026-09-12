@@ -1,7 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.Helper_3;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.ducks.DuckZombifiedPiglinEntity;
+import me.mioclient.util.time.Stopwatch;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.ZombifiedPiglinEntity;
@@ -15,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /* compiled from: 0.java */
 @Mixin({ZombifiedPiglinEntity.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinZombifiedPiglinEntity.class */
-public abstract class MixinZombifiedPiglinEntity extends MobEntity implements Helper_3 {
+public abstract class MixinZombifiedPiglinEntity extends MobEntity implements DuckZombifiedPiglinEntity {
 
     @Unique
     private Stopwatch stopwatch;
@@ -29,11 +31,11 @@ public abstract class MixinZombifiedPiglinEntity extends MobEntity implements He
         this.stopwatch = new Stopwatch();
     }
 
-    @Override // me.mioclient.Helper_3
+    @Override // me.mioclient.mixin.ducks.AttackStateMixin
     public boolean mio$isAttacking() {
         if (isAttacking()) {
             this.stopwatch.reset();
         }
-        return !this.stopwatch.is419(1000L);
+        return !this.stopwatch.hasElapsedMs(1000L);
     }
 }

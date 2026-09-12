@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.movement.EntityControl;
 import net.minecraft.entity.passive.AbstractHorseEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,11 +15,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({AbstractHorseEntity.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinAbstractHorseEntity.class */
 public class MixinAbstractHorseEntity {
-    private static EntityControl entitycontrol = (EntityControl) BaritoneHelper_3.baritoneHelper_4.getModule117(EntityControl.class);
+    private static EntityControl entitycontrol;
+
+    private static EntityControl getEntitycontrol() {
+
+        if (entitycontrol == null && ClientServices.moduleInjector != null) {
+
+            try { entitycontrol = (EntityControl) ClientServices.moduleInjector.getModule(EntityControl.class); } catch (Exception e) {}
+
+        }
+
+        return entitycontrol;
+
+    }
 
     @Inject(method = {"isSaddled"}, at = {@At("HEAD")}, cancellable = true)
     private void isSaddledHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (entitycontrol.isToggled()) {
+        EntityControl entitycontrol_lcl = getEntitycontrol();
+
+        if (entitycontrol_lcl == null) return;
+
+        if (entitycontrol_lcl.isToggled()) {
             callbackInfoReturnable.setReturnValue(true);
         }
     }

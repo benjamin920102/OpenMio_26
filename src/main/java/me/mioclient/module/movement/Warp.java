@@ -1,41 +1,53 @@
 package me.mioclient.module.movement;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.WarpHelper;
-import me.mioclient.WarpHelperMode;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.module.movement.warp.WarpHelperMode;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.module.movement.warp.WarpChargeHandler;
+
+import me.mioclient.render.RenderConstants;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.module.movement.warp.WarpHelperMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ChannelRead0Event;
+import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent;
-import me.mioclient.feature.MotionEvent;
+import me.mioclient.event.events.player.MoveEvent;
+import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Warp.class */
 public class Warp extends Module {
-    public static FakeLag fakeLag2 = (FakeLag) BaritoneHelper_3.baritoneHelper_4.getModule117(FakeLag.class);
-    public Setting<WarpMode> mode;
-    public Setting<Integer> boost;
-    public Setting<Integer> charge;
-    public Setting<Integer> chargeSpeed;
-    public Setting<WarpHelperMode> recharge;
-    public Setting<Boolean> fakeLag;
-    public Setting<Boolean> disableGround;
-    public Setting<Boolean> limitPackets;
-    public Setting<Boolean> autoDisable;
-    public final WarpHelper warpHelper;
+    public static FakeLag fakeLag2 = (FakeLag) ClientServices.moduleInjector.getModule(FakeLag.class);
+    public Setting<WarpMode> mode = add(new EnumSetting<>("Mode", WarpMode.PLAIN));
+    public Setting<Integer> boost = add(new NumberSetting<>("Boost", 2, 1, 50));
+    public Setting<Integer> charge = add(new NumberSetting<>("Charge", 20, 1, 100));
+    public Setting<Integer> chargeSpeed = add(new NumberSetting<>("ChargeSpeed", 1, 1, 4, v -> this.mode.getValue() == Warp.WarpMode.PLAIN));
+    public Setting<WarpHelperMode> recharge = add(new EnumSetting<>("Recharge", WarpHelperMode.NONE, v -> this.mode.getValue() == Warp.WarpMode.PLAIN));
+    public Setting<Boolean> fakeLag = add(new BooleanSetting("FakeLag", false).setVisible());
+    public Setting<Boolean> disableGround = add(new BooleanSetting("DisableGround", false).requiresSettings(this.fakeLag));
+    public Setting<Boolean> limitPackets = add(new BooleanSetting("LimitPackets", false).requiresSettings(this.fakeLag));
+    public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", false));
+    public final WarpChargeHandler warpHelper;
     public boolean flag;
     public volatile int num;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Warp$WarpMode.class */
-    public enum WarpMode implements EnumSettingHelper {
+    public enum WarpMode implements NamedValue {
         PLAIN("Plain"),
         ALTERNATIVE("Alternative");
 
@@ -45,7 +57,7 @@ public class Warp extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -53,8 +65,7 @@ public class Warp extends Module {
 
     public Warp() {
         super("Warp", "Allows you to dash forward after standing still for a certain amount of time.", Category.MOVEMENT, "tickshift");
-        PhaseESPHelper.do1351(this);
-        this.warpHelper = new WarpHelper(this);
+        this.warpHelper = new WarpChargeHandler(this);
     }
 
     @Override // me.mioclient.module.Module
@@ -71,8 +82,8 @@ public class Warp extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        do2179(false);
-        if (this.mode.getValue() != WarpMode.ALTERNATIVE || is1469()) {
+        setFakeLagEnabled(false);
+        if (this.mode.getValue() != WarpMode.ALTERNATIVE || isNotInGame()) {
             return;
         }
         while (!this.warpHelper.queue.isEmpty()) {
@@ -84,74 +95,74 @@ public class Warp extends Module {
         this.warpHelper.queue.clear();
     }
 
-    @Listen(get219= Helper_7.num5)
+    @Listen(get219= RenderConstants.num5)
     public void onMove(MoveEvent moveEvent) {
         if (this.mode.getValue() != WarpMode.PLAIN) {
             return;
         }
-        if (!is2180()) {
-            BaritoneHelper_3.inner.do2017(this);
-            do2179(false);
+        if (!isPlayerMoving()) {
+            ClientServices.inner.releaseTickRate(this);
+            setFakeLagEnabled(false);
             this.flag = false;
             return;
         }
         if (this.num == 0 || this.flag) {
-            BaritoneHelper_3.inner.do2017(this);
+            ClientServices.inner.releaseTickRate(this);
             if (this.autoDisable.getValue().booleanValue()) {
-                do496();
+                toggle();
             }
-            do2179(false);
+            setFakeLagEnabled(false);
             return;
         }
         if (this.num > 0) {
             if (this.fakeLag.getValue().booleanValue()) {
                 boolean isToggled = fakeLag2.isToggled();
-                do2179(minecraftClient.player.isOnGround() || !this.disableGround.getValue().booleanValue());
+                setFakeLagEnabled(minecraftClient.player.isOnGround() || !this.disableGround.getValue().booleanValue());
                 if (this.boost.getValue().intValue() > 1 && this.limitPackets.getValue().booleanValue()) {
-                    BaritoneHelper_3.holeSnapSearchHelper4_4.getStopwatch2616().reset();
+                    ClientServices.holeSnapRenderHelper.getTeleportStopwatch().reset();
                 }
                 if (!isToggled) {
                     return;
                 }
             }
-            BaritoneHelper_3.inner.do2018(this, this.boost.getValue().intValue());
+            ClientServices.inner.requestTickRate(this, this.boost.getValue().intValue());
         }
     }
 
     @Listen
-    public void do31(MotionEvent motionEvent) {
-        if (this.mode.getValue() == WarpMode.ALTERNATIVE && motionEvent.getKeyPearlMode1472() == KeyPearlMode.Pre) {
-            if (!this.warpHelper.queue.isEmpty() && is2180()) {
-                BaritoneHelper_3.inner.do2018(this, this.boost.getValue().intValue());
+    public void onMotion(MotionEvent motionEvent) {
+        if (this.mode.getValue() == WarpMode.ALTERNATIVE && motionEvent.getPhase() == KeyPearlMode.Pre) {
+            if (!this.warpHelper.queue.isEmpty() && isPlayerMoving()) {
+                ClientServices.inner.requestTickRate(this, this.boost.getValue().intValue());
                 minecraftClient.player.networkHandler.sendPacket(this.warpHelper.queue.poll());
                 return;
             }
             if (!this.warpHelper.queue.isEmpty() && !this.flag) {
-                BaritoneHelper_3.inner.do2017(this);
+                ClientServices.inner.releaseTickRate(this);
                 return;
             }
-            BaritoneHelper_3.inner.do2017(this);
+            ClientServices.inner.releaseTickRate(this);
             if (this.autoDisable.getValue().booleanValue()) {
-                do496();
+                toggle();
             }
         }
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        if (channelRead0Event.getPacket904() instanceof PlayerPositionLookS2CPacket) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
             this.flag = true;
         }
     }
 
-    public void do2179(boolean z) {
+    public void setFakeLagEnabled(boolean z) {
         if (!this.fakeLag.getValue().booleanValue() || minecraftClient.player == null) {
             return;
         }
-        fakeLag2.do495(z);
+        fakeLag2.setToggled(z);
     }
 
-    public boolean is2180() {
+    public boolean isPlayerMoving() {
         return minecraftClient.player.input.pressingRight || minecraftClient.player.input.pressingLeft || minecraftClient.player.input.pressingBack || minecraftClient.player.input.pressingForward || minecraftClient.player.getX() - minecraftClient.player.prevX != 0.0d || minecraftClient.player.getY() - minecraftClient.player.prevY != 0.0d || minecraftClient.player.getZ() - minecraftClient.player.prevZ != 0.0d;
     }
 

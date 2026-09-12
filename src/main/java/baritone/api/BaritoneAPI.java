@@ -1,4 +1,5 @@
 package baritone.api;
+import me.mioclient.module.client.Baritone;
 /** Minimal stub of the Baritone API surface used by this mod (Baritone is not bundled). */
 public final class BaritoneAPI {
     private static final IBaritoneProvider PROVIDER = null;

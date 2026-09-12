@@ -1,0 +1,324 @@
+package me.mioclient.gui.screen;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.setting.StringSettingRow;
+
+import me.mioclient.gui.panel.CategoryPanel;
+import me.mioclient.gui.panel.ClickGuiPanel;
+import me.mioclient.gui.widget.ModuleButton;
+import me.mioclient.mode.client.ModuleListMode;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.render.hud.DraggableHudElement;
+import me.mioclient.render.hud.ModuleListRenderer;
+import me.mioclient.render.hud.ResizableHudElement;
+import me.mioclient.render.hud.TextRenderState;
+import me.mioclient.render.shape.Shape2DRenderer;
+import me.mioclient.util.anim.AnimationProgress;
+import me.mioclient.util.math.ColorUtils;
+import me.mioclient.util.math.GridPoint;
+import me.mioclient.util.math.Tuple;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.math.GridPoint;
+import me.mioclient.render.hud.TextRenderState;
+import me.mioclient.module.client.hud.HudEdgeDragHandler;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.render.hud.DraggableHudElement;
+import me.mioclient.render.shape.Shape2DRenderer;
+import me.mioclient.util.math.ColorUtils;
+import me.mioclient.util.math.Tuple;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import me.mioclient.api.Category;
+import me.mioclient.util.anim.AnimationProgress;
+import me.mioclient.render.hud.ResizableHudElement;
+import net.minecraft.client.gui.DrawContext;
+import me.mioclient.module.client.HUD;
+import me.mioclient.mode.client.ModuleListMode;
+import me.mioclient.render.hud.ModuleListRenderer;
+import me.mioclient.setting.StringSettingRow;
+
+/* compiled from: 0.java */
+/* loaded from: mio-yarn.jar:me/mioclient/HudEditorScreen.class */
+public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAccessor {
+    public static final List<ModuleListRenderer> list = Collections.synchronizedList(new ArrayList());
+    public static final TextRenderState helper_22 = new TextRenderState();
+    public final HudEdgeDragHandler zoomHelper_2 = new HudEdgeDragHandler();
+    public final AnimationProgress progress = new AnimationProgress(Float.intBitsToFloat(1073741824), true);
+    public boolean isDraggingModule;
+    public float dragOffsetX;
+    public float dragOffsetY;
+    public float lastMouseX;
+    public float lastMouseY;
+
+    public HudEditorScreen() {
+        for (ModuleListMode moduleListMode : ModuleListMode.values()) {
+            list.add(new ModuleListRenderer(moduleListMode));
+        }
+        CategoryPanel categorySearchHelper4 = new CategoryPanel(Category.HUD);
+        categorySearchHelper4.getChildren().sort(Comparator.comparing(presetHelper_5 -> {
+            return presetHelper_5 instanceof ModuleButton ? ((ModuleButton) presetHelper_5).getModule().getName() : "";
+        }));
+        categorySearchHelper4.getTotalWidth();
+        categorySearchHelper4.setX(85);
+        categorySearchHelper4.setY(10);
+        this.arrayList.add(categorySearchHelper4);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public void render(DrawContext drawContext, int i, int i2, float f) {
+        RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), getAlpha());
+        helper_22.setActive(false);
+        this.lastMouseX = i;
+        this.lastMouseY = i2;
+        float scaledWindowWidth = drawContext.getScaledWindowWidth() / Float.intBitsToFloat(1073741824);
+        float scaledWindowHeight = drawContext.getScaledWindowHeight() / Float.intBitsToFloat(1073741824);
+        Color color817 = ColorUtils.withAlphaPercent(Color.white, RenderSystem.getShaderColor()[3] * Float.intBitsToFloat(1053609165));
+        Shape2DRenderer.drawRect(drawContext.getMatrices(), scaledWindowWidth - Float.intBitsToFloat(1056964608), 0.0f, scaledWindowWidth + Float.intBitsToFloat(1056964608), scaledWindowHeight * Float.intBitsToFloat(1073741824), color817);
+        Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, scaledWindowHeight - Float.intBitsToFloat(1056964608), scaledWindowWidth - Float.intBitsToFloat(1056964608), scaledWindowHeight + Float.intBitsToFloat(1056964608), color817);
+        Shape2DRenderer.drawRect(drawContext.getMatrices(), scaledWindowWidth + Float.intBitsToFloat(1056964608), scaledWindowHeight - Float.intBitsToFloat(1056964608), scaledWindowWidth * Float.intBitsToFloat(1073741824), scaledWindowHeight + Float.intBitsToFloat(1056964608), color817);
+        this.zoomHelper_2.do1010(drawContext, i, i2, f);
+        renderAll(drawContext, i, i2);
+        if (this.isDraggingModule) {
+            DraggableHudElement object1989 = getRenderer(ModuleListMode.NONE).getElements().getLast();
+            float[] floatArray2950 = object1989.getMeasuredSize();
+            object1989.setRelativeX(Math.max(0.0f, Math.min(drawContext.getScaledWindowWidth() - floatArray2950[0], i - this.dragOffsetX)), true);
+            object1989.setRelativeY(Math.max(0.0f, Math.min(drawContext.getScaledWindowHeight() - floatArray2950[1], i2 - this.dragOffsetY)), true);
+            object1989.computeSides();
+            if (Math.abs((object1989.getX() + (floatArray2950[0] / Float.intBitsToFloat(1073741824))) - scaledWindowWidth) <= Float.intBitsToFloat(1084227584)) {
+                float intBitsToFloat = scaledWindowWidth - (floatArray2950[0] / Float.intBitsToFloat(1073741824));
+                object1989.setRelativeX(intBitsToFloat, true);
+                drawSnapGuide(drawContext, intBitsToFloat - Double.longBitsToDouble(4602678819172646912L), true);
+                drawSnapGuide(drawContext, intBitsToFloat + floatArray2950[0], true);
+            }
+            if (Math.abs((object1989.getY() + (floatArray2950[1] / Float.intBitsToFloat(1073741824))) - scaledWindowHeight) <= Float.intBitsToFloat(1084227584)) {
+                float intBitsToFloat2 = scaledWindowHeight - (floatArray2950[1] / Float.intBitsToFloat(1073741824));
+                object1989.setRelativeY(intBitsToFloat2, true);
+                drawSnapGuide(drawContext, intBitsToFloat2 - Double.longBitsToDouble(4602678819172646912L), false);
+                drawSnapGuide(drawContext, intBitsToFloat2 + floatArray2950[1], false);
+            }
+        }
+        float f2 = this.progress.getValue();
+        this.progress.animateToggle(helper_22.isActive());
+        if (helper_22.isActive() || f2 > Double.longBitsToDouble(4591870180066957722L)) {
+            ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, helper_22.getText(), helper_22.getX() + (Float.intBitsToFloat(1092616192) * (Float.intBitsToFloat(1065353216) - f2) * helper_22.getSide()), helper_22.getY(), ColorUtils.withAlpha(Color.white, (int) (f2 * Float.intBitsToFloat(1132396544))));
+        }
+        super.render(drawContext, i, i2, f);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public boolean mouseClicked(double d, double d2, int i) {
+        Tuple holeSnapData_2 = null;
+        for (ModuleListRenderer ModuleListRenderer : list) {
+            for (int size = ModuleListRenderer.getElements().size() - 1; size >= 0; size--) {
+                DraggableHudElement moduleListSearchHelper4 = ModuleListRenderer.getElements().get(size);
+                if (moduleListSearchHelper4.isVisible() && i == 0 && holeSnapData_2 == null && ((!(moduleListSearchHelper4 instanceof ResizableHudElement) || !((ResizableHudElement) moduleListSearchHelper4).isOverResizeHandle(d, d2)) && moduleListSearchHelper4.containsPoint(d, d2))) {
+                    holeSnapData_2 = new Tuple(ModuleListRenderer.getAnchor(), moduleListSearchHelper4);
+                    this.dragOffsetX = (int) (d - moduleListSearchHelper4.getX());
+                    this.dragOffsetY = (int) (d2 - moduleListSearchHelper4.getY());
+                    this.isDraggingModule = true;
+                    moduleListSearchHelper4.setDragging(true);
+                }
+            }
+        }
+        if (holeSnapData_2 != null) {
+            getRenderer((ModuleListMode) holeSnapData_2.getLeft()).getElements().remove(holeSnapData_2.getRight());
+            getRenderer(ModuleListMode.NONE).getElements().addLast((DraggableHudElement) holeSnapData_2.getRight());
+            ((DraggableHudElement) holeSnapData_2.getRight()).setAnchor(ModuleListMode.NONE);
+        } else {
+            this.zoomHelper_2.mouseClicked(d, d2, i);
+        }
+        return super.mouseClicked(d, d2, i);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public boolean mouseReleased(double d, double d2, int i) {
+        this.zoomHelper_2.mouseReleased(d, d2, i);
+        if (this.isDraggingModule) {
+            this.isDraggingModule = false;
+            ModuleListRenderer ModuleListRenderer200 = getRenderer(ModuleListMode.NONE);
+            DraggableHudElement object1989 = ModuleListRenderer200.getElements().getLast();
+            object1989.setDragging(false);
+            ModuleListRenderer200.getElements().remove(object1989);
+            for (ModuleListRenderer ModuleListRenderer : list) {
+                Iterator<DraggableHudElement> it = ModuleListRenderer.getElements().iterator();
+                while (it.hasNext()) {
+                    if (it.next().getData_32936().overlaps(object1989.getData_32936())) {
+                        getRenderer(ModuleListRenderer.getAnchor()).getElements().addLast(object1989);
+                        object1989.setAnchor(ModuleListRenderer.getAnchor());
+                        return true;
+                    }
+                }
+            }
+            for (ModuleListMode moduleListMode : ModuleListMode.values()) {
+                if (moduleListMode.getData_32936().overlaps(object1989.getData_32936().expand(Float.intBitsToFloat(1084227584)))) {
+                    getRenderer(moduleListMode).getElements().addLast(object1989);
+                    object1989.setAnchor(moduleListMode);
+                    return true;
+                }
+            }
+        }
+        return super.mouseReleased(d, d2, i);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public boolean keyPressed(int i, int i2, int i3) {
+        boolean z = false;
+        Iterator<ClickGuiPanel> it = this.arrayList.iterator();
+        while (true) {
+            if (!it.hasNext()) {
+                break;
+            }
+            if (it.next().containsPoint(this.lastMouseX, this.lastMouseY)) {
+                z = true;
+                break;
+            }
+        }
+        if (!z) {
+            DraggableHudElement moduleListSearchHelper4202 = getHoveredElement();
+            if (getArrowPositionData(i) == null || moduleListSearchHelper4202 == null || !moduleListSearchHelper4202.isVisible()) {
+                switch (i) {
+                    case 73:
+                        if (!(ClientServices.getClickGui().getActiveSettingButton() instanceof StringSettingRow)) {
+                            swapLists(ModuleListMode.BOTTOM_LEFT, ModuleListMode.BOTTOM_RIGHT);
+                            swapLists(ModuleListMode.TOP_LEFT, ModuleListMode.TOP_RIGHT);
+                            break;
+                        }
+                        break;
+                    case 259:
+                    case 261:
+                        if (moduleListSearchHelper4202 != null && moduleListSearchHelper4202.isVisible()) {
+                            moduleListSearchHelper4202.getHudModule().setToggled(false);
+                            break;
+                        }
+                        break;
+                }
+            } else {
+                GridPoint positionData = getArrowPositionData(i);
+                moduleListSearchHelper4202.setRelativeX(moduleListSearchHelper4202.getX() + positionData.get476(), true);
+                moduleListSearchHelper4202.setRelativeY(moduleListSearchHelper4202.getY() + positionData.getGridY(), true);
+                moduleListSearchHelper4202.computeSides();
+            }
+        }
+        return super.keyPressed(i, i2, i3);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public boolean mouseScrolled(double d, double d2, double d3, double d4) {
+        return super.mouseScrolled(d, d2, d3, d4);
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public void close() {
+        super.close();
+        if (this.isDraggingModule) {
+            getRenderer(ModuleListMode.NONE).getElements().getLast().setDragging(false);
+            this.isDraggingModule = false;
+        }
+    }
+
+    public void addModuleToList(ModuleListMode moduleListMode, DraggableHudElement moduleListSearchHelper4) {
+        getRenderer(moduleListMode).getElements().add(moduleListSearchHelper4);
+    }
+
+    public void addModuleDefault(DraggableHudElement moduleListSearchHelper4) {
+        addModuleToList(ModuleListMode.NONE, moduleListSearchHelper4);
+    }
+
+    public void removeModuleFromAll(DraggableHudElement moduleListSearchHelper4) {
+        Iterator<ModuleListRenderer> it = getAllRenderers().iterator();
+        while (it.hasNext() && !it.next().getElements().remove(moduleListSearchHelper4)) {
+        }
+    }
+
+    public List<ModuleListRenderer> getAllRenderers() {
+        return list;
+    }
+
+    public void renderAll(DrawContext drawContext, double d, double d2) {
+        Iterator<ModuleListRenderer> it = getAllRenderers().iterator();
+        while (it.hasNext()) {
+            it.next().render(drawContext, drawContext.getMatrices(), d, d2);
+        }
+        Shape2DRenderer.resetShadowOffset();
+    }
+
+    public ModuleListRenderer getRenderer(ModuleListMode moduleListMode) {
+        for (ModuleListRenderer ModuleListRenderer : getAllRenderers()) {
+            if (ModuleListRenderer.getAnchor() == moduleListMode) {
+                return ModuleListRenderer;
+            }
+        }
+        return null;
+    }
+
+    public void swapLists(ModuleListMode moduleListMode, ModuleListMode moduleListMode2) {
+        ModuleListRenderer ModuleListRenderer200 = getRenderer(moduleListMode);
+        ModuleListRenderer ModuleListRenderer2002 = getRenderer(moduleListMode2);
+        ArrayList arrayList = new ArrayList(ModuleListRenderer200.getElements());
+        ModuleListRenderer200.getElements().clear();
+        Iterator<DraggableHudElement> it = ModuleListRenderer2002.getElements().iterator();
+        while (it.hasNext()) {
+            ModuleListRenderer200.getElements().add(it.next());
+        }
+        ModuleListRenderer2002.getElements().clear();
+        Iterator it2 = arrayList.iterator();
+        while (it2.hasNext()) {
+            ModuleListRenderer2002.getElements().add((DraggableHudElement) it2.next());
+        }
+    }
+
+    public DraggableHudElement getHoveredElement() {
+        Iterator<ModuleListRenderer> it = list.iterator();
+        while (it.hasNext()) {
+            Iterator<DraggableHudElement> it2 = it.next().getElements().iterator();
+            while (it2.hasNext()) {
+                DraggableHudElement next = it2.next();
+                if (next.containsPoint(this.lastMouseX, this.lastMouseY)) {
+                    return next;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void drawSnapGuide(DrawContext drawContext, double d, boolean z) {
+        float f = (float) d;
+        if (z) {
+            Shape2DRenderer.drawRect(drawContext.getMatrices(), f, 0.0f, f + Float.intBitsToFloat(1056964608), drawContext.getScaledWindowHeight(), Color.yellow);
+        } else {
+            Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, f, drawContext.getScaledWindowWidth(), f + Float.intBitsToFloat(1056964608), Color.yellow);
+        }
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public void renderOverlay(DrawContext drawContext) {
+    }
+
+    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
+    public boolean shouldRenderBackground() {
+        return false;
+    }
+
+    public GridPoint getArrowPositionData(int i) {
+        switch (i) {
+            case 262:
+                return new GridPoint(1, 0);
+            case 263:
+                return new GridPoint(-1, 0);
+            case 264:
+                return new GridPoint(0, 1);
+            case 265:
+                return new GridPoint(0, -1);
+            default:
+                return null;
+        }
+    }
+}

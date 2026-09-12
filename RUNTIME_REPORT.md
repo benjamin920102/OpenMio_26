@@ -68,14 +68,14 @@ System.setProperty("java.awt.headless", mac ? "true" : "false");
 lambda/合成方法名带编译器计数器（`lambda$new$2`/`lambda$do1$3`），obf/yarn/current 三方都不同、无稳定映射。加载器仅 5 处方法反射，按**语义 + 当前签名**定名：
 | 位置 | 反射目标 | 当前真实名 |
 |------|----------|-----------|
-| `Modules`/`Commands` | ModuleManager 注册 `(Module)`/`(Feature)` | `register` |
+| `ModuleRegistry`/`Commands` | ModuleManager 注册 `(Module)`/`(Feature)` | `register` |
 | `Settings:92` | Module 加设置 `(Setting)` | `add` |
 | `SettingPredicates:84` | Setting 注册谓词 `(Predicate)` | `do2343` |
 | `SettingPredicates:45` | `findStatic` Setting 的谓词工厂 `(Setting[],Object)Z` | `lambda$getSetting2342$0` |
 
 ## 其余加载器修复（CFR 反编译瑕疵 / 运行时兜底）
-- `MioClassLoader.read()`：缺失 `.bin` 返回 null（资源已解包到真实路径，见 [RESOURCES.md](RESOURCES.md)）。
-- `SettingSubdata`：intermediary 名 `class_7923/class_2378` → `Registries/Registry`（+ `field_411xx` → BLOCK/ITEM/…）。
+- `ResourceClassLoader.read()`：缺失 `.bin` 返回 null（资源已解包到真实路径，见 [RESOURCES.md](RESOURCES.md)）。
+- `SettingMetadataApplier`：intermediary 名 `class_7923/class_2378` → `Registries/Registry`（+ `field_411xx` → BLOCK/ITEM/…）。
 - 泛型转型：`Reflection` `(T[])(Object)`、`SettingPredicates` `(Predicate<?>)`、`SettingTypes` 去多余 `(Object)`。
 
 ## 复现

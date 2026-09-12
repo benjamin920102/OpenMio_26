@@ -1,19 +1,26 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.event.events.network.PacketSendEvent;
+
+import me.mioclient.util.client.InteractPacketReader;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.client.InteractPacketReader;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.util.HashMap;
 import java.util.Map;
-import me.mioclient.FireworksHelper;
-import me.mioclient.LegacyCrystalSearchHelper4;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
 import me.mioclient.api.Category;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.api.Setting;
-import me.mioclient.event.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.EndCrystalEntity;
@@ -35,7 +42,6 @@ public class LegacyCrystal extends Module {
 
     public LegacyCrystal() {
         super("LegacyCrystal", "Legit auto crystal (crystal aura).", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.map = new HashMap();
         this.stopwatch = new Stopwatch();
         this.num = 150L;
@@ -43,6 +49,9 @@ public class LegacyCrystal extends Module {
 
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
+        if (this.setting == null || this.setting2 == null) {
+            return;
+        }
         synchronized (this.map) {
             this.map.entrySet().removeIf(entry -> {
                 return ((Long) entry.getValue()).longValue() + 15000 < System.currentTimeMillis();
@@ -50,7 +59,7 @@ public class LegacyCrystal extends Module {
         }
         if (minecraftClient.crosshairTarget instanceof EntityHitResult) {
             Entity entity = ((EntityHitResult) minecraftClient.crosshairTarget).getEntity();
-            if (this.stopwatch.is419(this.num) && (entity instanceof EndCrystalEntity)) {
+            if (this.stopwatch.hasElapsedMs(this.num) && (entity instanceof EndCrystalEntity)) {
                 if (this.map.containsKey(entity.getBlockPos().down())) {
                     ((DuckMinecraftClient)(Object) minecraftClient).attack();
                     this.num = (long) (Math.random() * this.setting.getValue().intValue());
@@ -62,21 +71,24 @@ public class LegacyCrystal extends Module {
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (minecraftClient.world.getBlockState(interactBlockEvent.getBlockHitResult2585().getBlockPos().up(2)).isAir()) {
-            boolean is3043 = PhaseESPSearchHelper4_2.is3043(interactBlockEvent.getBlockHitResult2585().getBlockPos(), false, false, true, false, false, false);
+        if (minecraftClient.world.getBlockState(interactBlockEvent.getHitResult().getBlockPos().up(2)).isAir()) {
+            boolean isCrystalPlaceable = BlockPlacer.isCrystalPlaceable(interactBlockEvent.getHitResult().getBlockPos(), false, false, true, false, false, false);
             if (minecraftClient.player.getMainHandStack().getItem() instanceof SwordItem) {
-                FireworksHelper.do456(FireworksHelper.get447(is3043 ? Items.END_CRYSTAL : Items.OBSIDIAN));
+                InventoryUtils.selectSlot(InventoryUtils.findInHotbar(isCrystalPlaceable ? Items.END_CRYSTAL : Items.OBSIDIAN));
                 return;
             }
-            if (minecraftClient.player.getMainHandStack().isOf(Items.OBSIDIAN) && is3043) {
-                FireworksHelper.do438(FireworksHelper.get447(Items.END_CRYSTAL));
+            if (minecraftClient.player.getMainHandStack().isOf(Items.OBSIDIAN) && isCrystalPlaceable) {
+                InventoryUtils.do438(InventoryUtils.findInHotbar(Items.END_CRYSTAL));
             }
         }
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        PlayerInteractBlockC2SPacket packet904 = (sendImmediatelyEvent.getPacket904()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        if (this.setting2 == null) {
+            return;
+        }
+        PlayerInteractBlockC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if (packet904 instanceof PlayerInteractBlockC2SPacket) {
             PlayerInteractBlockC2SPacket playerInteractBlockC2SPacket = packet904;
             if (minecraftClient.player.getStackInHand(playerInteractBlockC2SPacket.getHand()).isOf(Items.END_CRYSTAL)) {
@@ -85,11 +97,11 @@ public class LegacyCrystal extends Module {
                 });
             }
         }
-        PlayerInteractEntityC2SPacket packet9042 = (sendImmediatelyEvent.getPacket904()) instanceof PlayerInteractEntityC2SPacket ? (PlayerInteractEntityC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+        PlayerInteractEntityC2SPacket packet9042 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractEntityC2SPacket ? (PlayerInteractEntityC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if (packet9042 instanceof PlayerInteractEntityC2SPacket) {
             PlayerInteractEntityC2SPacket playerInteractEntityC2SPacket = packet9042;
-            if (this.setting2.getValue().booleanValue() && LegacyCrystalSearchHelper4.getLegacyCrystalMode2611(playerInteractEntityC2SPacket) == LegacyCrystalSearchHelper4.LegacyCrystalMode.ATTACK && (LegacyCrystalSearchHelper4.getEntity2610(playerInteractEntityC2SPacket) instanceof EndCrystalEntity)) {
-                LegacyCrystalSearchHelper4.getEntity2610(playerInteractEntityC2SPacket).setRemoved(Entity.RemovalReason.KILLED);
+            if (this.setting2.getValue().booleanValue() && InteractPacketReader.getCrystalInteractionType(playerInteractEntityC2SPacket) == InteractPacketReader.LegacyCrystalMode.ATTACK && (InteractPacketReader.resolvePacketEntity(playerInteractEntityC2SPacket) instanceof EndCrystalEntity)) {
+                InteractPacketReader.resolvePacketEntity(playerInteractEntityC2SPacket).setRemoved(Entity.RemovalReason.KILLED);
             }
         }
     }

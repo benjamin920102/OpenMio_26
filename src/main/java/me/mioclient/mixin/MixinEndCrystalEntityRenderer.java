@@ -1,13 +1,20 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.render.ChamsMode;
+import me.mioclient.render.mesh.CustomRenderLayers;
+import me.mioclient.render.shader.ShaderPassRegistry;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.shader.ShaderPassRegistry;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import com.llamalad7.mixinextras.sugar.Local;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ChamsMode;
-import me.mioclient.Helper_18;
-import me.mioclient.ShaderSearchHelper4;
-import me.mioclient.SpawnTimeHelper_2;
+import me.mioclient.mode.render.ChamsMode;
+import me.mioclient.render.mesh.CustomRenderLayers;
+import me.mioclient.ducks.DuckEndCrystalEntity;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.render.Animations;
 import me.mioclient.module.render.Chams;
@@ -39,9 +46,45 @@ public class MixinEndCrystalEntityRenderer {
     @Shadow
     @Final
     private static Identifier field_4663;
-    private static AutoCrystal ac = (AutoCrystal) BaritoneHelper_3.baritoneHelper_4.getModule117(AutoCrystal.class);
-    private static Chams mod = (Chams) BaritoneHelper_3.baritoneHelper_4.getModule117(Chams.class);
-    private static Animations animations = (Animations) BaritoneHelper_3.baritoneHelper_4.getModule117(Animations.class);
+    private static AutoCrystal ac;
+
+    private static AutoCrystal getAc() {
+
+        if (ac == null && ClientServices.moduleInjector != null) {
+
+            try { ac = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class); } catch (Exception e) {}
+
+        }
+
+        return ac;
+
+    }
+    private static Chams mod;
+
+    private static Chams getMod() {
+
+        if (mod == null && ClientServices.moduleInjector != null) {
+
+            try { mod = (Chams) ClientServices.moduleInjector.getModule(Chams.class); } catch (Exception e) {}
+
+        }
+
+        return mod;
+
+    }
+    private static Animations animations;
+
+    private static Animations getAnimations() {
+
+        if (animations == null && ClientServices.moduleInjector != null) {
+
+            try { animations = (Animations) ClientServices.moduleInjector.getModule(Animations.class); } catch (Exception e) {}
+
+        }
+
+        return animations;
+
+    }
 
     @Unique
     private static EndCrystalEntity last;
@@ -51,32 +94,47 @@ public class MixinEndCrystalEntityRenderer {
 
     @ModifyArgs(method = {"render*"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;scale(FFF)V", ordinal = 0))
     private void scaleHook(Args args) {
-        if (animations.isToggled() && animations.crystals.getValue().booleanValue()) {
-            args.set(0, Float.valueOf(((Float) args.get(0)).floatValue() * animations.crystalScale.getValue().floatValue()));
-            args.set(1, Float.valueOf(((Float) args.get(1)).floatValue() * animations.crystalScale.getValue().floatValue()));
-            args.set(2, Float.valueOf(((Float) args.get(2)).floatValue() * animations.crystalScale.getValue().floatValue()));
+        Animations animations_lcl = getAnimations();
+
+        if (animations_lcl == null) return;
+
+        if (animations_lcl.isToggled() && animations_lcl.crystals.getValue().booleanValue()) {
+            args.set(0, Float.valueOf(((Float) args.get(0)).floatValue() * animations_lcl.crystalScale.getValue().floatValue()));
+            args.set(1, Float.valueOf(((Float) args.get(1)).floatValue() * animations_lcl.crystalScale.getValue().floatValue()));
+            args.set(2, Float.valueOf(((Float) args.get(2)).floatValue() * animations_lcl.crystalScale.getValue().floatValue()));
         }
     }
 
     @Inject(method = {"render(Lnet/minecraft/entity/decoration/EndCrystalEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"}, at = {@At("HEAD")}, cancellable = true)
     private void renderHook(EndCrystalEntity endCrystalEntity, float f, float f2, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo callbackInfo) {
+        AutoCrystal ac_lcl = getAc();
+
+        if (ac_lcl == null) return;
+
         this.mio$ordinal = 0;
         last = endCrystalEntity;
-        if (System.currentTimeMillis() - ((SpawnTimeHelper_2) endCrystalEntity).getSpawnTime() > Math.max(BaritoneHelper_3.holeSnapSearchHelper4_4.get1730(), 50) && endCrystalEntity.age < 10 && ac.isToggled() && ac.inhibit.getValue().booleanValue() && ((SpawnTimeHelper_2) endCrystalEntity).isMioAttacked()) {
+        if (System.currentTimeMillis() - ((DuckEndCrystalEntity) endCrystalEntity).getSpawnTime() > Math.max(ClientServices.holeSnapRenderHelper.getPing(), 50) && endCrystalEntity.age < 10 && ac_lcl.isToggled() && ac_lcl.inhibit.getValue().booleanValue() && ((DuckEndCrystalEntity) endCrystalEntity).isMioAttacked()) {
             callbackInfo.cancel();
         }
     }
 
     @Inject(method = {"getYOffset"}, at = {@At("HEAD")}, cancellable = true)
     private static void offsetHook(EndCrystalEntity endCrystalEntity, float f, CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (animations.isToggled() && animations.crystals.getValue().booleanValue()) {
+        AutoCrystal ac_lcl = getAc();
+        Animations animations_lcl = getAnimations();
+
+        if (ac_lcl == null) return;
+
+        if (animations_lcl == null) return;
+
+        if (animations_lcl.isToggled() && animations_lcl.crystals.getValue().booleanValue()) {
             float sin = (MathHelper.sin((endCrystalEntity.endCrystalAge + f) * 0.2f) / 2.0f) + 0.5f;
             float f2 = 1.0f;
-            if (animations.isToggled() && animations.crystals.getValue().booleanValue()) {
-                f2 = animations.floatFactor.getValue().floatValue();
+            if (animations_lcl.isToggled() && animations_lcl.crystals.getValue().booleanValue()) {
+                f2 = animations_lcl.floatFactor.getValue().floatValue();
             }
-            if (endCrystalEntity.age < 10 && ac.isToggled() && animations.floatFactor.getValue().floatValue() != 0.0f && ac.inhibit.getValue().booleanValue() && ((SpawnTimeHelper_2) endCrystalEntity).isMioAttacked()) {
-                f2 *= ((SpawnTimeHelper_2) endCrystalEntity).getSpawnTime() % 2 == 0 ? 0.0f : 1.0f;
+            if (endCrystalEntity.age < 10 && ac_lcl.isToggled() && animations_lcl.floatFactor.getValue().floatValue() != 0.0f && ac_lcl.inhibit.getValue().booleanValue() && ((DuckEndCrystalEntity) endCrystalEntity).isMioAttacked()) {
+                f2 *= ((DuckEndCrystalEntity) endCrystalEntity).getSpawnTime() % 2 == 0 ? 0.0f : 1.0f;
             }
             callbackInfoReturnable.cancel();
             callbackInfoReturnable.setReturnValue(Float.valueOf((((sin * sin) + sin) * f2) - 1.4f));
@@ -85,11 +143,18 @@ public class MixinEndCrystalEntityRenderer {
 
     @ModifyArgs(method = {"render(Lnet/minecraft/entity/decoration/EndCrystalEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/RotationAxis;rotationDegrees(F)Lorg/joml/Quaternionf;"), require = 0)
     private void speedHook(Args args) {
-        if (last.age < 10 && ac.isToggled() && ac.inhibit.getValue().booleanValue() && ((me.mioclient.SpawnTimeHelper_2)(Object) last).isMioAttacked()) {
+        AutoCrystal ac_lcl = getAc();
+        Animations animations_lcl = getAnimations();
+
+        if (ac_lcl == null) return;
+
+        if (animations_lcl == null) return;
+
+        if (last.age < 10 && ac_lcl.isToggled() && ac_lcl.inhibit.getValue().booleanValue() && ((me.mioclient.ducks.DuckEndCrystalEntity)(Object) last).isMioAttacked()) {
             args.set(0, Float.valueOf(((Float) args.get(0)).floatValue() * 1.5f));
         }
-        if (animations.isToggled() && animations.crystals.getValue().booleanValue()) {
-            args.set(0, Float.valueOf(((Float) args.get(0)).floatValue() * animations.rotationSpeed.getValue().floatValue()));
+        if (animations_lcl.isToggled() && animations_lcl.crystals.getValue().booleanValue()) {
+            args.set(0, Float.valueOf(((Float) args.get(0)).floatValue() * animations_lcl.rotationSpeed.getValue().floatValue()));
         }
     }
 
@@ -101,33 +166,37 @@ public class MixinEndCrystalEntityRenderer {
     }
 
     @Inject(method = {"render(Lnet/minecraft/entity/decoration/EndCrystalEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;multiply(Lorg/joml/Quaternionf;)V", ordinal = 0)})
-    private void renderHook2(EndCrystalEntity endCrystalEntity, float f, float f2, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo callbackInfo) {
+    private void suppressIndicatorBg(EndCrystalEntity endCrystalEntity, float f, float f2, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo callbackInfo) {
         if (this.mio$ordinal == 0) {
             this.mio$ordinal++;
         }
     }
 
     @ModifyExpressionValue(method = {"render(Lnet/minecraft/entity/decoration/EndCrystalEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/render/VertexConsumerProvider;getBuffer(Lnet/minecraft/client/render/RenderLayer;)Lnet/minecraft/client/render/VertexConsumer;")})
-    private VertexConsumer render3(VertexConsumer vertexConsumer, @Local(argsOnly = true) VertexConsumerProvider vertexConsumerProvider) {
-        return (!mod.isToggled() || !mod.xqz.getValue().booleanValue() || mod.crystals.getValue() == ChamsMode.OFF || ShaderSearchHelper4.flag) ? vertexConsumer : vertexConsumerProvider.getBuffer(Helper_18.getRenderLayer2033(field_4663));
+    private VertexConsumer getChamsConsumer(VertexConsumer vertexConsumer, @Local(argsOnly = true) VertexConsumerProvider vertexConsumerProvider) {
+        return (!getMod().isToggled() || !getMod().xqz.getValue().booleanValue() || getMod().crystals.getValue() == ChamsMode.OFF || ShaderPassRegistry.flag) ? vertexConsumer : vertexConsumerProvider.getBuffer(CustomRenderLayers.getRenderLayer2033(field_4663));
     }
 
     @Unique
     private boolean mio$renderHandler(ModelPart modelPart, MatrixStack matrixStack, VertexConsumer vertexConsumer, int i, int i2, int i3) {
-        if (animations.is1003(i3)) {
+        if (getAnimations().isCrystalPartHidden(i3)) {
             return false;
         }
-        if (!mod.isToggled() || !mod.crystals.getValue().is594() || MinecraftClient.getInstance().gameRenderer.getCamera().getPos().distanceTo(last.getPos()) > mod.range.getValue().intValue() || !mod.is1763(last)) {
+        if (!getMod().isToggled() || !getMod().crystals.getValue().is594() || MinecraftClient.getInstance().gameRenderer.getCamera().getPos().distanceTo(last.getPos()) > getMod().range.getValue().intValue() || !getMod().shouldRenderEntity(last)) {
             return true;
         }
         render(modelPart, matrixStack, i2);
-        return !mod.is2046(last);
+        return !getMod().shouldShineEntity(last);
     }
 
     private static void render(ModelPart modelPart, MatrixStack matrixStack, int i) {
-        if (mod.isToggled() && mod.crystals.getValue().is594() && mod.shine2.getValue().booleanValue() && Chams.flag) {
+        Chams mod_lcl = getMod();
+
+        if (mod_lcl == null) return;
+
+        if (mod_lcl.isToggled() && mod_lcl.crystals.getValue().is594() && mod_lcl.shine2.getValue().booleanValue() && Chams.flag) {
             matrixStack.push();
-            modelPart.render(matrixStack, mod.getTrajectoriesVertexConsumer2049().getBufferBuilder2596(), 15728880, i);
+            modelPart.render(matrixStack, mod_lcl.getShineVertexConsumer().getOrCreateBuffer(), 15728880, i);
             matrixStack.pop();
         }
     }

@@ -1,27 +1,29 @@
 package me.mioclient.module.movement;
 
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.util.time.Stopwatch;
+
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ClipAtLedgeEvent;
+import me.mioclient.event.events.player.ClipAtLedgeEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/SafeWalk.class */
 public class SafeWalk extends Module {
-    public Setting<Boolean> sneak;
-    public Setting<Integer> delay;
+    public Setting<Boolean> sneak = add(new BooleanSetting("Sneak", false).setVisible());
+    public Setting<Integer> delay = add(new NumberSetting<>("Delay", 0, 0, 1000).setSuffix("ms").requiresSettings(this.sneak));
     public final Stopwatch stopwatch;
 
     public SafeWalk() {
         super("SafeWalk", "Helps not to fall from blocks if you're bad.", Category.MOVEMENT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
     }
 
@@ -33,7 +35,7 @@ public class SafeWalk extends Module {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         if (this.sneak.getValue().booleanValue()) {
             BlockPos down = BlockPos.ofFloored(minecraftClient.player.getPos()).down();
             BlockState blockState = minecraftClient.world.getBlockState(down);
@@ -41,7 +43,7 @@ public class SafeWalk extends Module {
                 this.stopwatch.reset();
                 minecraftClient.options.sneakKey.setPressed(true);
             } else {
-                minecraftClient.options.sneakKey.setPressed(!this.stopwatch.is419((long) this.delay.getValue().intValue()));
+                minecraftClient.options.sneakKey.setPressed(!this.stopwatch.hasElapsedMs((long) this.delay.getValue().intValue()));
             }
         }
     }
@@ -51,6 +53,6 @@ public class SafeWalk extends Module {
         if (minecraftClient.player.isSwimming() || minecraftClient.player.isInLava() || minecraftClient.player.isTouchingWater() || this.sneak.getValue().booleanValue()) {
             return;
         }
-        clipAtLedgeEvent.do1162();
+        clipAtLedgeEvent.cancel();
     }
 }

@@ -1,4 +1,5 @@
 package com.jagrosh.discordipc.exceptions;
+import me.mioclient.module.client.Discord;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:com/jagrosh/discordipc/exceptions/NoDiscordClientException.class */

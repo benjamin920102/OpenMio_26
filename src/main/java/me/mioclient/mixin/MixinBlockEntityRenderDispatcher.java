@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.render.ESP;
 import me.mioclient.module.render.NoRender;
 import net.minecraft.block.entity.BlockEntity;
@@ -17,12 +20,43 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({BlockEntityRenderDispatcher.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinBlockEntityRenderDispatcher.class */
 public class MixinBlockEntityRenderDispatcher {
-    private static final ESP esp = (ESP) BaritoneHelper_3.baritoneHelper_4.getModule117(ESP.class);
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
+    private static ESP esp;
+
+    private static ESP getEsp() {
+
+        if (esp == null && ClientServices.moduleInjector != null) {
+
+            try { esp = (ESP) ClientServices.moduleInjector.getModule(ESP.class); } catch (Exception e) {}
+
+        }
+
+        return esp;
+
+    }
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
 
     @Inject(method = {"render(Lnet/minecraft/block/entity/BlockEntity;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;)V"}, at = {@At("HEAD")}, cancellable = true)
     private <E extends BlockEntity> void renderHook(E e, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, CallbackInfo callbackInfo) {
-        if (!(norender.ignoreESP.getValue().booleanValue() && esp.is1918()) && norender.isToggled() && norender.tileEntities.getValue().booleanValue() && e.getPos().getSquaredDistance(MinecraftClient.getInstance().gameRenderer.getCamera().getBlockPos()) > norender.tileDistance.getValue().intValue() * norender.tileDistance.getValue().intValue()) {
+        NoRender norender_lcl = getNorender();
+        ESP esp_lcl = getEsp();
+
+        if (norender_lcl == null) return;
+
+        if (esp_lcl == null) return;
+
+        if (!(norender_lcl.ignoreESP.getValue().booleanValue() && esp_lcl.is1918()) && norender_lcl.isToggled() && norender_lcl.tileEntities.getValue().booleanValue() && e.getPos().getSquaredDistance(MinecraftClient.getInstance().gameRenderer.getCamera().getBlockPos()) > norender_lcl.tileDistance.getValue().intValue() * norender_lcl.tileDistance.getValue().intValue()) {
             callbackInfo.cancel();
         }
     }

@@ -1,13 +1,22 @@
 package me.mioclient.mixin;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.network.PacketSendPostEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.client.ChatUtils;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.client.ChatUtils;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.event.SendInternalEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.network.PacketSendPostEvent;
 import me.mioclient.module.misc.NoPacketKick;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
@@ -24,7 +33,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({ClientConnection.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientConnection.class */
 public class MixinClientConnection {
-    private static NoPacketKick nopacketkick = (NoPacketKick) BaritoneHelper_3.baritoneHelper_4.getModule117(NoPacketKick.class);
+    private static NoPacketKick nopacketkick;
+
+    private static NoPacketKick getNopacketkick() {
+
+        if (nopacketkick == null && ClientServices.moduleInjector != null) {
+
+            try { nopacketkick = (NoPacketKick) ClientServices.moduleInjector.getModule(NoPacketKick.class); } catch (Exception e) {}
+
+        }
+
+        return nopacketkick;
+
+    }
 
     @Shadow
     private Channel field_11651;
@@ -39,9 +60,9 @@ public class MixinClientConnection {
             return;
         }
         try {
-            ChannelRead0Event channelRead0Event = new ChannelRead0Event(packet);
-            SearchHelper_4.baritoneHelper.getObject1794(channelRead0Event);
-            if (channelRead0Event.is2403()) {
+            PacketReceiveEvent channelRead0Event = new PacketReceiveEvent(packet);
+            ClientAccessor.eventBus.fireEvent(channelRead0Event);
+            if (channelRead0Event.isCancelled()) {
                 callbackInfo.cancel();
             }
         } catch (Exception e) {
@@ -54,9 +75,9 @@ public class MixinClientConnection {
             return;
         }
         try {
-            SendImmediatelyEvent sendImmediatelyEvent = new SendImmediatelyEvent(packet);
-            SearchHelper_4.baritoneHelper.getObject1794(sendImmediatelyEvent);
-            if (sendImmediatelyEvent.is2403()) {
+            PacketSendEvent sendImmediatelyEvent = new PacketSendEvent(packet);
+            ClientAccessor.eventBus.fireEvent(sendImmediatelyEvent);
+            if (sendImmediatelyEvent.isCancelled()) {
                 callbackInfo.cancel();
             }
         } catch (Exception e) {
@@ -69,17 +90,21 @@ public class MixinClientConnection {
             return;
         }
         try {
-            SearchHelper_4.baritoneHelper.getObject1794(new SendInternalEvent(packet));
+            ClientAccessor.eventBus.fireEvent(new PacketSendPostEvent(packet));
         } catch (Exception e) {
         }
     }
 
     @Inject(method = {"exceptionCaught"}, at = {@At("HEAD")}, cancellable = true)
     private void exceptionCaught(ChannelHandlerContext channelHandlerContext, Throwable th, CallbackInfo callbackInfo) {
-        if (nopacketkick.isToggled()) {
-            if (nopacketkick.message.getValue().booleanValue()) {
+        NoPacketKick nopacketkick_lcl = getNopacketkick();
+
+        if (nopacketkick_lcl == null) return;
+
+        if (nopacketkick_lcl.isToggled()) {
+            if (nopacketkick_lcl.message.getValue().booleanValue()) {
                 try {
-                    MixinMessageIndicatorHelper.do345(nopacketkick.getText1411(th), MixinMessageIndicatorHelper.getMessageSignatureData339(nopacketkick), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode);
+                    ChatUtils.sendPrefixedMessage(nopacketkick_lcl.getText1411(th), ChatUtils.signatureOfModule(nopacketkick), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                 } catch (Throwable th2) {
                 }
             }

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinCrashReport {
     @Inject(method = {"addDetails"}, at = {@At("TAIL")})
     public void addStackTrace(StringBuilder sb, CallbackInfo callbackInfo) {
-        sb.append("\n\n-- www.mioclient.me --\n");
+        sb.append("\n\n-- www.me.mioclient.me --\n");
         sb.append("Details:\n");
         sb.append("\tMagic: rizz\n\n");
     }

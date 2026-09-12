@@ -1,5 +1,7 @@
 package com.jagrosh.discordipc.entities.pipe;
 
+import me.mioclient.gui.minigame.MinigamePanel;
+
 import com.google.gson.JsonObject;
 import com.jagrosh.discordipc.IPCClient;
 import com.jagrosh.discordipc.entities.Callback;
@@ -16,6 +18,8 @@ import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.mioclient.module.client.Discord;
+import me.mioclient.gui.minigame.MinigamePanel;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:com/jagrosh/discordipc/entities/pipe/UnixPipe.class */

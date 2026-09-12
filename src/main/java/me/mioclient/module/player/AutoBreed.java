@@ -1,5 +1,18 @@
 package me.mioclient.module.player;
 
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.module.player.autobreed.BredAnimalEntry;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.inventory.InventoryUtils;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.SwitchBootstraps;
@@ -10,17 +23,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import me.mioclient.AutoBreedHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FireworksHelper;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4_2;
-import me.mioclient.SearchHelper4_8;
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.AnimalEntity;
@@ -33,27 +41,28 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoBreed.class */
 public class AutoBreed extends Module {
-    public Setting<Float> range;
-    public Setting<Integer> frequency;
-    public Setting<Float> delay;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> targets;
-    public Setting<Boolean> dogs;
-    public Setting<Boolean> cats;
-    public Setting<Boolean> parrots;
-    public Setting<Boolean> donkeys;
-    public Setting<Boolean> horses;
-    public Setting<Boolean> others;
+    public Setting<Float> range = add(new NumberSetting<>("Range", 3.0f, 1.0f, 6.0f).setSuffix("m"));
+    public Setting<Integer> frequency = add(new NumberSetting<>("Frequency", 1, 1, 8));
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 0.0f, 0.0f, 5.0f).setSuffix("s"));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true));
+    public Setting<Boolean> targets = add(new BooleanSetting("Targets", false).setDependent());
+    public Setting<Boolean> dogs = add(new BooleanSetting("Dogs", true, v -> this.targets.isShown()));
+    public Setting<Boolean> cats = add(new BooleanSetting("Cats", true, v -> this.targets.isShown()));
+    public Setting<Boolean> parrots = add(new BooleanSetting("Parrots", true, v -> this.targets.isShown()));
+    public Setting<Boolean> donkeys = add(new BooleanSetting("Donkeys", true, v -> this.targets.isShown()));
+    public Setting<Boolean> horses = add(new BooleanSetting("Horses", true, v -> this.targets.isShown()));
+    public Setting<Boolean> others = add(new BooleanSetting("Others", true, v -> this.targets.isShown()));
     public final Stopwatch stopwatch;
-    public final List<AutoBreedHelper> list;
+    public final List<BredAnimalEntry> list;
 
     public AutoBreed() {
         super("AutoBreed", "Breeds animals in between each other automatically.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.list = Collections.synchronizedList(new ArrayList());
     }
@@ -64,34 +73,34 @@ public class AutoBreed extends Module {
     }
 
     @Listen
-    public void onEvent2(HoleSnapEvent holeSnapEvent) {
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
         this.list.forEach((v0) -> {
-            v0.do1457();
+            v0.runCallback();
         });
         this.list.removeIf(autoBreedHelper -> {
             return autoBreedHelper.get1459() >= 6000;
         });
-        if (this.stopwatch.is418(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
+        if (this.stopwatch.hasElapsed(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
             int i = 0;
             for (Entity animalEntity : minecraftClient.world.getEntities()) {
                 if (animalEntity instanceof AnimalEntity) {
                     AnimalEntity animalEntity2 = (AnimalEntity) animalEntity;
-                    Iterator<AutoBreedHelper> it = this.list.iterator();
+                    Iterator<BredAnimalEntry> it = this.list.iterator();
                     while (true) {
                         if (!it.hasNext()) {
-                            if (is1204(animalEntity2) && animalEntity2.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue()) {
-                                int i2 = FireworksHelper.get448(getPredicate1203(animalEntity2));
+                            if (isAllowedAnimal(animalEntity2) && animalEntity2.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue()) {
+                                int i2 = InventoryUtils.findInHotbar(getBreedingItemPredicate(animalEntity2));
                                 if (i2 == -1) {
                                     return;
                                 }
                                 Vec3d center = animalEntity2.getBoundingBox().getCenter();
                                 if (center != null) {
-                                    FireworksHelper.do456(i2);
-                                    PhaseESPSearchHelper4_2.do3049((Entity) animalEntity2, Hand.MAIN_HAND);
-                                    this.list.add(new AutoBreedHelper(animalEntity2));
+                                    InventoryUtils.selectSlot(i2);
+                                    BlockPlacer.interactWithEntity((Entity) animalEntity2, Hand.MAIN_HAND);
+                                    this.list.add(new BredAnimalEntry(animalEntity2));
                                     i++;
                                     if (this.rotate.getValue().booleanValue()) {
-                                        BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2484(center), 5);
+                                        ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(center), 5);
                                     }
                                     if (i >= this.frequency.getValue().intValue()) {
                                         break;
@@ -101,7 +110,7 @@ public class AutoBreed extends Module {
                                 }
                             }
                         } else {
-                            if (animalEntity2 == it.next().getAnimalEntity1458()) {
+                            if (animalEntity2 == it.next().getAnimalEntity()) {
                                 break;
                             }
                         }
@@ -112,7 +121,7 @@ public class AutoBreed extends Module {
         }
     }
 
-    public static Predicate<ItemStack> getPredicate1203(AnimalEntity animalEntity) {
+    public static Predicate<ItemStack> getBreedingItemPredicate(AnimalEntity animalEntity) {
         if (animalEntity instanceof ParrotEntity) {
             return itemStack -> {
                 return List.of(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS).contains(itemStack.getItem());
@@ -122,7 +131,7 @@ public class AutoBreed extends Module {
         return animalEntity::isBreedingItem;
     }
 
-    public boolean is1204(AnimalEntity animalEntity) {
+    public boolean isAllowedAnimal(AnimalEntity animalEntity) {
         if (animalEntity.isBaby()) {
             return false;
         }

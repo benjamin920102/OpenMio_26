@@ -1,21 +1,31 @@
 package me.mioclient.module.movement;
 
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.math.Vec3dUtils;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.time.Stopwatch;
+import me.mioclient.util.world.RaycastUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.player.MovementUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.world.RaycastUtils;
+import me.mioclient.util.math.Vec3dUtils;
+
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.HoleSnapSearchHelper4_3;
-import me.mioclient.HoleSnapSearchHelper4_6;
-import me.mioclient.MixinLivingEntityHelper_2;
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent;
-import me.mioclient.event.TickEvent;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MoveEvent;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.exploit.Phase;
@@ -31,20 +41,25 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.RaycastContext;
+import me.mioclient.mixin.ducks.DuckAbstractBlock;
+import me.mioclient.mixin.ducks.DuckClientPlayerEntity;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/FastFall.class */
 public class FastFall extends Module {
-    public static Speed speed2 = (Speed) BaritoneHelper_3.baritoneHelper_4.getModule117(Speed.class);
-    public static HoleSnap holeSnap = (HoleSnap) BaritoneHelper_3.baritoneHelper_4.getModule117(HoleSnap.class);
-    public static AntiCheat antiCheat = (AntiCheat) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiCheat.class);
-    public static Phase phase = (Phase) BaritoneHelper_3.baritoneHelper_4.getModule117(Phase.class);
-    public Setting<FastFallMode> mode;
-    public Setting<Float> height;
-    public Setting<Float> speed;
-    public Setting<Boolean> stopInLiquids;
-    public Setting<Boolean> onlyHole;
-    public Setting<Boolean> safeDisable;
+    public static Speed speed2 = (Speed) ClientServices.moduleInjector.getModule(Speed.class);
+    public static HoleSnap holeSnap = (HoleSnap) ClientServices.moduleInjector.getModule(HoleSnap.class);
+    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    public static Phase phase = (Phase) ClientServices.moduleInjector.getModule(Phase.class);
+    public Setting<FastFallMode> mode = add(new EnumSetting<>("Mode", FastFallMode.PLAIN));
+    public Setting<Float> height = add(new NumberSetting<>("Height", 2.0f, 1.0f, 15.0f).setSuffix("m"));
+    public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.0f, 5.0f, v -> this.mode.getValue() == FastFall.FastFallMode.PLAIN));
+    public Setting<Boolean> stopInLiquids = add(new BooleanSetting("StopInLiquids", true));
+    public Setting<Boolean> onlyHole = add(new BooleanSetting("OnlyHole", false));
+    public Setting<Boolean> safeDisable = add(new BooleanSetting("SafeDisable", false));
     public boolean flag;
     public boolean flag2;
     public boolean flag3;
@@ -57,7 +72,7 @@ public class FastFall extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/FastFall$FastFallMode.class */
-    public enum FastFallMode implements EnumSettingHelper {
+    public enum FastFallMode implements NamedValue {
         PLAIN("Plain"),
         STRICT("Strict"),
         INSTANT("Instant");
@@ -68,7 +83,7 @@ public class FastFall extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -76,7 +91,6 @@ public class FastFall extends Module {
 
     public FastFall() {
         super("FastFall", "Allows you to get in holes with ease!", Category.MOVEMENT, "reversestep");
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
     }
 
@@ -87,43 +101,43 @@ public class FastFall extends Module {
     }
 
     @Listen
-    public void do32(TickPostEvent tickPostEvent) {
-        if (this.safeDisable.getValue().booleanValue() && BaritoneHelper_3.holeSnapSearchHelper4_5.is2728() && this.flag6) {
+    public void onTickPost(TickPostEvent tickPostEvent) {
+        if (this.safeDisable.getValue().booleanValue() && ClientServices.holeSnapOverlayHelper.isInHole() && this.flag6) {
             disable();
             return;
         }
-        if (!is1195() || (!this.flag4 && this.onlyHole.getValue().booleanValue())) {
-            do1196();
+        if (!shouldActivateStrictFall() || (!this.flag4 && this.onlyHole.getValue().booleanValue())) {
+            releaseStrictTickRate();
             return;
         }
         if (minecraftClient.player.isOnGround()) {
             this.flag2 = true;
-            BaritoneHelper_3.inner.do2017(this);
-            if (BaritoneHelper_3.antiPhaseSearchHelper4_2.get2231() > 3) {
+            ClientServices.inner.releaseTickRate(this);
+            if (ClientServices.antiPhaseHelper.getGroundTicks() > 3) {
                 this.stopwatch.reset();
                 this.flag3 = true;
                 return;
             }
             return;
         }
-        if (this.stopwatch.is419(500L)) {
+        if (this.stopwatch.hasElapsedMs(500L)) {
             this.flag3 = !this.flag3;
             this.stopwatch.reset();
         }
         if (minecraftClient.player.getVelocity().y >= 0.0d || !this.flag2 || !this.flag3) {
-            do1196();
+            releaseStrictTickRate();
         } else {
-            BaritoneHelper_3.inner.do2018(this, Float.intBitsToFloat(1073741824));
+            ClientServices.inner.requestTickRate(this, Float.intBitsToFloat(1073741824));
             this.flag6 = true;
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        boolean z = HoleSnapSearchHelper4_3.is2181() || (holeSnap.isToggled() && holeSnap.getHoleSnapData_2129() != null);
+    public void onTick(TickEvent tickEvent) {
+        boolean z = MovementUtils.is2181() || (holeSnap.isToggled() && holeSnap.getHoleSnapData_2129() != null);
         if ((this.flag4 || !this.onlyHole.getValue().booleanValue()) && z) {
             this.flag5 = false;
-            if (!((me.mioclient.mixin.ducks.DuckClientPlayerEntity) minecraftClient.player).lastOnGround() || minecraftClient.player.getVelocity().getY() > 0.0d || !is1193() || is1194()) {
+            if (!((me.mioclient.mixin.ducks.DuckClientPlayerEntity) minecraftClient.player).lastOnGround() || minecraftClient.player.getVelocity().getY() > 0.0d || !canFastFall() || isStrictMode()) {
                 return;
             }
             Box withMaxY = minecraftClient.player.getBoundingBox().stretch(0.0d, -this.height.getValue().floatValue(), 0.0d).withMaxY(minecraftClient.player.getY());
@@ -136,7 +150,7 @@ public class FastFall extends Module {
                 if (((Double) atomicReference.get()).doubleValue() < minecraftClient.player.getY()) {
                     double doubleValue = ((Double) atomicReference.get()).doubleValue();
                     Vec3d velocity = minecraftClient.player.getVelocity();
-                    boolean z2 = minecraftClient.world.isAir(BlockPos.ofFloored(minecraftClient.player.getX(), doubleValue, minecraftClient.player.getZ()).add(new Vec3i((int) velocity.x, -1, (int) velocity.z))) || !BaritoneHelper_3.holeSnapSearchHelper4_4.getStopwatch2616().is419(25L) || this.mode.getValue() == FastFallMode.PLAIN;
+                    boolean z2 = minecraftClient.world.isAir(BlockPos.ofFloored(minecraftClient.player.getX(), doubleValue, minecraftClient.player.getZ()).add(new Vec3i((int) velocity.x, -1, (int) velocity.z))) || !ClientServices.holeSnapRenderHelper.getTeleportStopwatch().hasElapsedMs(25L) || this.mode.getValue() == FastFallMode.PLAIN;
                     if (minecraftClient.player.getY() - doubleValue > Double.longBitsToDouble(4611686018427387904L) || z2) {
                         doubleValue = minecraftClient.player.getY() - Double.longBitsToDouble(4611686018427387904L);
                         this.flag5 = true;
@@ -148,7 +162,7 @@ public class FastFall extends Module {
                     if (!z2) {
                         minecraftClient.player.setPosition(minecraftClient.player.getX(), doubleValue, minecraftClient.player.getZ());
                     }
-                    phase.do1761();
+                    phase.resetGroundTicks();
                     this.flag6 = true;
                 }
             }
@@ -156,20 +170,20 @@ public class FastFall extends Module {
     }
 
     @Listen
-    public void do28(MoveEvent moveEvent) {
-        this.val = HoleSnapSearchHelper4_6.get2787();
-        this.val2 = HoleSnapSearchHelper4_6.get2786();
-        this.flag4 = BaritoneHelper_3.holeSnapSearchHelper4_5.is2723(minecraftClient.player.getBlockPos().down((int) this.val2));
+    public void onMove(MoveEvent moveEvent) {
+        this.val = RaycastUtils.getDistanceToCeiling();
+        this.val2 = RaycastUtils.getDistanceToFloor();
+        this.flag4 = ClientServices.holeSnapOverlayHelper.isHoleAt(minecraftClient.player.getBlockPos().down((int) this.val2));
         if (this.flag4 || !this.onlyHole.getValue().booleanValue()) {
             double longBitsToDouble = Double.longBitsToDouble(4599075939470750515L);
-            boolean z = holeSnap.isToggled() && holeSnap.stopwatch2.is419(500L) && holeSnap.getHoleSnapData_2129() != null;
-            if ((is1194() && is1193() && is1191() && minecraftClient.player.isOnGround()) || (this.flag5 && !z && is1192())) {
-                MixinLivingEntityHelper_2.do2581(moveEvent.getVec3d689(), moveEvent.get515() * longBitsToDouble, moveEvent.get692(), moveEvent.get516() * longBitsToDouble);
+            boolean z = holeSnap.isToggled() && holeSnap.stopwatch2.hasElapsedMs(500L) && holeSnap.getHoleSnapData_2129() != null;
+            if ((isStrictMode() && canFastFall() && hasGroundBelow() && minecraftClient.player.isOnGround()) || (this.flag5 && !z && hasBlockAhead())) {
+                Vec3dUtils.setVectorComponents(moveEvent.getMovement(), moveEvent.getX() * longBitsToDouble, moveEvent.getY(), moveEvent.getZ() * longBitsToDouble);
             }
         }
     }
 
-    public boolean is1191() {
+    public boolean hasGroundBelow() {
         Box boundingBox = minecraftClient.player.getBoundingBox();
         Vec3d center = boundingBox.getCenter();
         double d = boundingBox.minX;
@@ -188,14 +202,14 @@ public class FastFall extends Module {
                 return false;
             }
         }
-        if (!is1192()) {
+        if (!hasBlockAhead()) {
             return false;
         }
         BlockState blockState = minecraftClient.world.getBlockState(BlockPos.ofFloored(minecraftClient.player.getX(), minecraftClient.player.getY() - Double.longBitsToDouble(4607182418800017408L), minecraftClient.player.getZ()));
         return blockState == null || blockState.getBlock() == Blocks.AIR;
     }
 
-    public boolean is1192() {
+    public boolean hasBlockAhead() {
         Vec3d velocity = minecraftClient.player.getVelocity();
         double d = velocity.x;
         double d2 = velocity.z;
@@ -207,8 +221,8 @@ public class FastFall extends Module {
         return true;
     }
 
-    public boolean is1193() {
-        if ((!speed2.isToggled() || speed2.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode4 || speed2.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode3) && !minecraftClient.player.isSneaking() && !minecraftClient.player.isFallFlying() && !minecraftClient.player.isInsideWall() && ((!HoleSnapSearchHelper4.is2007(minecraftClient.player) || !this.stopInLiquids.getValue().booleanValue()) && BaritoneHelper_3.holeSnapSearchHelper4_4.getStopwatch2615().is419(500L))) {
+    public boolean canFastFall() {
+        if ((!speed2.isToggled() || speed2.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode4 || speed2.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode3) && !minecraftClient.player.isSneaking() && !minecraftClient.player.isFallFlying() && !minecraftClient.player.isInsideWall() && ((!PlayerUtils.isInLiquid(minecraftClient.player) || !this.stopInLiquids.getValue().booleanValue()) && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(500L))) {
             if (!(minecraftClient.world.getBlockState(BlockPos.ofFloored(minecraftClient.player.getPos())).getBlock() instanceof BedBlock)) {
                 return true;
             }
@@ -216,18 +230,18 @@ public class FastFall extends Module {
         return false;
     }
 
-    public boolean is1194() {
+    public boolean isStrictMode() {
         return this.mode.getValue() == FastFallMode.STRICT;
     }
 
-    public boolean is1195() {
-        return is1193() && is1194() && this.val != 0.0d && this.val2 != 0.0d && this.val2 <= ((double) this.height.getValue().floatValue());
+    public boolean shouldActivateStrictFall() {
+        return canFastFall() && isStrictMode() && this.val != 0.0d && this.val2 != 0.0d && this.val2 <= ((double) this.height.getValue().floatValue());
     }
 
-    public void do1196() {
-        if (is1194()) {
+    public void releaseStrictTickRate() {
+        if (isStrictMode()) {
             this.flag2 = false;
-            BaritoneHelper_3.inner.do2017(this);
+            ClientServices.inner.releaseTickRate(this);
         }
     }
 }

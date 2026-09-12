@@ -1,76 +1,76 @@
 package me.mioclient.module.render;
 
-import me.mioclient.PhaseESPHelper;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/Animations.class */
 public class Animations extends Module {
-    public Setting<Boolean> crystals;
-    public Setting<Float> floatFactor;
-    public Setting<Float> rotationSpeed;
-    public Setting<Float> crystalScale;
-    public Setting<Boolean> parts;
-    public Setting<Boolean> inner;
-    public Setting<Boolean> outer;
-    public Setting<Boolean> core;
-    public Setting<Boolean> bottom;
-    public Setting<Boolean> players;
-    public Setting<Boolean> static_;
-    public Setting<Boolean> sneak;
-    public Setting<Float> playerScale;
+    public Setting<Boolean> crystals = add(new BooleanSetting("Crystals", false).setVisible());
+    public Setting<Float> floatFactor = add(new NumberSetting<>("FloatFactor", 1.0f, 0.0f, 1.0f).requiresSettings(this.crystals));
+    public Setting<Float> rotationSpeed = add(new NumberSetting<>("RotationSpeed", 1.0f, 0.0f, 6.0f).requiresSettings(this.crystals));
+    public Setting<Float> crystalScale = add(new NumberSetting<>("CrystalScale", 1.0f, 0.0f, 2.0f).requiresSettings(this.crystals));
+    public Setting<Boolean> parts = add(new BooleanSetting("Parts", false).setDependent().requiresSettings(this.crystals));
+    public Setting<Boolean> inner = add(new BooleanSetting("Inner", true).requiresSettings(this.crystals, this.parts));
+    public Setting<Boolean> outer = add(new BooleanSetting("Outer", true).requiresSettings(this.crystals, this.parts));
+    public Setting<Boolean> core = add(new BooleanSetting("Core", true).requiresSettings(this.crystals, this.parts));
+    public Setting<Boolean> bottom = add(new BooleanSetting("Bottom", true).requiresSettings(this.crystals, this.parts));
+    public Setting<Boolean> players = add(new BooleanSetting("Players", false).setVisible());
+    public Setting<Boolean> static_ = add(new BooleanSetting("Static", false).requiresSettings(this.players));
+    public Setting<Boolean> sneak = add(new BooleanSetting("Sneak", false).requiresSettings(this.players));
+    public Setting<Float> playerScale = add(new NumberSetting<>("PlayerScale", 1.0f, 0.0f, 2.0f).requiresSettings(this.players));
 
     public Animations() {
         super("Animations", "Modifies entity animations.", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
-    public boolean is999() {
+    public boolean isPlayerScaleModified() {
         return isToggled() && this.players.getValue().booleanValue() && this.playerScale.getValue().floatValue() != Float.intBitsToFloat(1065353216);
     }
 
-    public boolean is1000() {
+    public boolean isStaticAnimationEnabled() {
         return isToggled() && this.players.getValue().booleanValue() && this.static_.getValue().booleanValue();
     }
 
-    public boolean is1001() {
+    public boolean isSneakAnimationEnabled() {
         return isToggled() && this.players.getValue().booleanValue() && this.sneak.getValue().booleanValue();
     }
 
-    public boolean is1002() {
+    public boolean isCrystalsEnabled() {
         return isToggled() && this.crystals.getValue().booleanValue();
     }
 
-    public boolean is1003(int i) {
+    public boolean isCrystalPartHidden(int i) {
         switch (i) {
             case 0:
-                return is1007();
+                return isBottomPartHidden();
             case 1:
-                return is1005();
+                return isOuterPartHidden();
             case 2:
-                return is1004();
+                return isInnerPartHidden();
             case 3:
-                return is1006();
+                return isCorePartHidden();
             default:
                 return false;
         }
     }
 
-    public boolean is1004() {
-        return is1002() && !this.inner.getValue().booleanValue();
+    public boolean isInnerPartHidden() {
+        return isCrystalsEnabled() && !this.inner.getValue().booleanValue();
     }
 
-    public boolean is1005() {
-        return is1002() && !this.outer.getValue().booleanValue();
+    public boolean isOuterPartHidden() {
+        return isCrystalsEnabled() && !this.outer.getValue().booleanValue();
     }
 
-    public boolean is1006() {
-        return is1002() && !this.core.getValue().booleanValue();
+    public boolean isCorePartHidden() {
+        return isCrystalsEnabled() && !this.core.getValue().booleanValue();
     }
 
-    public boolean is1007() {
-        return is1002() && !this.bottom.getValue().booleanValue();
+    public boolean isBottomPartHidden() {
+        return isCrystalsEnabled() && !this.bottom.getValue().booleanValue();
     }
 }

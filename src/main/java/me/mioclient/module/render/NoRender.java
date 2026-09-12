@@ -1,22 +1,36 @@
 package me.mioclient.module.render;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.event.events.entity.EntityModelRenderEvent;
+
+import me.mioclient.event.events.entity.EntityRenderEvent;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.player.ScaffoldMode_2;
+import me.mioclient.mode.world.StashFinderMode;
+import me.mioclient.render.shader.ShaderPassRegistry;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.shader.ShaderPassRegistry;
+
 import java.util.Set;
-import me.mioclient.EntityEvent;
-import me.mioclient.EntityEvent_2;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.Helper_7;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.ScaffoldMode_2;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.ShaderSearchHelper4;
-import me.mioclient.StashFinderMode;
+import me.mioclient.event.events.entity.EntityModelRenderEvent;
+import me.mioclient.event.events.entity.EntityRenderEvent;
+import me.mioclient.render.RenderConstants;
+import me.mioclient.mode.player.ScaffoldMode_2;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.mode.world.StashFinderMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.AddParticleEvent;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.GetStatusEffectEvent;
+import me.mioclient.event.events.render.AddParticleEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.player.GetStatusEffectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.RenderLabelEvent;
+import me.mioclient.event.events.render.RenderLabelEvent;
 import me.mioclient.module.Module;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.particle.ExplosionLargeParticle;
@@ -31,65 +45,70 @@ import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.util.math.BlockPos;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EntityListObjectSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
+import net.minecraft.registry.Registries;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/NoRender.class */
 public class NoRender extends Module {
-    public Setting<Boolean> self;
-    public Setting<Boolean> hurtCam;
-    public Setting<Boolean> potions;
-    public Setting<Boolean> darkness;
-    public Setting<Boolean> blindness;
-    public Setting<Boolean> newSneaking;
-    public Setting<Boolean> totemOverlay;
-    public Setting<Boolean> hands;
-    public Setting<Float> opacity2;
-    public Setting<Boolean> ui;
-    public Setting<Boolean> messageIndicator;
-    public Setting<Boolean> unsecureServer;
-    public Setting<Boolean> tutorialToast;
-    public Setting<Boolean> textShadow;
-    public Setting<Boolean> bossBars;
-    public Setting<Boolean> scoreBoard;
-    public Setting<Boolean> tabIcons;
-    public Setting<Boolean> heldTooltips;
-    public Setting<Boolean> tint;
-    public Setting<Boolean> world;
-    public Setting<Boolean> explosions;
-    public Setting<Boolean> worldBorder;
-    public Setting<Boolean> skyLight;
-    public Setting<Boolean> fog;
-    public Setting<Float> range;
-    public Setting<Boolean> sky;
-    public Setting<Boolean> particles;
-    public Setting<Set<ParticleType<?>>> particleTypes;
-    public Setting<ScaffoldMode_2> selection2;
-    public Setting<Boolean> noBlockBreaking;
-    public Setting<Boolean> entities;
-    public Setting<Boolean> hurt;
-    public Setting<Boolean> nameTags;
-    public Setting<Boolean> interpolation;
-    public Setting<Boolean> fire;
-    public Setting<Boolean> others;
-    public Setting<Boolean> armor;
-    public Setting<Float> opacity;
-    public Setting<Boolean> noCluster;
-    public Setting<Integer> clusterAlpha;
-    public Setting<Boolean> tileEntities;
-    public Setting<Integer> tileDistance;
-    public Setting<Boolean> ignoreESP;
-    public Setting<Boolean> wardens;
-    public Setting<Integer> wardenDistance;
-    public Setting<Boolean> entities2;
-    public Setting<Set<EntityType<?>>> entityTypes;
-    public Setting<NoRenderMode> removal;
-    public Setting<ScaffoldMode_2> selection;
+    public Setting<Boolean> self = add(new BooleanSetting("Self", false).setDependent());
+    public Setting<Boolean> hurtCam = add(new BooleanSetting("HurtCam", true).requiresSettings(this.self));
+    public Setting<Boolean> potions = add(new BooleanSetting("Potions", false).requiresSettings(this.self));
+    public Setting<Boolean> darkness = add(new BooleanSetting("Darkness", true).requiresSettings(this.self));
+    public Setting<Boolean> blindness = add(new BooleanSetting("Blindness", true).requiresSettings(this.self));
+    public Setting<Boolean> newSneaking = add(new BooleanSetting("NewSneaking", false).requiresSettings(this.self));
+    public Setting<Boolean> totemOverlay = add(new BooleanSetting("TotemOverlay", false).requiresSettings(this.self));
+    public Setting<Boolean> hands = add(new BooleanSetting("Hands", false).setVisible().requiresSettings(this.self));
+    public Setting<Float> opacity2 = add(new NumberSetting<>("Opacity", 0.0f, 0.0f, 1.0f).requiresSettings(this.self, this.hands));
+    public Setting<Boolean> ui = add(new BooleanSetting("UI", false).setDependent());
+    public Setting<Boolean> messageIndicator = add(new BooleanSetting("MessageIndicator", true).requiresSettings(this.ui));
+    public Setting<Boolean> unsecureServer = add(new BooleanSetting("UnsecureServer", true).requiresSettings(this.ui));
+    public Setting<Boolean> tutorialToast = add(new BooleanSetting("TutorialToast", true).requiresSettings(this.ui));
+    public Setting<Boolean> textShadow = add(new BooleanSetting("TextShadow", false).requiresSettings(this.ui));
+    public Setting<Boolean> bossBars = add(new BooleanSetting("BossBars", false).requiresSettings(this.ui));
+    public Setting<Boolean> scoreBoard = add(new BooleanSetting("ScoreBoard", false).requiresSettings(this.ui));
+    public Setting<Boolean> tabIcons = add(new BooleanSetting("TabIcons", false).requiresSettings(this.ui));
+    public Setting<Boolean> heldTooltips = add(new BooleanSetting("HeldTooltips", false).requiresSettings(this.ui));
+    public Setting<Boolean> tint = add(new BooleanSetting("Tint", false).requiresSettings(this.ui));
+    public Setting<Boolean> world = add(new BooleanSetting("World", false).setDependent());
+    public Setting<Boolean> explosions = add(new BooleanSetting("Explosions", true).requiresSettings(this.world));
+    public Setting<Boolean> worldBorder = add(new BooleanSetting("WorldBorder", true).requiresSettings(this.world));
+    public Setting<Boolean> skyLight = add(new BooleanSetting("SkyLight", false).requiresSettings(this.world));
+    public Setting<Boolean> fog = add(new BooleanSetting("Fog", false).setVisible().requiresSettings(this.world));
+    public Setting<Float> range = add(new NumberSetting<>("Range", 3.0f, 0.1f, 10.0f).requiresSettings(this.fog, this.world));
+    public Setting<Boolean> sky = add(new BooleanSetting("Sky", false).requiresSettings(this.fog, this.world));
+    public Setting<Boolean> particles = add(new BooleanSetting("Particles", false).setVisible().requiresSettings(this.world));
+    public Setting<Set<ParticleType<?>>> particleTypes = add(new EntityListObjectSetting<>("ParticleTypes", Registries.PARTICLE_TYPE).requiresSettings(this.particles, this.world));
+    public Setting<ScaffoldMode_2> selection2 = add(new EnumSetting<>("Selection", ScaffoldMode_2.BLACKLIST).requiresSettings(this.particles, this.world));
+    public Setting<Boolean> noBlockBreaking = add(new BooleanSetting("NoBlockBreaking", false).requiresSettings(this.particles, this.world));
+    public Setting<Boolean> entities = add(new BooleanSetting("Entities", false).setDependent());
+    public Setting<Boolean> hurt = add(new BooleanSetting("Hurt", true).requiresSettings(this.entities));
+    public Setting<Boolean> nameTags = add(new BooleanSetting("NameTags", false).requiresSettings(this.entities));
+    public Setting<Boolean> interpolation = add(new BooleanSetting("Interpolation", false).requiresSettings(this.entities));
+    public Setting<Boolean> fire = add(new BooleanSetting("Fire", true).setVisible().requiresSettings(this.entities));
+    public Setting<Boolean> others = add(new BooleanSetting("Others", false).requiresSettings(this.entities, this.fire));
+    public Setting<Boolean> armor = add(new BooleanSetting("Armor", false).setVisible().requiresSettings(this.entities));
+    public Setting<Float> opacity = add(new NumberSetting<>("Opacity", 0.0f, 0.0f, 1.0f).requiresSettings(this.entities, this.armor));
+    public Setting<Boolean> noCluster = add(new BooleanSetting("NoCluster", false).setVisible().requiresSettings(this.entities));
+    public Setting<Integer> clusterAlpha = add(new NumberSetting<>("ClusterAlpha", 120, 0, 255).requiresSettings(this.noCluster, this.entities));
+    public Setting<Boolean> tileEntities = add(new BooleanSetting("TileEntities", false).setVisible().requiresSettings(this.entities));
+    public Setting<Integer> tileDistance = add(new NumberSetting<>("TileDistance", 64, 1, 256).setSuffix("m").requiresSettings(this.entities, this.tileEntities));
+    public Setting<Boolean> ignoreESP = add(new BooleanSetting("IgnoreESP", false).requiresSettings(this.tileEntities));
+    public Setting<Boolean> wardens = add(new BooleanSetting("Wardens", false).setVisible().requiresSettings(this.entities));
+    public Setting<Integer> wardenDistance = add(new NumberSetting<>("WardenDistance", 32, 1, 128).setSuffix("m").requiresSettings(this.entities, this.wardens));
+    public Setting<Boolean> entities2 = add(new BooleanSetting("Entities", false).setVisible().requiresSettings(this.entities));
+    public Setting<Set<EntityType<?>>> entityTypes = add(new EntityListObjectSetting<>("EntityTypes", Registries.ENTITY_TYPE).requiresSettings(this.entities2, this.entities));
+    public Setting<NoRenderMode> removal = add(new EnumSetting<>("Removal", NoRenderMode.PARTIAL).requiresSettings(this.entities, this.entities2));
+    public Setting<ScaffoldMode_2> selection = add(new EnumSetting<>("Selection", ScaffoldMode_2.BLACKLIST).requiresSettings(this.entities, this.entities2));
     public float val;
     public BlockPos blockPos;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/render/NoRender$NoRenderMode.class */
-    public enum NoRenderMode implements EnumSettingHelper {
+    public enum NoRenderMode implements NamedValue {
         PARTIAL("Partial"),
         FULL("Full");
 
@@ -99,7 +118,7 @@ public class NoRender extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -107,71 +126,70 @@ public class NoRender extends Module {
 
     public NoRender() {
         super("NoRender", "Removes the annoying stuff from your screen.", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
         setDrawn(false);
-        this.entities.do2329("EntitiesPage");
-        this.selection2.do2329("ParticleSelection");
-        this.selection.do2329("EntitySelection");
-        this.opacity2.do2329("HandsOpacity");
+        this.entities.setConfigName("EntitiesPage");
+        this.selection2.setConfigName("ParticleSelection");
+        this.selection.setConfigName("EntitySelection");
+        this.opacity2.setConfigName("HandsOpacity");
     }
 
-    @Listen(get219= Helper_7.num4)
-    public void onEvent(EntityEvent entityEvent) {
+    @Listen(get219= RenderConstants.num4)
+    public void onEntityModelRender(EntityModelRenderEvent entityEvent) {
         if (!this.noCluster.getValue().booleanValue()) {
             this.val = Float.intBitsToFloat(1065353216);
             return;
         }
-        double distanceTo = minecraftClient.player.getPos().distanceTo(entityEvent.getEntity181().getPos());
-        float width = entityEvent.getEntity181().getWidth();
-        if (distanceTo > width || entityEvent.getEntity181() == minecraftClient.player) {
+        double distanceTo = minecraftClient.player.getPos().distanceTo(entityEvent.getEntity().getPos());
+        float width = entityEvent.getEntity().getWidth();
+        if (distanceTo > width || entityEvent.getEntity() == minecraftClient.player) {
             this.val = Float.intBitsToFloat(1065353216);
             return;
         }
         float f = (float) (distanceTo / width);
         float intValue = this.clusterAlpha.getValue().intValue() / Float.intBitsToFloat(1132396544);
-        entityEvent.do190(intValue + (f * (Float.intBitsToFloat(1065353216) - intValue)));
-        this.val = entityEvent.get189();
+        entityEvent.setAlpha(intValue + (f * (Float.intBitsToFloat(1065353216) - intValue)));
+        this.val = entityEvent.getAlpha();
     }
 
     @Listen
-    public void onEvent2(EntityEvent_2.Inner inner) {
-        if (is1992(inner.getEntity181()) && inner.getEntity181() != minecraftClient.player && this.removal.getValue() == NoRenderMode.FULL) {
-            inner.do1162();
+    public void onEntityRenderPre(EntityRenderEvent.Inner inner) {
+        if (isEntityHidden(inner.getEntity()) && inner.getEntity() != minecraftClient.player && this.removal.getValue() == NoRenderMode.FULL) {
+            inner.cancel();
         }
     }
 
     @Listen
     public void onRenderLabel(RenderLabelEvent renderLabelEvent) {
         if (this.nameTags.getValue().booleanValue()) {
-            renderLabelEvent.do1162();
+            renderLabelEvent.cancel();
         }
     }
 
     @Listen
     public void onAddParticle(AddParticleEvent addParticleEvent) {
-        Particle particle982 = addParticleEvent.getParticle982();
+        Particle particle982 = addParticleEvent.getParticle();
         if (((particle982 instanceof ExplosionLargeParticle) || (particle982 instanceof ExplosionSmokeParticle)) && this.explosions.getValue().booleanValue()) {
-            addParticleEvent.do1162();
+            addParticleEvent.cancel();
         }
         if (this.potions.getValue().booleanValue() && (particle982 instanceof SpellParticle)) {
-            addParticleEvent.do1162();
+            addParticleEvent.cancel();
         }
     }
 
     @Listen
     public void onGetStatusEffect(GetStatusEffectEvent getStatusEffectEvent) {
-        if (this.blindness.getValue().booleanValue() && getStatusEffectEvent.getRegistryEntry830() == StatusEffects.BLINDNESS) {
-            getStatusEffectEvent.do1162();
+        if (this.blindness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == StatusEffects.BLINDNESS) {
+            getStatusEffectEvent.cancel();
         }
-        if (this.darkness.getValue().booleanValue() && getStatusEffectEvent.getRegistryEntry830() == StatusEffects.DARKNESS) {
-            getStatusEffectEvent.do1162();
+        if (this.darkness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == StatusEffects.DARKNESS) {
+            getStatusEffectEvent.cancel();
         }
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        if (this.fire.getValue().booleanValue() && SearchHelper4_7.getStashFinderMode2438() == StashFinderMode.THE_END) {
-            BlockUpdateS2CPacket packet904 = (channelRead0Event.getPacket904()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket904()) : null;
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        if (this.fire.getValue().booleanValue() && WorldUtils.getDimension() == StashFinderMode.THE_END) {
+            BlockUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
             if (packet904 instanceof BlockUpdateS2CPacket) {
                 BlockUpdateS2CPacket blockUpdateS2CPacket = packet904;
                 if (this.blockPos != null) {
@@ -182,10 +200,10 @@ public class NoRender extends Module {
                         return;
                     }
                     this.blockPos = null;
-                    channelRead0Event.do1162();
+                    channelRead0Event.cancel();
                 }
             }
-            EntitySpawnS2CPacket packet9042 = (channelRead0Event.getPacket904()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket904()) : null;
+            EntitySpawnS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
             if (packet9042 instanceof EntitySpawnS2CPacket) {
                 EntitySpawnS2CPacket entitySpawnS2CPacket = packet9042;
                 if (entitySpawnS2CPacket.getEntityType() == EntityType.END_CRYSTAL) {
@@ -196,37 +214,37 @@ public class NoRender extends Module {
     }
 
     public boolean is179() {
-        return isToggled() && this.hands.getValue().booleanValue() && !ShaderSearchHelper4.flag2 && !ShaderSearchHelper4.flag && this.opacity2.getValue().floatValue() == 0.0f;
+        return isToggled() && this.hands.getValue().booleanValue() && !ShaderPassRegistry.flag2 && !ShaderPassRegistry.flag && this.opacity2.getValue().floatValue() == 0.0f;
     }
 
-    public boolean is1990() {
+    public boolean shouldHideTabIcons() {
         return isToggled() && this.tabIcons.getValue().booleanValue();
     }
 
-    public boolean is1991(ParticleEffect particleEffect) {
+    public boolean isParticleBlocked(ParticleEffect particleEffect) {
         if (isToggled() && this.particles.getValue().booleanValue()) {
-            return !this.selection2.getValue().is1391(particleEffect.getType(), this.particleTypes.getValue());
+            return !this.selection2.getValue().isAllowed(particleEffect.getType(), this.particleTypes.getValue());
         }
         return false;
     }
 
-    public boolean is1992(Entity entity) {
-        return is1993(entity.getType());
+    public boolean isEntityHidden(Entity entity) {
+        return isEntityTypeHidden(entity.getType());
     }
 
-    public boolean is1993(EntityType<?> entityType) {
+    public boolean isEntityTypeHidden(EntityType<?> entityType) {
         if (isToggled() && this.entities2.getValue().booleanValue()) {
-            return !this.selection.getValue().is1391(entityType, this.entityTypes.getValue());
+            return !this.selection.getValue().isAllowed(entityType, this.entityTypes.getValue());
         }
         return false;
     }
 
-    public boolean is1994() {
+    public boolean shouldBlockBlockBreaking() {
         return isToggled() && this.noBlockBreaking.getValue().booleanValue();
     }
 
-    public float get1995() {
-        if (!isToggled() || !this.hands.getValue().booleanValue() || ShaderSearchHelper4.flag || ShaderSearchHelper4.flag2) {
+    public float getHandOpacity() {
+        if (!isToggled() || !this.hands.getValue().booleanValue() || ShaderPassRegistry.flag || ShaderPassRegistry.flag2) {
             return Float.intBitsToFloat(1065353216);
         }
         float floatValue = this.opacity2.getValue().floatValue();
@@ -236,7 +254,7 @@ public class NoRender extends Module {
         return Math.max(floatValue, Float.intBitsToFloat(1038174126));
     }
 
-    public float get1996() {
+    public float getArmorOpacity() {
         if (!isToggled() || !this.armor.getValue().booleanValue()) {
             return Float.intBitsToFloat(1065353216);
         }
@@ -247,11 +265,11 @@ public class NoRender extends Module {
         return Math.max(floatValue, Float.intBitsToFloat(1038174126));
     }
 
-    public float get1997() {
+    public float getGlobalOpacity() {
         return !isToggled() ? Float.intBitsToFloat(1065353216) : this.val;
     }
 
-    public boolean is1998() {
+    public boolean isTintEnabled() {
         return isToggled() && this.tint.getValue().booleanValue();
     }
 }

@@ -1,43 +1,49 @@
 package me.mioclient.module;
 
+import me.mioclient.mode.client.ModuleListMode;
+import me.mioclient.mode.player.ScaffoldMode_2;
+import me.mioclient.render.hud.HudTextLine;
+import me.mioclient.render.hud.TextHudElement;
+
+import me.mioclient.render.hud.HudTextLine;
+import me.mioclient.module.effects.StatusEffectHudElement;
+import me.mioclient.render.hud.TextHudElement;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import me.mioclient.BooleanSetting;
-import me.mioclient.CryptoHelper;
-import me.mioclient.EffectsSearchHelper4;
-import me.mioclient.EntityListObjectSetting;
-import me.mioclient.EnumSetting;
-import me.mioclient.ModuleListMode;
-import me.mioclient.ModuleListSearchHelper4_2;
-import me.mioclient.ScaffoldMode_2;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EntityListObjectSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.mode.client.ModuleListMode;
+import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/Effects.class */
-public class Effects extends me.mioclient.ModuleList {
+public class Effects extends me.mioclient.module.HudModule {
     public Setting<Boolean> setting;
     public Setting<ScaffoldMode_2> setting2;
     public Setting<Set<StatusEffect>> setting3;
-    public final List<EffectsSearchHelper4> list;
+    public final List<StatusEffectHudElement> list;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/Effects$Inner.class */
-    class Inner extends ModuleListSearchHelper4_2 {
-        public Inner(me.mioclient.ModuleList moduleList, List list) {
-            super(moduleList, (List<? extends CryptoHelper>) list);
+    class Inner extends TextHudElement {
+        public Inner(me.mioclient.module.HudModule moduleList, List list) {
+            super(moduleList, (List<? extends HudTextLine>) list);
         }
 
-        @Override // me.mioclient.ModuleListSearchHelper4_2
-        public Color getColor489(float f, CryptoHelper cryptoHelper) {
-            return Effects.this.setting.getValue().booleanValue() ? new Color(((StatusEffect) ((EffectsSearchHelper4) cryptoHelper).getRegistryEntry830().value()).getColor(), false) : super.getColor489(f, cryptoHelper);
+        @Override // me.mioclient.render.hud.TextHudElement
+        public Color getLineColor(float f, HudTextLine cryptoHelper) {
+            return Effects.this.setting.getValue().booleanValue() ? new Color(((StatusEffect) ((StatusEffectHudElement) cryptoHelper).getEffect().value()).getColor(), false) : super.getLineColor(f, cryptoHelper);
         }
     }
 
@@ -47,18 +53,18 @@ public class Effects extends me.mioclient.ModuleList {
         this.setting2 = add(new EnumSetting("Selection", ScaffoldMode_2.ANY));
         this.setting3 = add(new EntityListObjectSetting("WhiteList", Registries.STATUS_EFFECT, new StatusEffect[0]));
         this.list = new ArrayList();
-        do3019(new Inner(this, this.list));
-        getModuleListSearchHelper43020().do2952(ModuleListMode.BOTTOM_RIGHT);
+        setElement(new Inner(this, this.list));
+        getElement().setAnchor(ModuleListMode.BOTTOM_RIGHT);
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
         this.list.clear();
         Registries.STATUS_EFFECT.streamEntries().forEach(reference -> {
-            this.list.add(new EffectsSearchHelper4(reference, () -> {
+            this.list.add(new StatusEffectHudElement(reference, () -> {
                 boolean z;
                 if (minecraftClient.player.hasStatusEffect((RegistryEntry) reference)) {
-                    if (this.setting2.getValue().is1392((StatusEffect) reference.value(), this.setting3)) {
+                    if (this.setting2.getValue().isAllowedBySetting((StatusEffect) reference.value(), this.setting3)) {
                         z = true;
                         return Boolean.valueOf(z);
                     }
@@ -70,9 +76,9 @@ public class Effects extends me.mioclient.ModuleList {
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         this.list.sort(Comparator.comparing(effectsSearchHelper4 -> {
-            return ((StatusEffect) effectsSearchHelper4.getRegistryEntry830().value()).getName().getString();
+            return ((StatusEffect) effectsSearchHelper4.getEffect().value()).getName().getString();
         }));
     }
 }

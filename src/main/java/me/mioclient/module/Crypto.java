@@ -1,5 +1,17 @@
 package me.mioclient.module;
 
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.hud.HudTextLine;
+import me.mioclient.render.hud.TextHudElement;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.render.hud.HudTextLine;
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.hud.TextHudElement;
+
 import com.google.gson.JsonObject;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -8,22 +20,18 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.CryptoHelper;
-import me.mioclient.EnumSetting;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.ModuleListSearchHelper4_2;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.StringSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.StringSetting;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.util.time.Stopwatch;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/Crypto.class */
-public class Crypto extends me.mioclient.ModuleList {
+public class Crypto extends me.mioclient.module.HudModule {
     public static final String string = "MioClient/2.0";
     public Setting<String> setting;
     public Setting<CryptoMode> setting2;
@@ -34,7 +42,7 @@ public class Crypto extends me.mioclient.ModuleList {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/Crypto$CryptoMode.class */
-    private enum CryptoMode implements EnumSettingHelper {
+    private enum CryptoMode implements NamedValue {
         USD("USD"),
         EUR("EUR"),
         RUB("RUB"),
@@ -50,7 +58,7 @@ public class Crypto extends me.mioclient.ModuleList {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -64,33 +72,33 @@ public class Crypto extends me.mioclient.ModuleList {
         this.string2 = "0.00";
         this.formatting = Formatting.WHITE;
         this.stopwatch = new Stopwatch();
-        do3019(new ModuleListSearchHelper4_2(this, new CryptoHelper(() -> {
+        setElement(new TextHudElement(this, new HudTextLine(() -> {
             return Text.literal("%s %s%s".formatted(this.setting.getValue().toUpperCase(), this.formatting, this.string2));
         }, () -> {
             return true;
         })));
-        this.setting.do2339(() -> {
+        this.setting.setChangeCallback(() -> {
             this.formatting = Formatting.WHITE;
             this.string2 = "0.00";
-            if (is214()) {
+            if (isValidCoinSymbol()) {
                 this.stopwatch.setTime(5000L);
             } else {
-                this.setting.do2333("UNKNOWN");
+                this.setting.setValue("UNKNOWN");
             }
         });
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
-        if (this.stopwatch.is418(Double.longBitsToDouble(4617315517961601024L), TimeUnit.SECONDS)) {
-            executorService.submit(this::do212);
+    public void onTick(TickEvent tickEvent) {
+        if (this.stopwatch.hasElapsed(Double.longBitsToDouble(4617315517961601024L), TimeUnit.SECONDS)) {
+            executorService.submit(this::fetchExchangeRate);
             this.stopwatch.reset();
         }
     }
 
-    public void do212() {
-        if (!is214()) {
-            this.setting.do2333("UNKNOWN");
+    public void fetchExchangeRate() {
+        if (!isValidCoinSymbol()) {
+            this.setting.setValue("UNKNOWN");
             this.string2 = "0.00";
             this.formatting = Formatting.WHITE;
             return;
@@ -104,7 +112,7 @@ public class Crypto extends me.mioclient.ModuleList {
                 this.formatting = Formatting.WHITE;
                 return;
             }
-            JsonObject jsonObject = (JsonObject) SearchHelper_4.gson.fromJson((String) send.body(), JsonObject.class);
+            JsonObject jsonObject = (JsonObject) ClientAccessor.gson.fromJson((String) send.body(), JsonObject.class);
             if (jsonObject.has("status") && jsonObject.has(upperCase2)) {
                 String formatted = "%.2f".formatted(Float.valueOf(jsonObject.get(upperCase2).getAsFloat()));
                 float parseFloat = Float.parseFloat(formatted);
@@ -128,7 +136,7 @@ public class Crypto extends me.mioclient.ModuleList {
         }
     }
 
-    public boolean is214() {
+    public boolean isValidCoinSymbol() {
         String value = this.setting.getValue();
         return !value.isEmpty() && value.matches("[a-zA-Z]+");
     }

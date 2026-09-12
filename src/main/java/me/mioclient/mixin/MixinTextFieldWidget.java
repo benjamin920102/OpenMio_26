@@ -1,8 +1,11 @@
 package me.mioclient.mixin;
 
+import me.mioclient.gui.widget.ChestSearchOverlay;
+
+import me.mioclient.gui.widget.ChestSearchOverlay;
+import me.mioclient.render.RenderUtil;
+
 import java.awt.Color;
-import me.mioclient.MixinTextFieldWidgetHelper;
-import me.mioclient.SearchHelper_2;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.math.MatrixStack;
@@ -29,18 +32,18 @@ public class MixinTextFieldWidget {
 
     @Redirect(method = {"renderWidget"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/widget/TextFieldWidget;drawsBackground()Z", ordinal = 0))
     public boolean drawsBackground(TextFieldWidget textFieldWidget) {
-        if (textFieldWidget != MixinTextFieldWidgetHelper.textFieldWidget) {
+        if (textFieldWidget != ChestSearchOverlay.textFieldWidget) {
             return this.field_2095;
         }
         int x = textFieldWidget.getX() - 1;
         int y = textFieldWidget.getY() - 1;
         int width = textFieldWidget.getWidth() + 1;
         int height = textFieldWidget.getHeight() + 1;
-        SearchHelper_2.searchHelper_2.do545(this.lastmatrix, x, y, x + width, y + height, new Color(135, 135, 135, 255).getRGB());
-        SearchHelper_2.searchHelper_2.do545(this.lastmatrix, x, y, (x + width) - 1, y + 1, new Color(85, 85, 85, 255).getRGB());
-        SearchHelper_2.searchHelper_2.do545(this.lastmatrix, x, y, x + 1, (y + height) - 1, new Color(85, 85, 85, 255).getRGB());
-        SearchHelper_2.searchHelper_2.do545(this.lastmatrix, x + 1, (y + height) - 1, (x + width) - 1, y + height, -1);
-        SearchHelper_2.searchHelper_2.do545(this.lastmatrix, (x + width) - 1, y + 1, x + width, y + height, -1);
+        RenderUtil.INSTANCE.drawFilledRect(this.lastmatrix, x, y, x + width, y + height, new Color(135, 135, 135, 255).getRGB());
+        RenderUtil.INSTANCE.drawFilledRect(this.lastmatrix, x, y, (x + width) - 1, y + 1, new Color(85, 85, 85, 255).getRGB());
+        RenderUtil.INSTANCE.drawFilledRect(this.lastmatrix, x, y, x + 1, (y + height) - 1, new Color(85, 85, 85, 255).getRGB());
+        RenderUtil.INSTANCE.drawFilledRect(this.lastmatrix, x + 1, (y + height) - 1, (x + width) - 1, y + height, -1);
+        RenderUtil.INSTANCE.drawFilledRect(this.lastmatrix, (x + width) - 1, y + 1, x + width, y + height, -1);
         return false;
     }
 }

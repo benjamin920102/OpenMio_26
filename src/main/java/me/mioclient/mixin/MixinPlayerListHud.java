@@ -1,5 +1,9 @@
 package me.mioclient.mixin;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
@@ -7,7 +11,6 @@ import com.mojang.authlib.GameProfile;
 import java.awt.Color;
 import java.util.Comparator;
 import java.util.List;
-import me.mioclient.BaritoneHelper_3;
 import me.mioclient.module.misc.ExtraTab;
 import me.mioclient.module.player.NameProtect;
 import me.mioclient.module.render.NoRender;
@@ -43,18 +46,62 @@ public class MixinPlayerListHud {
     @Shadow
     @Final
     private MinecraftClient field_2155;
-    private static final NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
-    private static final ExtraTab extratab = (ExtraTab) BaritoneHelper_3.baritoneHelper_4.getModule117(ExtraTab.class);
-    private static final NameProtect nameprotect = (NameProtect) BaritoneHelper_3.baritoneHelper_4.getModule117(NameProtect.class);
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
+    private static ExtraTab extratab;
+
+    private static ExtraTab getExtratab() {
+
+        if (extratab == null && ClientServices.moduleInjector != null) {
+
+            try { extratab = (ExtraTab) ClientServices.moduleInjector.getModule(ExtraTab.class); } catch (Exception e) {}
+
+        }
+
+        return extratab;
+
+    }
+    private static NameProtect nameprotect;
+
+    private static NameProtect getNameprotect() {
+
+        if (nameprotect == null && ClientServices.moduleInjector != null) {
+
+            try { nameprotect = (NameProtect) ClientServices.moduleInjector.getModule(NameProtect.class); } catch (Exception e) {}
+
+        }
+
+        return nameprotect;
+
+    }
 
     @ModifyExpressionValue(method = {"collectPlayerEntries"}, at = {@At(value = "FIELD", target = "Lnet/minecraft/client/gui/hud/PlayerListHud;ENTRY_ORDERING:Ljava/util/Comparator;")})
     private Comparator<PlayerListEntry> collectPlayerEntries(Comparator<PlayerListEntry> comparator) {
-        return (extratab.isToggled() && extratab.sort.getValue().booleanValue()) ? extratab.getComparator1088() : comparator;
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return comparator;
+
+        return (extratab_lcl.isToggled() && extratab_lcl.sort.getValue().booleanValue()) ? extratab_lcl.getComparator() : comparator;
     }
 
     @ModifyArg(method = {"collectPlayerEntries"}, at = @At(value = "INVOKE", target = "Ljava/util/stream/Stream;limit(J)Ljava/util/stream/Stream;"))
     private long renderHook(long j) {
-        if (extratab.isToggled()) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return 0L;
+
+        if (extratab_lcl.isToggled()) {
             return Long.MAX_VALUE;
         }
         return j;
@@ -62,26 +109,34 @@ public class MixinPlayerListHud {
 
     @ModifyExpressionValue(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;isPartVisible(Lnet/minecraft/entity/player/PlayerModelPart;)Z")})
     private boolean renderHook(boolean z) {
-        if (extratab.isToggled() && extratab.betterSkin.getValue().booleanValue()) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return z;
+
+        if (extratab_lcl.isToggled() && extratab_lcl.betterSkin.getValue().booleanValue()) {
             return true;
         }
         return z;
     }
 
     @Inject(method = {"getPlayerName"}, at = {@At("RETURN")}, cancellable = true)
-    private void renderHook2(PlayerListEntry playerListEntry, CallbackInfoReturnable<Text> callbackInfoReturnable) {
+    private void suppressIndicatorBg(PlayerListEntry playerListEntry, CallbackInfoReturnable<Text> callbackInfoReturnable) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return;
+
         String strip;
         Color color530;
-        if (extratab.isToggled() && extratab.highlight.getValue().booleanValue() && (strip = Formatting.strip(((Text) callbackInfoReturnable.getReturnValue()).getString())) != null) {
+        if (extratab_lcl.isToggled() && extratab_lcl.highlight.getValue().booleanValue() && (strip = Formatting.strip(((Text) callbackInfoReturnable.getReturnValue()).getString())) != null) {
             String name = playerListEntry.getProfile().getName();
-            if (extratab.social.getValue().booleanValue() && (color530 = BaritoneHelper_3.searchHelper4_14.getColor530(name, null)) != null) {
+            if (extratab_lcl.social.getValue().booleanValue() && (color530 = ClientServices.socialManager.getSocialColor(name, null)) != null) {
                 callbackInfoReturnable.setReturnValue(Text.literal(strip).styled(style -> {
                     return style.withColor(color530.hashCode());
                 }));
             }
             if (MinecraftClient.getInstance().getSession().getUsername().equals(name)) {
                 callbackInfoReturnable.setReturnValue(Text.literal(strip).styled(style2 -> {
-                    return style2.withColor(extratab.self.getValue().hashCode());
+                    return style2.withColor(extratab_lcl.self.getValue().hashCode());
                 }));
             }
         }
@@ -89,7 +144,7 @@ public class MixinPlayerListHud {
 
     @Inject(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;isInSingleplayer()Z")})
     private void renderHook(DrawContext drawContext, int i, Scoreboard scoreboard, ScoreboardObjective scoreboardObjective, CallbackInfo callbackInfo, @Local(ordinal = 4) LocalIntRef localIntRef, @Local(ordinal = 5) LocalIntRef localIntRef2, @Local(ordinal = 6) LocalIntRef localIntRef3, @Local(ordinal = 0) List<PlayerListEntry> list) {
-        if (extratab.isToggled()) {
+        if (getExtratab().isToggled()) {
             int size = list.size();
             int i2 = size;
             int i3 = 1;
@@ -105,10 +160,14 @@ public class MixinPlayerListHud {
 
     @Inject(method = {"renderLatencyIcon"}, at = {@At("HEAD")}, cancellable = true)
     private void renderLatencyIconHook(DrawContext drawContext, int i, int i2, int i3, PlayerListEntry playerListEntry, CallbackInfo callbackInfo) {
-        if (!extratab.isToggled() || extratab.latency.getValue() == ExtraTab.MixinPlayerListHudMode.VANILLA) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return;
+
+        if (!extratab_lcl.isToggled() || extratab_lcl.latency.getValue() == ExtraTab.MixinPlayerListHudMode.VANILLA) {
             return;
         }
-        if (extratab.latency.getValue() == ExtraTab.MixinPlayerListHudMode.NONE) {
+        if (extratab_lcl.latency.getValue() == ExtraTab.MixinPlayerListHudMode.NONE) {
             callbackInfo.cancel();
             return;
         }
@@ -119,7 +178,11 @@ public class MixinPlayerListHud {
 
     @ModifyConstant(method = {"render"}, constant = {@Constant(intValue = 13)})
     private int renderConstant(int i) {
-        if (extratab.isToggled() && extratab.latency.getValue() == ExtraTab.MixinPlayerListHudMode.NONE) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return i;
+
+        if (extratab_lcl.isToggled() && extratab_lcl.latency.getValue() == ExtraTab.MixinPlayerListHudMode.NONE) {
             return 0;
         }
         return i;
@@ -127,28 +190,44 @@ public class MixinPlayerListHud {
 
     @ModifyArgs(method = {"render"}, at = @At(value = "INVOKE", target = "Ljava/lang/Math;max(II)I", ordinal = 0))
     private void render(Args args, @Local PlayerListEntry playerListEntry) {
-        if (extratab.isToggled() && extratab.latency.getValue() == ExtraTab.MixinPlayerListHudMode.TEXT) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return;
+
+        if (extratab_lcl.isToggled() && extratab_lcl.latency.getValue() == ExtraTab.MixinPlayerListHudMode.TEXT) {
             args.set(1, Integer.valueOf(((Integer) args.get(1)).intValue() + this.field_2155.textRenderer.getWidth(String.valueOf(playerListEntry.getLatency()))));
         }
     }
 
     @Redirect(method = {"render"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/network/ClientConnection;isEncrypted()Z"))
     private boolean africanAmerican(ClientConnection clientConnection) {
-        return clientConnection.isEncrypted() && !norender.is1990();
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return false;
+
+        return clientConnection.isEncrypted() && !norender_lcl.shouldHideTabIcons();
     }
 
     @Inject(method = {"render"}, at = {@At("HEAD")})
     private void renderHead(DrawContext drawContext, int i, Scoreboard scoreboard, ScoreboardObjective scoreboardObjective, CallbackInfo callbackInfo) {
-        if (extratab.get1086() == 1.0f) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return;
+
+        if (extratab_lcl.getTabScale() == 1.0f) {
             return;
         }
         drawContext.getMatrices().push();
-        drawContext.getMatrices().scale(extratab.get1086(), extratab.get1086(), 1.0f);
+        drawContext.getMatrices().scale(extratab_lcl.getTabScale(), extratab_lcl.getTabScale(), 1.0f);
     }
 
     @Inject(method = {"render"}, at = {@At("TAIL")})
     private void renderTail(DrawContext drawContext, int i, Scoreboard scoreboard, ScoreboardObjective scoreboardObjective, CallbackInfo callbackInfo) {
-        if (extratab.get1086() == 1.0f) {
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return;
+
+        if (extratab_lcl.getTabScale() == 1.0f) {
             return;
         }
         drawContext.getMatrices().pop();
@@ -156,14 +235,22 @@ public class MixinPlayerListHud {
 
     @ModifyVariable(method = {"render"}, at = @At("HEAD"), argsOnly = true)
     private int renderArgs(int i) {
-        return extratab.get1086() == 1.0f ? i : (int) (i / extratab.get1086());
+        ExtraTab extratab_lcl = getExtratab();
+
+        if (extratab_lcl == null) return i;
+
+        return extratab_lcl.getTabScale() == 1.0f ? i : (int) (i / extratab_lcl.getTabScale());
     }
 
     @Inject(method = {"method_46511"}, at = {@At("HEAD")}, cancellable = true)
     private static void methodHook(PlayerListEntry playerListEntry, CallbackInfoReturnable<String> callbackInfoReturnable) {
+        NameProtect nameprotect_lcl = getNameprotect();
+
+        if (nameprotect_lcl == null) return;
+
         GameProfile gameProfile = MinecraftClient.getInstance().player.getGameProfile();
-        if (nameprotect.isToggled() && playerListEntry.getProfile().equals(gameProfile)) {
-            callbackInfoReturnable.setReturnValue(nameprotect.name.getValue());
+        if (nameprotect_lcl.isToggled() && playerListEntry.getProfile().equals(gameProfile)) {
+            callbackInfoReturnable.setReturnValue(nameprotect_lcl.name.getValue());
         }
     }
 }

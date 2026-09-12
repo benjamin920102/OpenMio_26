@@ -1,33 +1,41 @@
 package me.mioclient.module.misc;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.Helper_7;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchIdentifier;
+import me.mioclient.api.ClientServices;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.util.client.SoundIdentifier;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.client.ChatUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.client.ChatUtils;
+
+import me.mioclient.render.RenderConstants;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.AddMessageEvent;
+import me.mioclient.event.events.network.AddMessageEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.setting.SoundIdentifierSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/PMSound.class */
 public class PMSound extends Module {
-    public Setting<SearchIdentifier> type;
-    public Setting<Float> volume;
+    public Setting<SoundIdentifier> type = add(new SoundIdentifierSetting("Type", new SoundIdentifier("system", "vk")));
+    public Setting<Float> volume = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f));
 
     public PMSound() {
         super("PMSound", "Plays a sound whenever you get a private message.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
-    @Listen(get219= Helper_7.num2)
+    @Listen(get219= RenderConstants.num2)
     public void onAddMessage(AddMessageEvent addMessageEvent) {
-        if (!addMessageEvent.is2403() && addMessageEvent.getKeyPearlMode1472() == KeyPearlMode.Pre && addMessageEvent.getText2279() != null && MixinMessageIndicatorHelper.is335(addMessageEvent.getText2279().getString())) {
+        if (!addMessageEvent.isCancelled() && addMessageEvent.getPhase() == KeyPearlMode.Pre && addMessageEvent.getText() != null && ChatUtils.isIncomingWhisper(addMessageEvent.getText().getString())) {
             minecraftClient.executeSync(() -> {
-                BaritoneHelper_3.searchHelper4_11.getSearchHelper4_42970(this.type.getValue()).do1820(this.volume.getValue().floatValue());
+                ClientServices.killstreakSoundManager.findSoundPlayer(this.type.getValue()).play(this.volume.getValue().floatValue());
             });
         }
     }

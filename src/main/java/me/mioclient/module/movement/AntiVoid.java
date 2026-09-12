@@ -1,28 +1,36 @@
 package me.mioclient.module.movement;
 
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockStateRaycastContext;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/AntiVoid.class */
 public class AntiVoid extends Module {
-    public Setting<AntiVoidMode> mode;
-    public Setting<Integer> height;
-    public Setting<Boolean> forceGround;
+    public Setting<AntiVoidMode> mode = add(new EnumSetting<>("Mode", AntiVoidMode.CANCEL));
+    public Setting<Integer> height = add(new NumberSetting<>("Height", 30, 1, 100).setSuffix("m"));
+    public Setting<Boolean> forceGround = add(new BooleanSetting("ForceGround", false, v -> this.mode.getValue() == AntiVoid.AntiVoidMode.CANCEL));
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/AntiVoid$AntiVoidMode.class */
-    public enum AntiVoidMode implements EnumSettingHelper {
+    public enum AntiVoidMode implements NamedValue {
         TELEPORT("Teleport"),
         CANCEL("Cancel");
 
@@ -32,7 +40,7 @@ public class AntiVoid extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -40,17 +48,16 @@ public class AntiVoid extends Module {
 
     public AntiVoid() {
         super("AntiVoid", "Prevents you from falling into the void.", Category.MOVEMENT, new String[0]);
-        PhaseESPHelper.do1351(this);
         setDrawn(false);
     }
 
     @Override // me.mioclient.module.Module
     public String getInfo() {
-        return FontsSearchHelper4.getString1684(this.mode.getValue());
+        return ClientTextRenderer.capitalize(this.mode.getValue());
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         if (minecraftClient.player.isOnGround() || minecraftClient.player.fallDistance <= 0.0f) {
             return;
         }

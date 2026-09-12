@@ -1,28 +1,38 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.event.events.network.PacketSendEvent;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.render.font.ClientTextRenderer;
+
 import java.util.Map;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.feature.Event;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.network.ChatEvent;
 import me.mioclient.mixin.ducks.DuckCommandExecutionC2SPacket;
 import me.mioclient.module.Module;
 import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
+import me.mioclient.module.Chat;
+import me.mioclient.setting.EnumSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiCyrillic.class */
 public class AntiCyrillic extends Module {
-    public Setting<AntiCyrillicMode> mode;
+    public Setting<AntiCyrillicMode> mode = add(new EnumSetting<>("Mode", AntiCyrillicMode.CHAT));
     public static final Map<Character, String> map = new HashMap();
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiCyrillic$AntiCyrillicMode.class */
-    public enum AntiCyrillicMode implements EnumSettingHelper {
+    public enum AntiCyrillicMode implements NamedValue {
         CHAT("Chat"),
         COMMANDS("Commands"),
         BOTH("Both");
@@ -33,7 +43,7 @@ public class AntiCyrillic extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -114,38 +124,37 @@ public class AntiCyrillic extends Module {
 
     public AntiCyrillic() {
         super("AntiCyrillic", "Replaces cyrillic letters in your messages with latin equivalents.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
     @Override // me.mioclient.module.Module
     public String getInfo() {
         try {
-            return FontsSearchHelper4.getString1684(this.mode.getValue());
+            return ClientTextRenderer.capitalize(this.mode.getValue());
         } catch (Exception e) {
             return null;
         }
     }
 
     @Listen
-    public void onDabigbulletz(Event event) {
+    public void onChat(ChatEvent event) {
         if (this.mode.getValue() == AntiCyrillicMode.COMMANDS) {
             return;
         }
-        event.do2650(getString127(event.getString2649()));
+        event.setMessage(replaceCyrillic(event.getMessage()));
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        CommandExecutionC2SPacket packet904 = (sendImmediatelyEvent.getPacket904()) instanceof CommandExecutionC2SPacket ? (CommandExecutionC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        CommandExecutionC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof CommandExecutionC2SPacket ? (CommandExecutionC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if (packet904 instanceof CommandExecutionC2SPacket) {
             CommandExecutionC2SPacket commandExecutionC2SPacket = packet904;
             if (this.mode.getValue() != AntiCyrillicMode.CHAT) {
-                ((DuckCommandExecutionC2SPacket)(Object) commandExecutionC2SPacket).setCommand(getString127(commandExecutionC2SPacket.command()));
+                ((DuckCommandExecutionC2SPacket)(Object) commandExecutionC2SPacket).setCommand(replaceCyrillic(commandExecutionC2SPacket.command()));
             }
         }
     }
 
-    public String getString127(String str) {
+    public String replaceCyrillic(String str) {
         String str2 = str;
         if (str2.startsWith("/")) {
             String[] split = str2.split(" ");
@@ -153,15 +162,15 @@ public class AntiCyrillic extends Module {
                 StringBuilder sb = new StringBuilder();
                 for (int length = split.length - 1; length >= 0; length--) {
                     if (length == 0) {
-                        sb.insert(0, new ArgumentTypeHelper().getArgumentTypeHelper2919(split[0]).getString2921("\u0001 "));
+                        sb.insert(0, new StringTemplate().arg(split[0]).format("\u0001 "));
                     } else {
-                        sb.insert(0, new ArgumentTypeHelper().getArgumentTypeHelper2919(getString128(split[length])).getString2921("\u0001 "));
+                        sb.insert(0, new StringTemplate().arg(replaceCyrillicChars(split[length])).format("\u0001 "));
                     }
                 }
                 str2 = sb.toString();
             }
         } else {
-            str2 = getString128(str2);
+            str2 = replaceCyrillicChars(str2);
         }
         if (str2.length() > 256) {
             str2 = str2.substring(0, 256);
@@ -169,12 +178,12 @@ public class AntiCyrillic extends Module {
         return str2;
     }
 
-    public String getString128(String str) {
+    public String replaceCyrillicChars(String str) {
         String str2 = str;
         for (int length = str2.length() - 1; length >= 0; length--) {
             char charAt = str2.charAt(length);
             if (map.containsKey(Character.valueOf(charAt))) {
-                str2 = new ArgumentTypeHelper().getArgumentTypeHelper2919(str2.substring(length + 1)).getArgumentTypeHelper2919(map.get(Character.valueOf(charAt))).getArgumentTypeHelper2919(str2.substring(0, length)).getString2921("\u0001\u0001\u0001");
+                str2 = new StringTemplate().arg(str2.substring(length + 1)).arg(map.get(Character.valueOf(charAt))).arg(str2.substring(0, length)).format("\u0001\u0001\u0001");
             }
         }
         return str2;

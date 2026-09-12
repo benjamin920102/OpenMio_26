@@ -1,5 +1,26 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.event.events.network.PacketReceiveEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.util.client.SoundIdentifier;
+import me.mioclient.util.client.SoundPlayer;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.io.FileIO;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.player.PlayerUtils;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.manager.ConfigManager;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.player.EntityUtil;
+import me.mioclient.util.io.FileIO;
+import me.mioclient.util.player.PlayerUtils;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
@@ -15,24 +36,17 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PresetHelper;
-import me.mioclient.PresetHelper_4;
-import me.mioclient.SearchHelper4_4;
-import me.mioclient.SearchHelper_3;
-import me.mioclient.SearchIdentifier;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.client.SoundPlayer;
+import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.AttackHookPostEvent;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.DisconnectEvent;
+import me.mioclient.event.events.player.AttackHookPostEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickEvent;
+import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.IRC;
 import net.minecraft.client.particle.Particle;
@@ -50,31 +64,35 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.math.random.ThreadSafeRandom;
 import org.apache.commons.io.FileUtils;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
+import me.mioclient.setting.SoundIdentifierSetting;
+import me.mioclient.setting.StringSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/KillEffects.class */
 public class KillEffects extends Module {
-    public Setting<Boolean> killSound;
-    public Setting<Boolean> players;
-    public Setting<SearchIdentifier> sound;
-    public Setting<Float> volume;
-    public Setting<Boolean> self;
-    public Setting<SearchIdentifier> sound2;
-    public Setting<Float> volume3;
-    public Setting<Boolean> killStreak;
-    public Setting<Float> volume2;
-    public Setting<Boolean> thunder;
-    public Setting<Integer> lightnings;
-    public Setting<Boolean> self2;
-    public Setting<Boolean> ignoreNakeds;
-    public Setting<Boolean> ashes;
-    public Setting<Boolean> self3;
-    public Setting<Boolean> autoEZ;
-    public Setting<Float> delay;
-    public Setting<String> path;
-    public Setting<Boolean> random;
-    public Setting<Boolean> refresh;
-    public static IRC iRC = (IRC) BaritoneHelper_3.baritoneHelper_4.getModule117(IRC.class);
+    public Setting<Boolean> killSound = add(new BooleanSetting("KillSound", false).setVisible());
+    public Setting<Boolean> players = add(new BooleanSetting("Players", false, v -> this.killSound.isShown()).setVisible());
+    public Setting<SoundIdentifier> sound = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "css"), v -> this.killSound.isShown() && this.players.isShown()));
+    public Setting<Float> volume = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f, v -> this.killSound.isShown() && this.players.isShown()));
+    public Setting<Boolean> self = add(new BooleanSetting("Self", false, v -> this.killSound.isShown()).setVisible());
+    public Setting<SoundIdentifier> sound2 = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "bodysplat"), v -> this.killSound.isShown() && this.self.isShown()));
+    public Setting<Float> volume3 = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f, v -> this.killSound.isShown() && this.self.isShown()));
+    public Setting<Boolean> killStreak = add(new BooleanSetting("KillStreak", false).setVisible());
+    public Setting<Float> volume2 = add(new NumberSetting<>("Volume", 0.4f, 0.0f, 1.0f, v -> this.killStreak.isShown()));
+    public Setting<Boolean> thunder = add(new BooleanSetting("Thunder", true).setVisible());
+    public Setting<Integer> lightnings = add(new NumberSetting<>("Lightnings", 1, 1, 4).requiresSettings(this.thunder));
+    public Setting<Boolean> self2 = add(new BooleanSetting("Self", false, v -> this.thunder.isShown()));
+    public Setting<Boolean> ignoreNakeds = add(new BooleanSetting("IgnoreNakeds", true).requiresSettings(this.thunder));
+    public Setting<Boolean> ashes = add(new BooleanSetting("Ashes", false).setVisible());
+    public Setting<Boolean> self3 = add(new BooleanSetting("Self", false).requiresSettings(this.ashes));
+    public Setting<Boolean> autoEZ = add(new BooleanSetting("AutoEZ", false).setVisible());
+    public Setting<Float> delay = add(new NumberSetting<>("Delay", 0.0f, 0.0f, 5.0f).setSuffix("s").requiresSettings(this.autoEZ));
+    public Setting<String> path = add(new StringSetting("Path", "autoez.txt").requiresSettings(this.autoEZ));
+    public Setting<Boolean> random = add(new BooleanSetting("Random", true).requiresSettings(this.autoEZ));
+    public Setting<Boolean> refresh = add(new BooleanSetting("Refresh", false).requiresSettings(this.autoEZ));
+    public static IRC iRC = (IRC) ClientServices.moduleInjector.getModule(IRC.class);
     public static final Random random2 = new ThreadSafeRandom(System.currentTimeMillis());
     public final ConcurrentHashMap<UUID, Integer> concurrentHashMap;
     public final ObjectList<UUID> objectList;
@@ -84,48 +102,47 @@ public class KillEffects extends Module {
 
     public KillEffects() {
         super("KillEffects", "Does various things when someone dies.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.concurrentHashMap = new ConcurrentHashMap<>();
         this.objectList = ObjectLists.synchronize(new ObjectArrayList());
         this.num = 0;
         this.num2 = 0;
         this.list = Collections.synchronizedList(new ArrayList());
-        this.players.do2329("KillSoundPlayers");
-        this.sound.do2329("KillSoundPlayersSound");
-        this.volume.do2329("KillSoundPlayersVolume");
-        this.self.do2329("KillSoundSelf");
-        this.sound2.do2329("KillSoundSelfSound");
-        this.volume3.do2329("KillSoundSelfVolume");
-        this.self2.do2329("ThunderSelf");
-        this.volume2.do2329("KillStreakSoundVolume");
-        this.self3.do2329("AshesSelf");
-        this.autoEZ.do2339(() -> {
+        this.players.setConfigName("KillSoundPlayers");
+        this.sound.setConfigName("KillSoundPlayersSound");
+        this.volume.setConfigName("KillSoundPlayersVolume");
+        this.self.setConfigName("KillSoundSelf");
+        this.sound2.setConfigName("KillSoundSelfSound");
+        this.volume3.setConfigName("KillSoundSelfVolume");
+        this.self2.setConfigName("ThunderSelf");
+        this.volume2.setConfigName("KillStreakSoundVolume");
+        this.self3.setConfigName("AshesSelf");
+        this.autoEZ.setChangeCallback(() -> {
             if (this.autoEZ.getValue().booleanValue()) {
-                do3004(false);
+                loadAutoEZLines(false);
             }
         });
-        this.refresh.do2339(() -> {
+        this.refresh.setChangeCallback(() -> {
             if (this.refresh.getValue().booleanValue()) {
-                do3004(true);
-                this.refresh.do2333(false);
+                loadAutoEZLines(true);
+                this.refresh.setValue(false);
             }
         });
-        this.random.do2339(() -> {
+        this.random.setChangeCallback(() -> {
             this.num2 = 0;
         });
-        this.path.do2339(() -> {
-            do3004(true);
+        this.path.setChangeCallback(() -> {
+            loadAutoEZLines(true);
         });
-        this.path.do2329("AutoEZPath");
-        this.random.do2329("AutoEZRandom");
-        this.refresh.do2329("AutoEZRefresh");
+        this.path.setConfigName("AutoEZPath");
+        this.random.setConfigName("AutoEZRandom");
+        this.refresh.setConfigName("AutoEZRefresh");
         setDrawn(false);
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
         this.num = 0;
-        do3004(true);
+        loadAutoEZLines(true);
     }
 
     @Listen
@@ -136,14 +153,14 @@ public class KillEffects extends Module {
     @Listen
     public void onAttackHookPost(AttackHookPostEvent attackHookPostEvent) {
         PlayerEntity playerEntity;
-        if (attackHookPostEvent.getKeyPearlMode1472() == KeyPearlMode.Post || is1469()) {
+        if (attackHookPostEvent.getPhase() == KeyPearlMode.Post || isNotInGame()) {
             return;
         }
-        PlayerEntity entity181 = (attackHookPostEvent.getEntity181()) instanceof PlayerEntity ? (PlayerEntity) (attackHookPostEvent.getEntity181()) : null;
+        PlayerEntity entity181 = (attackHookPostEvent.getEntity()) instanceof PlayerEntity ? (PlayerEntity) (attackHookPostEvent.getEntity()) : null;
         if (!(entity181 instanceof PlayerEntity) || (playerEntity = entity181) == minecraftClient.player) {
             return;
         }
-        if (BaritoneHelper_3.searchHelper4_14.is519(playerEntity.getName().getString()) || SearchHelper_3.get644((Entity) playerEntity) <= 0.0f) {
+        if (ClientServices.socialManager.isFriend(playerEntity.getName().getString()) || EntityUtil.getEntityHealth((Entity) playerEntity) <= 0.0f) {
             return;
         }
         try {
@@ -153,32 +170,32 @@ public class KillEffects extends Module {
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        if (channelRead0Event.getPacket904() instanceof DeathMessageS2CPacket) {
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        if (channelRead0Event.getPacket() instanceof DeathMessageS2CPacket) {
             this.num = -1;
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         PlayerEntity playerByUuid = null;
         String string3005;
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
         if (this.num == -1) {
             this.num = 0;
             if (this.killSound.getValue().booleanValue() && this.self.getValue().booleanValue() && this.volume3.getValue().floatValue() > 0.0f) {
-                SearchHelper4_4 searchHelper4_42970 = BaritoneHelper_3.searchHelper4_11.getSearchHelper4_42970(this.sound2.getValue());
+                SoundPlayer searchHelper4_42970 = ClientServices.killstreakSoundManager.findSoundPlayer(this.sound2.getValue());
                 if (searchHelper4_42970 != null) {
-                    searchHelper4_42970.do1820(this.volume3.getValue().floatValue());
+                    searchHelper4_42970.play(this.volume3.getValue().floatValue());
                 }
             }
             if (this.thunder.getValue().booleanValue() && this.self2.getValue().booleanValue()) {
-                do3006(minecraftClient.player.getPos());
+                spawnLightning(minecraftClient.player.getPos());
             }
             if (this.ashes.getValue().booleanValue() && this.self3.getValue().booleanValue()) {
-                do3007(minecraftClient.player.getPos());
+                spawnAshParticles(minecraftClient.player.getPos());
             }
         }
         this.objectList.clear();
@@ -197,35 +214,35 @@ public class KillEffects extends Module {
                 } else if (playerByUuid.getHealth() <= 0.0f) {
                     this.objectList.add(uuid);
                     this.num++;
-                    if (this.autoEZ.getValue().booleanValue() && (string3005 = getString3005()) != null) {
+                    if (this.autoEZ.getValue().booleanValue() && (string3005 = getNextAutoEZMessage()) != null) {
                         String replace = string3005.replace("{name}", playerByUuid.getName().getString());
                         if (!iRC.isToggled() || !replace.startsWith(iRC.prefix.getValue())) {
                             Runnable runnable = () -> {
-                                MixinMessageIndicatorHelper.do347(replace);
+                                ChatUtils.sendChatOrCommand(replace);
                             };
-                            if (this.delay.is2327()) {
+                            if (this.delay.isAtMinimum()) {
                                 runnable.run();
                             } else {
-                                BaritoneHelper_3.tooltipsSearchHelper4_2.do164(runnable, (int) (this.delay.getValue().floatValue() / Float.intBitsToFloat(1028443341)));
+                                ClientServices.tooltipsHelper.schedule(runnable, (int) (this.delay.getValue().floatValue() / Float.intBitsToFloat(1028443341)));
                             }
                         }
                     }
-                    if (this.thunder.getValue().booleanValue() && (HoleSnapSearchHelper4.is2013((LivingEntity) playerByUuid) || !this.ignoreNakeds.getValue().booleanValue())) {
-                        do3006(playerByUuid.getPos());
+                    if (this.thunder.getValue().booleanValue() && (PlayerUtils.hasArmor((LivingEntity) playerByUuid) || !this.ignoreNakeds.getValue().booleanValue())) {
+                        spawnLightning(playerByUuid.getPos());
                     }
                     if (this.ashes.getValue().booleanValue()) {
-                        do3007(playerByUuid.getPos());
+                        spawnAshParticles(playerByUuid.getPos());
                     }
                     if (this.killSound.getValue().booleanValue() && this.players.getValue().booleanValue() && this.volume.getValue().floatValue() > 0.0f) {
-                        SearchHelper4_4 searchHelper4_429702 = BaritoneHelper_3.searchHelper4_11.getSearchHelper4_42970(this.sound.getValue());
+                        SoundPlayer searchHelper4_429702 = ClientServices.killstreakSoundManager.findSoundPlayer(this.sound.getValue());
                         if (searchHelper4_429702 != null) {
-                            searchHelper4_429702.do1820(this.volume.getValue().floatValue());
+                            searchHelper4_429702.play(this.volume.getValue().floatValue());
                         }
                     }
                     if (this.killStreak.getValue().booleanValue() && this.num >= 2 && this.volume2.getValue().floatValue() > 0.0f) {
-                        SearchHelper4_4 searchHelper4_42968 = BaritoneHelper_3.searchHelper4_11.getSearchHelper4_42968(this.num);
+                        SoundPlayer searchHelper4_42968 = ClientServices.killstreakSoundManager.getRandomKillstreakSound(this.num);
                         if (searchHelper4_42968 != null) {
-                            searchHelper4_42968.do1820(this.volume2.getValue().floatValue());
+                            searchHelper4_42968.play(this.volume2.getValue().floatValue());
                         }
                     }
                 }
@@ -242,11 +259,11 @@ public class KillEffects extends Module {
         }
     }
 
-    public void do3003(PlayerEntity playerEntity) {
-        if (is1469() || playerEntity == minecraftClient.player) {
+    public void registerAttackTarget(PlayerEntity playerEntity) {
+        if (isNotInGame() || playerEntity == minecraftClient.player) {
             return;
         }
-        if (BaritoneHelper_3.searchHelper4_14.is519(playerEntity.getName().getString())) {
+        if (ClientServices.socialManager.isFriend(playerEntity.getName().getString())) {
             return;
         }
         try {
@@ -255,9 +272,9 @@ public class KillEffects extends Module {
         }
     }
 
-    public void do3004(boolean z) {
+    public void loadAutoEZLines(boolean z) {
         if (this.autoEZ.getValue().booleanValue() || z) {
-            Path path1566 = PresetHelper_4.getPath1566(PresetHelper.path4.resolve(this.path.getValue()), ".txt");
+            Path path1566 = FileIO.resolvePath(ConfigManager.path4.resolve(this.path.getValue()), ".txt");
             try {
                 if (!path1566.toFile().exists()) {
                     throw new IOException("AutoEZ file %s not found".formatted(this.path.getValue()));
@@ -267,9 +284,9 @@ public class KillEffects extends Module {
                 this.num2 = 0;
             } catch (Exception e) {
                 if (this.autoEZ.getValue().booleanValue()) {
-                    MixinMessageIndicatorHelper.do345(Text.literal(new ArgumentTypeHelper().getArgumentTypeHelper2919(String.valueOf(e)).getString2921("Failed to update AutoEZ lines: \u0001")).styled(style -> {
+                    ChatUtils.sendPrefixedMessage(Text.literal(new StringTemplate().arg(String.valueOf(e)).format("Failed to update AutoEZ lines: \u0001")).styled(style -> {
                         return style.withColor(Formatting.RED);
-                    }), MixinMessageIndicatorHelper.getMessageSignatureData337(-9634482), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode3);
+                    }), ChatUtils.createSignature(-9634482), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
                     try {
                         Files.createFile(path1566, new FileAttribute[0]);
                     } catch (Exception e2) {
@@ -279,7 +296,7 @@ public class KillEffects extends Module {
         }
     }
 
-    public String getString3005() {
+    public String getNextAutoEZMessage() {
         try {
             if (this.list.isEmpty()) {
                 return null;
@@ -297,7 +314,7 @@ public class KillEffects extends Module {
         }
     }
 
-    public void do3006(Vec3d vec3d) {
+    public void spawnLightning(Vec3d vec3d) {
         for (int i = 0; i < this.lightnings.getValue().intValue(); i++) {
             Entity lightningEntity = new LightningEntity(EntityType.LIGHTNING_BOLT, minecraftClient.world);
             ((LightningEntity) lightningEntity).setPosition(vec3d);
@@ -306,7 +323,7 @@ public class KillEffects extends Module {
         }
     }
 
-    public void do3007(Vec3d vec3d) {
+    public void spawnAshParticles(Vec3d vec3d) {
         for (int i = 0; i < random2.nextInt(35) + 25; i++) {
             Particle addParticle = minecraftClient.particleManager.addParticle((ParticleEffect) (random2.nextBoolean() ? ParticleTypes.ASH : ParticleTypes.WHITE_ASH), vec3d.getX() + (random2.nextGaussian() * Double.longBitsToDouble(4597454643433098445L)), (vec3d.getY() + Double.longBitsToDouble(4611686018427387904L)) - (random2.nextGaussian() * Double.longBitsToDouble(4602949035107339469L)), vec3d.getZ() + (random2.nextGaussian() * Double.longBitsToDouble(4597454643433098445L)), 0.0d, Double.longBitsToDouble(-4631501856787818086L) - (random2.nextGaussian() * Double.longBitsToDouble(4602678819172646912L)), 0.0d);
             if (addParticle != null) {

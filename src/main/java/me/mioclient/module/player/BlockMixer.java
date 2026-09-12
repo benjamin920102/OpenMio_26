@@ -1,11 +1,13 @@
 package me.mioclient.module.player;
 
+import me.mioclient.event.events.network.PacketSendEvent;
+
 import java.util.ArrayList;
 import java.util.Random;
 import me.mioclient.api.Category;
-import me.mioclient.event.InteractBlockEvent;
+import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.SendImmediatelyEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.module.Module;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
@@ -24,18 +26,18 @@ public class BlockMixer extends Module {
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
         if (minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem) {
-            do3061();
+            switchToRandomBlock();
         }
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        if ((sendImmediatelyEvent.getPacket904() instanceof PlayerInteractBlockC2SPacket) && (minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem)) {
-            do3061();
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        if ((sendImmediatelyEvent.getPacket() instanceof PlayerInteractBlockC2SPacket) && (minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem)) {
+            switchToRandomBlock();
         }
     }
 
-    public void do3061() {
+    public void switchToRandomBlock() {
         ArrayList arrayList = new ArrayList();
         for (int i = 0; i < 9; i++) {
             ItemStack stack = minecraftClient.player.getInventory().getStack(i);

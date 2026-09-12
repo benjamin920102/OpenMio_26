@@ -1,10 +1,12 @@
 package me.mioclient.api;
 
-import me.mioclient.EnumSettingHelper;
+
+
+import me.mioclient.module.client.HUD;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/api/Category.class */
-public enum Category implements EnumSettingHelper {
+public enum Category implements NamedValue {
     COMBAT("Combat"),
     MISC("Misc"),
     RENDER("Render"),
@@ -20,7 +22,7 @@ public enum Category implements EnumSettingHelper {
         this.name = str;
     }
 
-    @Override // me.mioclient.EnumSettingHelper
+    @Override // me.mioclient.api.NamedValue
     public String getName() {
         return this.name;
     }

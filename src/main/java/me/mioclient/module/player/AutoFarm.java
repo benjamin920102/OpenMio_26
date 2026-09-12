@@ -1,21 +1,30 @@
 package me.mioclient.module.player;
 
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_7;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_4;
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.util.world.WorldUtils;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -36,43 +45,47 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.BlockStateRaycastContext;
+import me.mioclient.module.render.Crosshair;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoFarm.class */
 public class AutoFarm extends Module {
-    public Setting<AutoFarmMode> mode;
-    public Setting<Float> range;
-    public Setting<Integer> bpt;
-    public Setting<Boolean> place;
-    public Setting<Boolean> rotate;
-    public Setting<Boolean> fertilize;
-    public Setting<Boolean> remove;
-    public Setting<Float> removeDelay;
-    public Setting<Boolean> onlyGrown;
-    public Setting<Boolean> crops;
-    public Setting<Boolean> wheat;
-    public Setting<Boolean> carrots;
-    public Setting<Boolean> potatoes;
-    public Setting<Boolean> beetRoots;
-    public Setting<Boolean> sugarCane;
-    public Setting<Boolean> trees;
+    public Setting<AutoFarmMode> mode = add(new EnumSetting<>("Mode", AutoFarmMode.autoFarmMode));
+    public Setting<Float> range = add(new NumberSetting<>("Range", 4.0f, 1.0f, 6.0f, v -> this.mode.getValue() == AutoFarm.AutoFarmMode.autoFarmMode2));
+    public Setting<Integer> bpt = add(new NumberSetting<>("BPT", 1, 1, 8));
+    public Setting<Boolean> place = add(new BooleanSetting("Place", false));
+    public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", false));
+    public Setting<Boolean> fertilize = add(new BooleanSetting("Fertilize", false));
+    public Setting<Boolean> remove = add(new BooleanSetting("Remove", false).setVisible());
+    public Setting<Float> removeDelay = add(new NumberSetting<>("RemoveDelay", 0.5f, 0.0f, 5.0f, v -> this.remove.isShown()).setSuffix("s"));
+    public Setting<Boolean> onlyGrown = add(new BooleanSetting("OnlyGrown", true, v -> this.remove.isShown()));
+    public Setting<Boolean> crops = add(new BooleanSetting("Crops", false).setDependent());
+    public Setting<Boolean> wheat = add(new BooleanSetting("Wheat", true, v -> this.crops.isShown()));
+    public Setting<Boolean> carrots = add(new BooleanSetting("Carrots", true, v -> this.crops.isShown()));
+    public Setting<Boolean> potatoes = add(new BooleanSetting("Potatoes", true, v -> this.crops.isShown()));
+    public Setting<Boolean> beetRoots = add(new BooleanSetting("BeetRoots", false, v -> this.crops.isShown()));
+    public Setting<Boolean> sugarCane = add(new BooleanSetting("SugarCane", false).requiresSettings(this.crops));
+    public Setting<Boolean> trees = add(new BooleanSetting("Trees", false).requiresSettings(this.crops));
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public int num;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoFarm$AutoFarmMode.class */
-    public static enum AutoFarmMode implements EnumSettingHelper {
+    public static enum AutoFarmMode implements NamedValue {
         autoFarmMode("Crosshair") {
             @Override
-            public List<BlockPos> getList610(AutoFarm autoFarm) {
-                return Collections.singletonList(BlockPos.ofFloored(SearchHelper_4.minecraftClient.crosshairTarget.getPos()));
+            public List<BlockPos> getTargetBlocks(AutoFarm autoFarm) {
+                return Collections.singletonList(BlockPos.ofFloored(ClientAccessor.minecraftClient.crosshairTarget.getPos()));
             }
         },
         autoFarmMode2("Sphere") {
             @Override
-            public List<BlockPos> getList610(AutoFarm autoFarm) {
-                return SearchHelper4_7.getList2429(SearchHelper_4.minecraftClient.player.getPos(), autoFarm.range.getValue().floatValue(), true);
+            public List<BlockPos> getTargetBlocks(AutoFarm autoFarm) {
+                return WorldUtils.getBlocksInRadius(ClientAccessor.minecraftClient.player.getPos(), autoFarm.range.getValue().floatValue(), true);
             }
         };
 
@@ -82,26 +95,25 @@ public class AutoFarm extends Module {
             this.name = str2;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public List<BlockPos> getList610(AutoFarm autoFarm) {
+        public List<BlockPos> getTargetBlocks(AutoFarm autoFarm) {
             return null;
         }
     }
 
     public AutoFarm() {
         super("AutoFarm", "Farms your crops for you.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
     }
 
     @Listen
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
-        for (BlockPos blockPos : this.mode.getValue().getList610(this)) {
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
+        for (BlockPos blockPos : this.mode.getValue().getTargetBlocks(this)) {
             if (this.num >= this.bpt.getValue().intValue()) {
                 break;
             }
@@ -115,8 +127,8 @@ public class AutoFarm extends Module {
     public void do1849(BlockPos blockPos, Direction direction) {
         BlockState blockState = minecraftClient.world.getBlockState(blockPos);
         boolean isOf = blockState.isOf(Blocks.SUGAR_CANE);
-        Hand hand1855 = getHand1855(itemStack -> {
-            return is1856(itemStack.getItem());
+        Hand hand1855 = findHandMatching(itemStack -> {
+            return isPlantableCrop(itemStack.getItem());
         });
         if (this.place.getValue().booleanValue() && hand1855 != null) {
             if (is1853(blockPos, blockState, minecraftClient.player.getStackInHand(hand1855).getItem())) {
@@ -124,9 +136,9 @@ public class AutoFarm extends Module {
                 return;
             }
         }
-        if (is1856(blockState.getBlock().asItem())) {
+        if (isPlantableCrop(blockState.getBlock().asItem())) {
             boolean is1854 = is1854(blockState, blockPos);
-            Hand hand450 = getHand450(Items.BONE_MEAL);
+            Hand hand450 = getHandWith(Items.BONE_MEAL);
             if (!this.fertilize.getValue().booleanValue() || is1854 || hand450 == null || isOf) {
                 do1850(blockPos, direction, is1854);
             } else {
@@ -137,7 +149,7 @@ public class AutoFarm extends Module {
 
     public void do1850(BlockPos blockPos, Direction direction, boolean z) {
         if (!(minecraftClient.world.getBlockState(blockPos).getBlock() instanceof SaplingBlock) && this.remove.getValue().booleanValue()) {
-            if (this.stopwatch.is418(this.removeDelay.getValue().floatValue(), TimeUnit.SECONDS)) {
+            if (this.stopwatch.hasElapsed(this.removeDelay.getValue().floatValue(), TimeUnit.SECONDS)) {
                 if (z || !this.onlyGrown.getValue().booleanValue()) {
                     minecraftClient.interactionManager.updateBlockBreakingProgress(blockPos, direction);
                     minecraftClient.player.swingHand(Hand.MAIN_HAND);
@@ -145,7 +157,7 @@ public class AutoFarm extends Module {
                     this.num++;
                     this.stopwatch.reset();
                     if (this.rotate.getValue().booleanValue()) {
-                        BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2484(blockPos.toCenterPos()), 0);
+                        ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(blockPos.toCenterPos()), 0);
                     }
                 }
             }
@@ -158,13 +170,13 @@ public class AutoFarm extends Module {
         this.stopwatch2.reset();
         this.num++;
         if (this.rotate.getValue().booleanValue()) {
-            BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2484(blockPos.toCenterPos()), 0);
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(blockPos.toCenterPos()), 0);
         }
     }
 
     public void do1852(BlockPos blockPos, Hand hand) {
         if (this.rotate.getValue().booleanValue()) {
-            BaritoneHelper_3.searchHelper4_8.do2477(SearchHelper4_8.getFloatArray2484(Vec3d.ofBottomCenter((Vec3i) blockPos)), 0);
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(Vec3d.ofBottomCenter((Vec3i) blockPos)), 0);
         }
         minecraftClient.interactionManager.interactBlock(minecraftClient.player, hand, new BlockHitResult(Vec3d.ofBottomCenter((Vec3i) blockPos), Direction.UP, blockPos, false));
         minecraftClient.player.swingHand(hand);
@@ -221,13 +233,13 @@ public class AutoFarm extends Module {
         return false;
     }
 
-    public Hand getHand450(Item item) {
-        return getHand1855(itemStack -> {
+    public Hand getHandWith(Item item) {
+        return findHandMatching(itemStack -> {
             return itemStack.isOf(item);
         });
     }
 
-    public Hand getHand1855(Predicate<ItemStack> predicate) {
+    public Hand findHandMatching(Predicate<ItemStack> predicate) {
         if (predicate.test(minecraftClient.player.getMainHandStack())) {
             return Hand.MAIN_HAND;
         }
@@ -237,7 +249,7 @@ public class AutoFarm extends Module {
         return null;
     }
 
-    public boolean is1856(Item item) {
+    public boolean isPlantableCrop(Item item) {
         return ((item instanceof BlockItem) && (((BlockItem) item).getBlock() instanceof SaplingBlock)) ? this.trees.getValue().booleanValue() : (item == Items.WHEAT_SEEDS && this.wheat.getValue().booleanValue()) || (item == Items.CARROT && this.carrots.getValue().booleanValue()) || ((item == Items.POTATO && this.potatoes.getValue().booleanValue()) || ((item == Items.BEETROOT_SEEDS && this.beetRoots.getValue().booleanValue()) || (item == Items.SUGAR_CANE && this.sugarCane.getValue().booleanValue())));
     }
 }

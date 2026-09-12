@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.movement.NoSlow;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.SweetBerryBushBlock;
@@ -14,11 +17,27 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin({SweetBerryBushBlock.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinSweetBerryBushBlock.class */
 public class MixinSweetBerryBushBlock {
-    private static NoSlow noslow = (NoSlow) BaritoneHelper_3.baritoneHelper_4.getModule117(NoSlow.class);
+    private static NoSlow noslow;
+
+    private static NoSlow getNoslow() {
+
+        if (noslow == null && ClientServices.moduleInjector != null) {
+
+            try { noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class); } catch (Exception e) {}
+
+        }
+
+        return noslow;
+
+    }
 
     @Redirect(method = {"onEntityCollision"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;slowMovement(Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/Vec3d;)V"))
     private void onEntityCollisionHook(Entity entity, BlockState blockState, Vec3d vec3d) {
-        if (noslow.isToggled() && noslow.berryBush.getValue().booleanValue()) {
+        NoSlow noslow_lcl = getNoslow();
+
+        if (noslow_lcl == null) return;
+
+        if (noslow_lcl.isToggled() && noslow_lcl.berryBush.getValue().booleanValue()) {
             return;
         }
         entity.slowMovement(blockState, vec3d);

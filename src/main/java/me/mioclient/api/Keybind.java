@@ -1,44 +1,48 @@
 package me.mioclient.api;
 
+import me.mioclient.mode.misc.KeybindMode;
+import me.mioclient.util.client.InputState;
+
+import me.mioclient.util.client.InputState;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import me.mioclient.EntityControlSearchHelper4;
-import me.mioclient.EnumSettingHelper;
+import me.mioclient.mode.misc.KeybindMode;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/api/Keybind.class */
 public final class Keybind {
-    public final int num;
+    public final int keyCode;
     public final KeybindMode keybindMode;
-    public final boolean flag;
+    public final boolean isMouse;
     public static final Keybind keybind = new Keybind(-1, KeybindMode.TOGGLE, false);
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/api/Keybind$KeybindMode.class */
-    public enum KeybindMode implements EnumSettingHelper {
+    public enum KeybindMode implements NamedValue {
         TOGGLE("Toggle", "toggle"),
         HOLD("Hold", "hold"),
         HOLD_REVERSE("ReverseHold", "hold_reverse");
 
         public final String name;
-        public final String string;
+        public final String serializedName;
 
         KeybindMode(String str, String str2) {
             this.name = str;
-            this.string = str2;
+            this.serializedName = str2;
         }
 
-        public String getString2552() {
-            return this.string;
+        public String getSerialized() {
+            return this.serializedName;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
 
-        public static KeybindMode getKeybindMode2553(String str) {
+        public static KeybindMode fromStringMode(String str) {
             String lowerCase = str.trim().toLowerCase();
             int z = -1;
             switch (lowerCase.hashCode()) {
@@ -67,43 +71,43 @@ public final class Keybind {
     }
 
     public Keybind(int i, KeybindMode keybindMode, boolean z) {
-        this.num = i;
+        this.keyCode = i;
         this.keybindMode = keybindMode;
-        this.flag = z;
+        this.isMouse = z;
     }
 
-    public Keybind getKeybind1941(int i) {
-        return new Keybind(i, this.keybindMode, this.flag);
+    public Keybind withKey(int i) {
+        return new Keybind(i, this.keybindMode, this.isMouse);
     }
 
-    public Keybind getKeybind1942(KeybindMode keybindMode) {
-        return new Keybind(this.num, keybindMode, this.flag);
+    public Keybind withMode(KeybindMode keybindMode) {
+        return new Keybind(this.keyCode, keybindMode, this.isMouse);
     }
 
-    public Keybind getKeybind1943(boolean z) {
-        return new Keybind(this.num, this.keybindMode, z);
+    public Keybind withMouse(boolean z) {
+        return new Keybind(this.keyCode, this.keybindMode, z);
     }
 
-    public boolean is1944() {
-        return this.num < 0;
+    public boolean isUnbound() {
+        return this.keyCode < 0;
     }
 
-    public String getString773() {
-        return EntityControlSearchHelper4.getString2602(this);
+    public String getBindString() {
+        return InputState.getString2602(this);
     }
 
 
 
 
-    public int get1945() {
-        return this.num;
+    public int getKey() {
+        return this.keyCode;
     }
 
-    public KeybindMode getKeybindMode1946() {
+    public KeybindMode getMode() {
         return this.keybindMode;
     }
 
-    public boolean is1947() {
-        return this.flag;
+    public boolean isMouseKeybind() {
+        return this.isMouse;
     }
 }

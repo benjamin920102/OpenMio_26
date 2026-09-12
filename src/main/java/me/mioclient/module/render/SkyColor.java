@@ -1,28 +1,36 @@
 package me.mioclient.module.render;
 
+import me.mioclient.api.NamedValue;
+import me.mioclient.util.world.WorldUtils;
+
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+
 import java.awt.Color;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_7;
+import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.EnumSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/SkyColor.class */
 public class SkyColor extends Module {
-    public Setting<MixinClientWorldMode> type;
-    public Setting<Boolean> dense;
-    public Setting<Color> fog;
-    public Setting<Color> sky;
-    public Setting<Boolean> dimensions;
-    public Setting<Boolean> overworld;
-    public Setting<Boolean> nether;
-    public Setting<Boolean> end;
+    public Setting<MixinClientWorldMode> type = add(new EnumSetting<>("Type", MixinClientWorldMode.NONE));
+    public Setting<Boolean> dense = add(new BooleanSetting("Dense", false));
+    public Setting<Color> fog = add(new ColorSetting("Fog", new Color(-4351489, true)).setThemeSync(true));
+    public Setting<Color> sky = add(new ColorSetting("Sky", new Color(-4351489, true)));
+    public Setting<Boolean> dimensions = add(new BooleanSetting("Dimensions", true).setDependent());
+    public Setting<Boolean> overworld = add(new BooleanSetting("Overworld", true).requiresSettings(this.dimensions));
+    public Setting<Boolean> nether = add(new BooleanSetting("Nether", true).requiresSettings(this.dimensions));
+    public Setting<Boolean> end = add(new BooleanSetting("End", true).requiresSettings(this.dimensions));
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/render/SkyColor$MixinClientWorldMode.class */
-    public enum MixinClientWorldMode implements EnumSettingHelper {
+    public enum MixinClientWorldMode implements NamedValue {
         NONE("None"),
         FLAT("Flat"),
         END("End");
@@ -33,7 +41,7 @@ public class SkyColor extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -41,21 +49,20 @@ public class SkyColor extends Module {
 
     public SkyColor() {
         super("SkyColor", "Changes the fog color.", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
         setDrawn(false);
-        this.fog.do2343(color -> {
+        this.fog.addVisibilityPredicate(color -> {
             return this.type.getValue() != MixinClientWorldMode.END;
         });
-        this.sky.do2343(color2 -> {
+        this.sky.addVisibilityPredicate(color2 -> {
             return this.type.getValue() != MixinClientWorldMode.END;
         });
-        this.dense.do2343(bool -> {
+        this.dense.addVisibilityPredicate(bool -> {
             return this.type.getValue() == MixinClientWorldMode.FLAT || ((this.nether.getValue().booleanValue() || this.end.getValue().booleanValue()) && this.type.getValue() == MixinClientWorldMode.NONE);
         });
     }
 
-    public boolean is3136() {
-        switch (SearchHelper4_7.getStashFinderMode2438()) {
+    public boolean isDimensionEnabled() {
+        switch (WorldUtils.getDimension()) {
             case OVERWORLD:
                 return this.overworld.getValue().booleanValue();
             case THE_NETHER:

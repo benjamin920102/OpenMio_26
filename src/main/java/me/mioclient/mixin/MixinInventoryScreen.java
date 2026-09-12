@@ -1,8 +1,11 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_2;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.RenderUtil;
+
+import me.mioclient.manager.RotationManager;
 import me.mioclient.module.PlayerModel;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
@@ -18,22 +21,34 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin({InventoryScreen.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinInventoryScreen.class */
 public class MixinInventoryScreen {
-    private static PlayerModel playermodel = (PlayerModel) BaritoneHelper_3.baritoneHelper_4.getModule117(PlayerModel.class);
+    private static PlayerModel playermodel;
+
+    private static PlayerModel getPlayermodel() {
+
+        if (playermodel == null && ClientServices.moduleInjector != null) {
+
+            try { playermodel = (PlayerModel) ClientServices.moduleInjector.getModule(PlayerModel.class); } catch (Exception e) {}
+
+        }
+
+        return playermodel;
+
+    }
 
     @Inject(method = {"drawEntity(Lnet/minecraft/client/gui/DrawContext;IIIIIFFFLnet/minecraft/entity/LivingEntity;)V"}, at = {@At("HEAD")})
     private static void drawEntityHook(DrawContext drawContext, int i, int i2, int i3, int i4, int i5, float f, float f2, float f3, LivingEntity livingEntity, CallbackInfo callbackInfo) {
-        SearchHelper4_8.flag = true;
+        RotationManager.flag = true;
     }
 
     @Inject(method = {"drawEntity(Lnet/minecraft/client/gui/DrawContext;IIIIIFFFLnet/minecraft/entity/LivingEntity;)V"}, at = {@At("RETURN")})
-    private static void drawEntityHook2(DrawContext drawContext, int i, int i2, int i3, int i4, int i5, float f, float f2, float f3, LivingEntity livingEntity, CallbackInfo callbackInfo) {
-        SearchHelper4_8.flag = false;
+    private static void resetRotationOverride(DrawContext drawContext, int i, int i2, int i3, int i4, int i5, float f, float f2, float f3, LivingEntity livingEntity, CallbackInfo callbackInfo) {
+        RotationManager.flag = false;
     }
 
     @ModifyArgs(method = {"method_29977"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/EntityRenderDispatcher;render(Lnet/minecraft/entity/Entity;DDDFFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"))
     private static void lambdaHook(Args args) {
         if (PlayerModel.flag) {
-            args.set(5, Float.valueOf(SearchHelper_2.get536()));
+            args.set(5, Float.valueOf(RenderUtil.getPartialTick()));
         }
     }
 }

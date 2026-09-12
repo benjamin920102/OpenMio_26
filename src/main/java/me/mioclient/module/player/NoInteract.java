@@ -1,7 +1,11 @@
 package me.mioclient.module.player;
 
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
@@ -15,17 +19,19 @@ import net.minecraft.item.ProjectileItem;
 import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/player/NoInteract.class */
 public class NoInteract extends Module {
-    public Setting<Mode> mode;
-    public Setting<Boolean> onlyFood;
+    public Setting<Mode> mode = add(new EnumSetting<>("Mode", Mode.CANCEL));
+    public Setting<Boolean> onlyFood = add(new BooleanSetting("OnlyFood", false));
     public boolean flag;
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/player/NoInteract$Mode.class */
-    public enum Mode implements EnumSettingHelper {
+    public enum Mode implements NamedValue {
         CANCEL("Cancel"),
         SHIFT("Shift");
 
@@ -35,7 +41,7 @@ public class NoInteract extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -43,18 +49,17 @@ public class NoInteract extends Module {
 
     public NoInteract() {
         super("NoInteract", "Prevents you from interacting with tile entities.", Category.PLAYER, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
-    public static boolean is1840(ItemStack itemStack) {
+    public static boolean isUsableItem(ItemStack itemStack) {
         return itemStack.contains(DataComponentTypes.FOOD) || (itemStack.getItem() instanceof EnderPearlItem) || (itemStack.getItem() instanceof ProjectileItem) || (itemStack.getItem() instanceof RangedWeaponItem);
     }
 
-    public static Hand getHand1841() {
-        return (is1840(minecraftClient.player.getMainHandStack()) || !is1840(minecraftClient.player.getOffHandStack())) ? Hand.MAIN_HAND : Hand.OFF_HAND;
+    public static Hand getUsableHand() {
+        return (isUsableItem(minecraftClient.player.getMainHandStack()) || !isUsableItem(minecraftClient.player.getOffHandStack())) ? Hand.MAIN_HAND : Hand.OFF_HAND;
     }
 
-    public boolean is1842(ItemStack itemStack, BlockPos blockPos) {
+    public boolean shouldBlockInteraction(ItemStack itemStack, BlockPos blockPos) {
         if (!isToggled()) {
             return false;
         }

@@ -1,5 +1,7 @@
 package me.mioclient.mixin;
 
+import me.mioclient.util.client.Flag;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.net.URI;
@@ -11,7 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.function.Consumer;
-import me.mioclient.feature.Flag;
+import me.mioclient.util.client.Flag;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Overlay;
@@ -47,7 +49,7 @@ public abstract class MixinSplashOverlay extends Overlay {
         try {
             JsonObject asJsonObject = JsonParser.parseString((String) HttpClient.newHttpClient().send(HttpRequest.newBuilder().uri(new URI("https://api.country.is/")).timeout(Duration.of(3L, ChronoUnit.SECONDS)).GET().build(), HttpResponse.BodyHandlers.ofString()).body()).getAsJsonObject();
             if (asJsonObject.has("country")) {
-                this.flag = Flag.getFlag684(asJsonObject.get("country").getAsString());
+                this.flag = Flag.fromString(asJsonObject.get("country").getAsString());
             }
         } catch (Throwable th) {
             this.flag = Flag.DEFAULT;
@@ -71,8 +73,8 @@ public abstract class MixinSplashOverlay extends Overlay {
         int scaledWidth = this.field_18217.getWindow().getScaledWidth();
         int scaledHeight = this.field_18217.getWindow().getScaledHeight();
         int ceil = MathHelper.ceil((1.0f - MathHelper.clamp((this.field_17771 > -1 ? ((float) (Util.getMeasuringTimeMs() - this.field_17771)) / 1000.0f : -1.0f) - 1.0f, 0.0f, 1.0f)) * 255.0f);
-        for (int i3 = 0; i3 < this.flag.getList685().size(); i3++) {
-            drawContext.fill(0, i3 * (scaledHeight / this.flag.getList685().size()), scaledWidth, (i3 + 1) * (scaledHeight / this.flag.getList685().size()), method_35732(this.flag.getList685().get(i3).hashCode(), ceil));
+        for (int i3 = 0; i3 < this.flag.getColors().size(); i3++) {
+            drawContext.fill(0, i3 * (scaledHeight / this.flag.getColors().size()), scaledWidth, (i3 + 1) * (scaledHeight / this.flag.getColors().size()), method_35732(this.flag.getColors().get(i3).hashCode(), ceil));
         }
     }
 }

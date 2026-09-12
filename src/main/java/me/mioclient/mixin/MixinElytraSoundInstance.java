@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.movement.ElytraFly;
 import net.minecraft.client.sound.ElytraSoundInstance;
 import net.minecraft.client.sound.MovingSoundInstance;
@@ -16,7 +19,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({ElytraSoundInstance.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinElytraSoundInstance.class */
 public abstract class MixinElytraSoundInstance extends MovingSoundInstance {
-    private static ElytraFly elytrafly = (ElytraFly) BaritoneHelper_3.baritoneHelper_4.getModule117(ElytraFly.class);
+    private static ElytraFly elytrafly;
+
+    private static ElytraFly getElytrafly() {
+
+        if (elytrafly == null && ClientServices.moduleInjector != null) {
+
+            try { elytrafly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class); } catch (Exception e) {}
+
+        }
+
+        return elytrafly;
+
+    }
 
     protected MixinElytraSoundInstance(SoundEvent soundEvent, SoundCategory soundCategory, Random random) {
         super(soundEvent, soundCategory, random);
@@ -24,7 +39,11 @@ public abstract class MixinElytraSoundInstance extends MovingSoundInstance {
 
     @Inject(method = {"tick"}, at = {@At("HEAD")}, cancellable = true)
     private void tickHook(CallbackInfo callbackInfo) {
-        if (elytrafly.isToggled() && elytrafly.muteElytra.getValue().booleanValue()) {
+        ElytraFly elytrafly_lcl = getElytrafly();
+
+        if (elytrafly_lcl == null) return;
+
+        if (elytrafly_lcl.isToggled() && elytrafly_lcl.muteElytra.getValue().booleanValue()) {
             this.volume = 0.0f;
             callbackInfo.cancel();
         }

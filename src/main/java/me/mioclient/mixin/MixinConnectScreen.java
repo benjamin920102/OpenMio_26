@@ -1,8 +1,11 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.ConnectEvent;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.event.events.network.ConnectEvent;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
 import net.minecraft.client.network.CookieStorage;
@@ -23,7 +26,7 @@ public class MixinConnectScreen {
         if (serverInfo2 == null) {
             serverInfo2 = new ServerInfo("mioclient", serverAddress.getAddress(), ServerInfo.ServerType.OTHER);
         }
-        SearchHelper_4.baritoneHelper.getObject1794(new ConnectEvent(serverInfo2.address));
-        BaritoneHelper_3.holeSnapSearchHelper4_4.do2623(serverInfo2);
+        ClientAccessor.eventBus.fireEvent(new ConnectEvent(serverInfo2.address));
+        ClientServices.holeSnapRenderHelper.setServerInfo(serverInfo2);
     }
 }

@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.exploit.Reach;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FluidBlock;
@@ -21,12 +24,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin({FluidBlock.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinFluidBlock.class */
 public class MixinFluidBlock {
-    private static Reach reach = (Reach) BaritoneHelper_3.baritoneHelper_4.getModule117(Reach.class);
+    private static Reach reach;
+
+    private static Reach getReach() {
+
+        if (reach == null && ClientServices.moduleInjector != null) {
+
+            try { reach = (Reach) ClientServices.moduleInjector.getModule(Reach.class); } catch (Exception e) {}
+
+        }
+
+        return reach;
+
+    }
 
     @Inject(method = {"getOutlineShape"}, at = {@At("HEAD")}, cancellable = true)
     private void getOutlineShapeHook(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext, CallbackInfoReturnable<VoxelShape> callbackInfoReturnable) {
+        Reach reach_lcl = getReach();
+
+        if (reach_lcl == null) return;
+
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        if (reach.isToggled() && reach.liquidPlace.getValue().booleanValue()) {
+        if (reach_lcl.isToggled() && reach_lcl.liquidPlace.getValue().booleanValue()) {
             if ((minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem) || (minecraftClient.player.getOffHandStack().getItem() instanceof BlockItem)) {
                 boolean z = false;
                 Direction[] values = Direction.values();
@@ -42,7 +61,7 @@ public class MixinFluidBlock {
                     }
                     i++;
                 }
-                if (MinecraftClient.getInstance().gameRenderer.getCamera().getPos().squaredDistanceTo(blockPos.toCenterPos()) >= reach.modifier.getValue().floatValue() * reach.modifier.getValue().floatValue() || z) {
+                if (MinecraftClient.getInstance().gameRenderer.getCamera().getPos().squaredDistanceTo(blockPos.toCenterPos()) >= reach_lcl.modifier.getValue().floatValue() * reach_lcl.modifier.getValue().floatValue() || z) {
                     callbackInfoReturnable.setReturnValue(VoxelShapes.fullCube());
                     callbackInfoReturnable.cancel();
                 }

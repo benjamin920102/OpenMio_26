@@ -5,15 +5,15 @@ package me.mioclient.event;
 public class Event {
     public boolean flag;
 
-    public void do1162() {
+    public void cancel() {
         this.flag = true;
     }
 
-    public void do2402() {
+    public void resetCancelled() {
         this.flag = false;
     }
 
-    public boolean is2403() {
+    public boolean isCancelled() {
         return this.flag;
     }
 }

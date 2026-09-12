@@ -1,7 +1,7 @@
 package me.mioclient.mixin;
 
 import java.util.function.Supplier;
-import me.mioclient.MixinStyleHelper;
+import me.mioclient.ducks.DuckTextColor;
 import net.minecraft.text.TextColor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /* compiled from: 0.java */
 @Mixin({TextColor.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinTextColor.class */
-public class MixinTextColor implements MixinStyleHelper {
+public class MixinTextColor implements DuckTextColor {
 
     @Unique
     private Supplier<Integer> customColorSupplier = null;
@@ -25,12 +25,12 @@ public class MixinTextColor implements MixinStyleHelper {
         }
     }
 
-    @Override // me.mioclient.MixinStyleHelper
+    @Override // me.mioclient.ducks.DuckTextColor
     public Supplier<Integer> getSupplier() {
         return this.customColorSupplier;
     }
 
-    @Override // me.mioclient.MixinStyleHelper
+    @Override // me.mioclient.ducks.DuckTextColor
     public void setSupplier(Supplier<Integer> supplier) {
         this.customColorSupplier = supplier;
     }

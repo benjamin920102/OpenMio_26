@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.mioclient.module.client.Discord;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:com/jagrosh/discordipc/entities/pipe/Pipe.class */

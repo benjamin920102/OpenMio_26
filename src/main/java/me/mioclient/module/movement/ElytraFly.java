@@ -1,36 +1,55 @@
 package me.mioclient.module.movement;
 
-import me.mioclient.AutoSignSearchHelper4;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ElytraFlyData;
-import me.mioclient.ElytraFlyHelper;
-import me.mioclient.ElytraFlyHelper_2;
-import me.mioclient.ElytraFlyHelper_3;
-import me.mioclient.ElytraFlyHelper_4;
-import me.mioclient.ElytraFlyHelper_5;
-import me.mioclient.ElytraFlyHelper_6;
-import me.mioclient.ElytraFlyHelper_7;
-import me.mioclient.EnumSettingHelper;
-import me.mioclient.FireworksHelper;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.HoleSnapEvent;
-import me.mioclient.HoleSnapMode;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+
+import me.mioclient.event.events.player.RotationTickEvent;
+
+import me.mioclient.event.events.input.InputTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.api.NamedValue;
+
+import me.mioclient.api.NamedValue;
+import me.mioclient.mode.setting.HoleSnapMode;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.player.RotationRequest;
+import me.mioclient.util.registry.ModeValueMap;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.player.RotationRequest;
+import me.mioclient.util.registry.ModeValueMap;
+import me.mioclient.api.NamedValue;
+import me.mioclient.module.movement.elytrafly.BoostElytraFlight;
+import me.mioclient.module.movement.elytrafly.BounceElytraFlight;
+import me.mioclient.module.movement.elytrafly.ControlElytraFlight;
+import me.mioclient.module.movement.elytrafly.ElytraFlyModeBase;
+import me.mioclient.module.movement.elytrafly.GlideElytraFlight;
+import me.mioclient.module.movement.elytrafly.PacketElytraFlight;
+import me.mioclient.network.PacketSender;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.util.inventory.InventoryUtils;
+import me.mioclient.util.player.PlayerUtils;
+
+import me.mioclient.event.events.player.RotationTickEvent;
+import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.ChannelRead0Event;
-import me.mioclient.event.InteractItemEvent;
+import me.mioclient.event.events.network.PacketReceiveEvent;
+import me.mioclient.event.events.interaction.InteractItemEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.MoveEvent;
-import me.mioclient.event.PlayEvent;
-import me.mioclient.event.SendImmediatelyEvent;
-import me.mioclient.event.TickEvent;
-import me.mioclient.event.TickEvent_2;
-import me.mioclient.event.TickPostEvent;
-import me.mioclient.feature.Event_3;
-import me.mioclient.feature.MotionEvent;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.event.events.player.MoveEvent;
+import me.mioclient.event.events.sound.PlayEvent;
+import me.mioclient.event.events.network.PacketSendEvent;
+import me.mioclient.event.events.client.TickEvent;
+import me.mioclient.event.events.input.InputTickEvent;
+import me.mioclient.event.events.client.TickPostEvent;
+import me.mioclient.event.events.player.RotationEvent;
+import me.mioclient.event.events.player.MotionEvent;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
@@ -43,55 +62,59 @@ import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Vec3d;
+import me.mioclient.manager.RotationManager;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.EnumSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/movement/ElytraFly.class */
 public class ElytraFly extends Module {
-    public static final MiddleClick middleClick = (MiddleClick) BaritoneHelper_3.baritoneHelper_4.getModule117(MiddleClick.class);
-    public static final ObstaclePasser obstaclePasser = (ObstaclePasser) BaritoneHelper_3.baritoneHelper_4.getModule117(ObstaclePasser.class);
-    public static final NoSlow noSlow = (NoSlow) BaritoneHelper_3.baritoneHelper_4.getModule117(NoSlow.class);
-    public static final AntiCheat antiCheat = (AntiCheat) BaritoneHelper_3.baritoneHelper_4.getModule117(AntiCheat.class);
+    public static final MiddleClick middleClick = (MiddleClick) ClientServices.moduleInjector.getModule(MiddleClick.class);
+    public static final ObstaclePasser obstaclePasser = (ObstaclePasser) ClientServices.moduleInjector.getModule(ObstaclePasser.class);
+    public static final NoSlow noSlow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
     public static boolean flag = false;
-    public Setting<ElytraFlyPredicateMode> mode;
-    public Setting<ElytraFlyMode_2> takeoff;
-    public Setting<Boolean> factorize;
-    public Setting<Boolean> always;
-    public Setting<Boolean> nCPBoost;
-    public Setting<Float> minBoost;
-    public Setting<Integer> verticalBoost;
-    public Setting<Float> limit;
-    public Setting<Boolean> autoJump;
-    public Setting<Boolean> inLava;
-    public Setting<Float> speed;
-    public Setting<Boolean> autoBoost;
-    public Setting<Integer> minY;
-    public Setting<Integer> add;
-    public Setting<Float> boostPitch;
-    public Setting<Float> speed3;
-    public Setting<ElytraFlyMode> vertical;
-    public Setting<Float> vSpeed;
-    public Setting<Float> vPitch;
-    public Setting<Boolean> antiKick;
-    public Setting<Float> glide;
-    public Setting<Boolean> spoofPitch;
-    public Setting<Float> pitch;
-    public Setting<Boolean> antiAfk;
-    public Setting<Boolean> vertical2;
-    public Setting<Boolean> accelerate;
-    public Setting<Float> verAccelMin;
-    public Setting<Float> accelMin;
-    public Setting<Float> accelTime;
-    public Setting<Float> start;
-    public Setting<Float> speed2;
-    public Setting<Integer> deployTime;
-    public Setting<Boolean> pitchLock;
-    public Setting<Boolean> silent;
-    public Setting<Float> pitch2;
-    public Setting<Boolean> compensate;
-    public Setting<Boolean> infDurability;
-    public Setting<Boolean> muteElytra;
-    public Setting<Boolean> grimDurability;
-    public final ElytraFlyHelper_4<ElytraFlyPredicateMode, ElytraFlyHelper> elytraFlyHelper_4;
+    public Setting<ElytraFlyPredicateMode> mode = add(new EnumSetting<>("Mode", ElytraFlyPredicateMode.CONTROL));
+    public Setting<ElytraFlyMode_2> takeoff = add(new EnumSetting<>("Takeoff", ElytraFlyMode_2.PLAIN, v -> this.mode.getValue() != ElytraFly.ElytraFlyPredicateMode.PACKET));
+    public Setting<Boolean> factorize = add(new BooleanSetting("Factorize", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST));
+    public Setting<Boolean> always = add(new BooleanSetting("Always", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST));
+    public Setting<Boolean> nCPBoost = add(new BooleanSetting("NCPBoost", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.PACKET || this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL));
+    public Setting<Float> minBoost = add(new NumberSetting<>("MinBoost", 1.5f, 0.0f, 5.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST).setHoleSnapConfig("GrimV3", HoleSnapMode.MAX));
+    public Setting<Integer> verticalBoost = add(new NumberSetting<>("VerticalBoost", 1, 1, 7));
+    public Setting<Float> limit = add(new NumberSetting<>("Limit", 500.0f, 20.0f, 500.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST).setSuffix("km/h").setHoleSnapConfig("Unlimited", HoleSnapMode.MAX));
+    public Setting<Boolean> autoJump = add(new BooleanSetting("AutoJump", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST));
+    public Setting<Boolean> inLava = add(new BooleanSetting("InLava", true, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST).setVisible());
+    public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.0f, 2.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST && this.inLava.isShown()));
+    public Setting<Boolean> autoBoost = add(new BooleanSetting("AutoBoost", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST).setVisible());
+    public Setting<Integer> minY = add(new NumberSetting<>("MinY", 100, 0, 500, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST && this.autoBoost.isShown()));
+    public Setting<Integer> add = add(new NumberSetting<>("Add", 20, 15, 50, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST && this.autoBoost.isShown()));
+    public Setting<Float> boostPitch = add(new NumberSetting<>("BoostPitch", 40.0f, 0.0f, 90.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST && this.autoBoost.isShown()));
+    public Setting<Float> speed3 = add(new NumberSetting<>("Speed", 1.6f, 0.1f, 10.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL));
+    public Setting<ElytraFlyMode> vertical = add(new EnumSetting<>("Vertical", ElytraFlyMode.NONE, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL || this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.PACKET));
+    public Setting<Float> vSpeed = add(new NumberSetting<>("VSpeed", 0.6f, 0.0f, 15.0f, v -> this.vertical.getValue() == ElytraFly.ElytraFlyMode.PLAIN && this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL));
+    public Setting<Float> vPitch = add(new NumberSetting<>("VPitch", 45.0f, 0.0f, 90.0f, v -> this.vertical.getValue() == ElytraFly.ElytraFlyMode.STRICT && this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL));
+    public Setting<Boolean> antiKick = add(new BooleanSetting("AntiKick", true, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL));
+    public Setting<Float> glide = add(new NumberSetting<>("Glide", 0.0f, 0.0f, 5.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL || this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.PACKET));
+    public Setting<Boolean> spoofPitch = add(new BooleanSetting("SpoofPitch", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL).setVisible());
+    public Setting<Float> pitch = add(new NumberSetting<>("Pitch", 0.5f, -90.0f, 90.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.CONTROL && this.spoofPitch.isShown()));
+    public Setting<Boolean> antiAfk = add(new BooleanSetting("AntiAfk", true, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.PACKET));
+    public Setting<Boolean> vertical2 = add(new BooleanSetting("Vertical", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.PACKET));
+    public Setting<Boolean> accelerate = add(new BooleanSetting("Accelerate", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST).setVisible());
+    public Setting<Float> verAccelMin = add(new NumberSetting<>("VerAccelMin", 1.0f, 0.0f, 5.0f));
+    public Setting<Float> accelMin = add(new NumberSetting<>("AccelMin", 1.0f, 0.0f, 5.0f));
+    public Setting<Float> accelTime = add(new NumberSetting<>("AccelTime", 1.0f, 0.1f, 10.0f).setSuffix("s"));
+    public Setting<Float> start = add(new NumberSetting<>("Start", 1.8f, 0.0f, 3.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.STRICT));
+    public Setting<Float> speed2 = add(new NumberSetting<>("Speed", 1.8f, 0.1f, 3.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.STRICT));
+    public Setting<Integer> deployTime = add(new NumberSetting<>("DeployTime", 400, 50, 1000, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.STRICT).setSuffix("ms"));
+    public Setting<Boolean> pitchLock = add(new BooleanSetting("PitchLock", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE).setVisible());
+    public Setting<Boolean> silent = add(new BooleanSetting("Silent", true, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && this.pitchLock.isShown()));
+    public Setting<Float> pitch2 = add(new NumberSetting<>("Pitch", 90.0f, -90.0f, 90.0f, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && this.pitchLock.isShown()));
+    public Setting<Boolean> compensate = add(new BooleanSetting("Compensate", true, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE));
+    public Setting<Boolean> infDurability = add(new BooleanSetting("InfDurability", false));
+    public Setting<Boolean> muteElytra = add(new BooleanSetting("MuteElytra", false));
+    public Setting<Boolean> grimDurability = add(new BooleanSetting("GrimDurability", false, v -> this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOOST || this.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE));
+    public final ModeValueMap<ElytraFlyPredicateMode, ElytraFlyModeBase> elytraFlyHelper_4;
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public final Stopwatch stopwatch3;
@@ -103,7 +126,7 @@ public class ElytraFly extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/ElytraFly$ElytraFlyMode.class */
-    public enum ElytraFlyMode implements EnumSettingHelper {
+    public enum ElytraFlyMode implements NamedValue {
         NONE("None"),
         PLAIN("Plain"),
         MANUAL("Manual"),
@@ -115,7 +138,7 @@ public class ElytraFly extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -123,7 +146,7 @@ public class ElytraFly extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/ElytraFly$ElytraFlyMode_2.class */
-    public enum ElytraFlyMode_2 implements EnumSettingHelper {
+    public enum ElytraFlyMode_2 implements NamedValue {
         NONE("None"),
         PLAIN("Plain"),
         STRICT("Strict");
@@ -134,7 +157,7 @@ public class ElytraFly extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -142,7 +165,7 @@ public class ElytraFly extends Module {
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/movement/ElytraFly$ElytraFlyPredicateMode.class */
-    public enum ElytraFlyPredicateMode implements EnumSettingHelper {
+    public enum ElytraFlyPredicateMode implements NamedValue {
         CONTROL("Control"),
         BOOST("Boost"),
         PACKET("Packet"),
@@ -155,7 +178,7 @@ public class ElytraFly extends Module {
             this.name = str;
         }
 
-        @Override // me.mioclient.EnumSettingHelper
+        @Override // me.mioclient.api.NamedValue
         public String getName() {
             return this.name;
         }
@@ -163,50 +186,49 @@ public class ElytraFly extends Module {
 
     public ElytraFly() {
         super("ElytraFly", "Turns you into a block game boeing.", Category.MOVEMENT, "elytraflight");
-        PhaseESPHelper.do1351(this);
-        this.elytraFlyHelper_4 = new ElytraFlyHelper_4<>(this.mode);
+        this.elytraFlyHelper_4 = new ModeValueMap<>(this.mode);
         this.stopwatch = new Stopwatch();
         this.stopwatch2 = new Stopwatch();
         this.stopwatch3 = new Stopwatch();
         this.stopwatch4 = new Stopwatch();
         this.stopwatch5 = new Stopwatch();
-        this.speed.do2329("LavaSpeed");
-        this.vertical2.do2329("VerticalPacket");
-        this.speed2.do2329("StrictSpeed");
-        this.pitch2.do2329("BouncePitch");
-        this.minBoost.getSetting2338("GrimV3", HoleSnapMode.MAX);
-        this.limit.getSetting2338("Unlimited", HoleSnapMode.MAX);
-        this.verticalBoost.do2343(num -> {
-            return !this.minBoost.is2327();
+        this.speed.setConfigName("LavaSpeed");
+        this.vertical2.setConfigName("VerticalPacket");
+        this.speed2.setConfigName("StrictSpeed");
+        this.pitch2.setConfigName("BouncePitch");
+        this.minBoost.setHoleSnapConfig("GrimV3", HoleSnapMode.MAX);
+        this.limit.setHoleSnapConfig("Unlimited", HoleSnapMode.MAX);
+        this.verticalBoost.addVisibilityPredicate(num -> {
+            return !this.minBoost.isAtMinimum();
         });
-        this.infDurability.do2343(bool -> {
+        this.infDurability.addVisibilityPredicate(bool -> {
             return !this.grimDurability.getValue().booleanValue();
         });
-        this.elytraFlyHelper_4.do997(ElytraFlyPredicateMode.BOOST, new ElytraFlyHelper_5(this));
-        this.elytraFlyHelper_4.do997(ElytraFlyPredicateMode.CONTROL, new ElytraFlyHelper_3(this));
-        this.elytraFlyHelper_4.do997(ElytraFlyPredicateMode.PACKET, new ElytraFlyHelper_6(this));
-        this.elytraFlyHelper_4.do997(ElytraFlyPredicateMode.STRICT, new ElytraFlyHelper_7(this));
-        this.elytraFlyHelper_4.do997(ElytraFlyPredicateMode.BOUNCE, new ElytraFlyHelper_2(this));
+        this.elytraFlyHelper_4.put(ElytraFlyPredicateMode.BOOST, new BoostElytraFlight(this));
+        this.elytraFlyHelper_4.put(ElytraFlyPredicateMode.CONTROL, new ControlElytraFlight(this));
+        this.elytraFlyHelper_4.put(ElytraFlyPredicateMode.PACKET, new GlideElytraFlight(this));
+        this.elytraFlyHelper_4.put(ElytraFlyPredicateMode.STRICT, new BounceElytraFlight(this));
+        this.elytraFlyHelper_4.put(ElytraFlyPredicateMode.BOUNCE, new PacketElytraFlight(this));
     }
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
         this.stopwatch4.setTime(-1L);
         this.flag2 = true;
-        if (is1469()) {
+        if (isNotInGame()) {
             return;
         }
-        this.elytraFlyHelper_4.getObject996().onEnable();
+        this.elytraFlyHelper_4.getCurrent().onEnable();
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (!is1469()) {
-            this.elytraFlyHelper_4.getObject996().onDisable();
+        if (!isNotInGame()) {
+            this.elytraFlyHelper_4.getCurrent().onDisable();
         }
-        if (!is1469() && this.grimDurability.getValue().booleanValue() && this.grimDurability.is2349() && !minecraftClient.player.isSneaking()) {
-            AutoSignSearchHelper4.do2567(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
-            AutoSignSearchHelper4.do2567(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
+        if (!isNotInGame() && this.grimDurability.getValue().booleanValue() && this.grimDurability.isVisible() && !minecraftClient.player.isSneaking()) {
+            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
+            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
         }
         this.stopwatch.reset();
     }
@@ -214,41 +236,41 @@ public class ElytraFly extends Module {
     @Override // me.mioclient.module.Module
     public String getInfo() {
         try {
-            return FontsSearchHelper4.getString1684(this.mode.getValue().getName());
+            return ClientTextRenderer.capitalize(this.mode.getValue().getName());
         } catch (Exception e) {
             return null;
         }
     }
 
     @Listen
-    public void onEvent(HoleSnapEvent holeSnapEvent) {
-        if (HoleSnapSearchHelper4.is955()) {
-            ElytraFlyHelper object996 = this.elytraFlyHelper_4.getObject996();
-            if (object996 instanceof ElytraFlyHelper_5) {
-                ElytraFlyHelper_5 elytraFlyHelper_5 = (ElytraFlyHelper_5) object996;
+    public void onRotationTick(RotationTickEvent holeSnapEvent) {
+        if (PlayerUtils.isReallyFallFlying()) {
+            ElytraFlyModeBase object996 = this.elytraFlyHelper_4.getCurrent();
+            if (object996 instanceof BoostElytraFlight) {
+                BoostElytraFlight elytraFlyHelper_5 = (BoostElytraFlight) object996;
                 if (this.autoBoost.getValue().booleanValue()) {
-                    ElytraFlyData elytraFlyData2475 = BaritoneHelper_3.searchHelper4_8.getElytraFlyData2475();
-                    BaritoneHelper_3.searchHelper4_8.do2478(new float[]{elytraFlyData2475 != null ? elytraFlyData2475.getFloatArray218()[0] : holeSnapEvent.get751(), elytraFlyHelper_5.get752()}, 999, true);
+                    RotationRequest elytraFlyData2475 = ClientServices.RotationManager.getActiveRequest();
+                    ClientServices.RotationManager.requestRotations(new float[]{elytraFlyData2475 != null ? elytraFlyData2475.getRotationAngles()[0] : holeSnapEvent.getYaw(), elytraFlyHelper_5.getPitch()}, 999, true);
                 }
             }
         }
     }
 
     @Listen
-    public void do27(TickEvent tickEvent) {
+    public void onTick(TickEvent tickEvent) {
         if (!minecraftClient.player.isFallFlying()) {
             this.flag2 = true;
         }
-        this.elytraFlyHelper_4.getObject996().do27(tickEvent);
+        this.elytraFlyHelper_4.getCurrent().handleTick(tickEvent);
     }
 
     @Listen
-    public void do30(SendImmediatelyEvent sendImmediatelyEvent) {
-        PlayerActionC2SPacket packet904 = (sendImmediatelyEvent.getPacket904()) instanceof PlayerActionC2SPacket ? (PlayerActionC2SPacket) (sendImmediatelyEvent.getPacket904()) : null;
+    public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
+        PlayerActionC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerActionC2SPacket ? (PlayerActionC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
         if ((packet904 instanceof PlayerActionC2SPacket) && packet904.getAction() == PlayerActionC2SPacket.Action.RELEASE_USE_ITEM) {
             this.stopwatch3.reset();
         }
-        this.elytraFlyHelper_4.getObject996().do30(sendImmediatelyEvent);
+        this.elytraFlyHelper_4.getCurrent().handlePacketSend(sendImmediatelyEvent);
     }
 
     @Listen
@@ -256,27 +278,27 @@ public class ElytraFly extends Module {
         if (this.flag4) {
             return;
         }
-        if (minecraftClient.player.getStackInHand(interactItemEvent.getHand2084()).isOf(Items.FIREWORK_ROCKET)) {
+        if (minecraftClient.player.getStackInHand(interactItemEvent.getHand()).isOf(Items.FIREWORK_ROCKET)) {
             this.flag3 = true;
-            interactItemEvent.do1162();
+            interactItemEvent.cancel();
         }
     }
 
     @Listen
-    public void do32(TickPostEvent tickPostEvent) {
-        int i = FireworksHelper.get447(Items.ELYTRA);
+    public void onTickPost(TickPostEvent tickPostEvent) {
+        int i = InventoryUtils.findInHotbar(Items.ELYTRA);
         boolean z = i == -1;
         if (i == -1) {
-            i = FireworksHelper.get443(Items.ELYTRA);
+            i = InventoryUtils.findSlot(Items.ELYTRA);
         }
-        boolean is956 = is956();
-        if (this.stopwatch3.is419(200L)) {
-            if (antiCheat.is238() && z) {
+        boolean shouldSwapElytra = shouldSwapElytra();
+        if (this.stopwatch3.hasElapsedMs(200L)) {
+            if (antiCheat.isF2b2t() && z) {
                 return;
             }
             if (obstaclePasser == null || !obstaclePasser.is929()) {
-                if (is956) {
-                    if (HoleSnapSearchHelper4.is2014(minecraftClient.player)) {
+                if (shouldSwapElytra) {
+                    if (PlayerUtils.hasElytraEquipped(minecraftClient.player)) {
                         minecraftClient.interactionManager.clickSlot(0, 6, 0, SlotActionType.PICKUP, minecraftClient.player);
                         minecraftClient.interactionManager.clickSlot(0, 6, 0, SlotActionType.PICKUP, minecraftClient.player);
                     } else if (i != -1) {
@@ -286,11 +308,11 @@ public class ElytraFly extends Module {
                             minecraftClient.interactionManager.clickSlot(0, i2, 0, SlotActionType.SWAP, minecraftClient.player);
                         }
                         minecraftClient.interactionManager.clickSlot(0, 6, i, SlotActionType.SWAP, minecraftClient.player);
-                        do947();
-                        if (this.flag3 && this.stopwatch.is420(150L)) {
+                        sendStartFlightIfReady();
+                        if (this.flag3 && this.stopwatch.hasElapsedAndResetMs(150L)) {
                             this.flag4 = true;
                             if (middleClick.isToggled()) {
-                                middleClick.do1492();
+                                middleClick.useFireworkRocket();
                             } else {
                                 ((DuckMinecraftClient) minecraftClient).interact();
                             }
@@ -304,14 +326,14 @@ public class ElytraFly extends Module {
                         }
                     }
                 }
-                this.elytraFlyHelper_4.getObject996().do32(tickPostEvent);
+                this.elytraFlyHelper_4.getCurrent().handleTickPost(tickPostEvent);
             }
         }
     }
 
     @Listen
-    public void do29(ChannelRead0Event channelRead0Event) {
-        EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket904()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket904()) : null;
+    public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
+        EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
         if (packet904 instanceof EntitySpawnS2CPacket) {
             EntitySpawnS2CPacket entitySpawnS2CPacket = packet904;
             if (entitySpawnS2CPacket.getEntityType() == EntityType.FIREWORK_ROCKET) {
@@ -320,76 +342,76 @@ public class ElytraFly extends Module {
                 }
             }
         }
-        this.elytraFlyHelper_4.getObject996().do29(channelRead0Event);
+        this.elytraFlyHelper_4.getCurrent().handlePacketReceive(channelRead0Event);
     }
 
     @Listen
-    public void do242(MoveEvent moveEvent) {
-        this.elytraFlyHelper_4.getObject996().do28(moveEvent);
+    public void onMove(MoveEvent moveEvent) {
+        this.elytraFlyHelper_4.getCurrent().handleMove(moveEvent);
     }
 
     @Listen
-    public void do31(MotionEvent motionEvent) {
-        this.elytraFlyHelper_4.getObject996().do31(motionEvent);
+    public void onMotion(MotionEvent motionEvent) {
+        this.elytraFlyHelper_4.getCurrent().handleMotion(motionEvent);
     }
 
     @Listen
-    public void do33(Event_3 event_3) {
-        this.elytraFlyHelper_4.getObject996().do33(event_3);
+    public void onRotation(RotationEvent event_3) {
+        this.elytraFlyHelper_4.getCurrent().handleRotation(event_3);
     }
 
     @Listen
-    public void do329(TickEvent_2 tickEvent_2) {
-        this.elytraFlyHelper_4.getObject996().do329(tickEvent_2);
+    public void onInputTick(InputTickEvent tickEvent_2) {
+        this.elytraFlyHelper_4.getCurrent().handleInputTick(tickEvent_2);
     }
 
     @Listen
     public void onPlay(PlayEvent playEvent) {
-        if (!is956() || playEvent.getSoundInstance1914() == null || playEvent.getSoundInstance1914().getId() == null || !playEvent.getSoundInstance1914().getId().toString().contains("item.armor.equip")) {
+        if (!shouldSwapElytra() || playEvent.getSoundInstance() == null || playEvent.getSoundInstance().getId() == null || !playEvent.getSoundInstance().getId().toString().contains("item.armor.equip")) {
             return;
         }
-        playEvent.do1162();
+        playEvent.cancel();
     }
 
-    public void do947() {
-        if (!this.stopwatch4.is419(500L) || this.grimDurability.is2349()) {
-            AutoSignSearchHelper4.do948();
+    public void sendStartFlightIfReady() {
+        if (!this.stopwatch4.hasElapsedMs(500L) || this.grimDurability.isVisible()) {
+            PacketSender.sendStartFallFlying();
             minecraftClient.player.startFallFlying();
         }
     }
 
-    public void do948() {
-        if (!is606() || minecraftClient.player.isFallFlying() || minecraftClient.player.isOnGround() || this.takeoff.getValue() == ElytraFlyMode_2.NONE) {
-            BaritoneHelper_3.holeSnapSearchHelper4_2.do2017(this);
+    public void sendStartFallFlying() {
+        if (!hasElytra() || minecraftClient.player.isFallFlying() || minecraftClient.player.isOnGround() || this.takeoff.getValue() == ElytraFlyMode_2.NONE) {
+            ClientServices.holeSnapHelper.releaseTickRate(this);
             return;
         }
         if (this.takeoff.getValue() == ElytraFlyMode_2.STRICT) {
-            BaritoneHelper_3.holeSnapSearchHelper4_2.do2018(this, Float.intBitsToFloat(1036831949));
+            ClientServices.holeSnapHelper.requestTickRate(this, Float.intBitsToFloat(1036831949));
         }
         long j = 100;
         if (this.mode.getValue() == ElytraFlyPredicateMode.STRICT) {
             j = this.deployTime.getValue().intValue();
         }
-        if (this.stopwatch2.is419(j)) {
+        if (this.stopwatch2.hasElapsedMs(j)) {
             minecraftClient.player.startFallFlying();
-            AutoSignSearchHelper4.do948();
+            PacketSender.sendStartFallFlying();
             this.stopwatch2.reset();
         }
     }
 
-    public boolean is606() {
-        return HoleSnapSearchHelper4.is2014(minecraftClient.player);
+    public boolean hasElytra() {
+        return PlayerUtils.hasElytraEquipped(minecraftClient.player);
     }
 
-    public boolean is949() {
-        if (is1469() || minecraftClient.player.input == null) {
+    public boolean isPacketFlyActive() {
+        if (isNotInGame() || minecraftClient.player.input == null) {
             return false;
         }
-        return !(this.vertical2.getValue().booleanValue() && minecraftClient.player.input.jumping) && isToggled() && !minecraftClient.player.isOnGround() && this.mode.getValue() == ElytraFlyPredicateMode.PACKET && is606();
+        return !(this.vertical2.getValue().booleanValue() && minecraftClient.player.input.jumping) && isToggled() && !minecraftClient.player.isOnGround() && this.mode.getValue() == ElytraFlyPredicateMode.PACKET && hasElytra();
     }
 
-    public boolean is950() {
-        if (this.grimDurability.getValue().booleanValue() || BaritoneHelper_3.obstaclePasserHelper.is702()) {
+    public boolean tryStartFallFlying() {
+        if (this.grimDurability.getValue().booleanValue() || ClientServices.obstaclePasserHelper.isPathing()) {
             return false;
         }
         if ((obstaclePasser != null && obstaclePasser.is929()) || !is951()) {
@@ -400,10 +422,10 @@ public class ElytraFly extends Module {
     }
 
     public boolean is951() {
-        if (BaritoneHelper_3.obstaclePasserHelper.is702()) {
+        if (ClientServices.obstaclePasserHelper.isPathing()) {
             return false;
         }
-        if ((obstaclePasser == null || !obstaclePasser.is929()) && !minecraftClient.player.getAbilities().flying && !minecraftClient.player.hasVehicle() && !minecraftClient.player.isClimbing() && is606() && !minecraftClient.player.isTouchingWater()) {
+        if ((obstaclePasser == null || !obstaclePasser.is929()) && !minecraftClient.player.getAbilities().flying && !minecraftClient.player.hasVehicle() && !minecraftClient.player.isClimbing() && hasElytra() && !minecraftClient.player.isTouchingWater()) {
             if (!minecraftClient.player.hasStatusEffect(StatusEffects.LEVITATION) && minecraftClient.player.input.jumping) {
                 return true;
             }
@@ -411,22 +433,22 @@ public class ElytraFly extends Module {
         return false;
     }
 
-    public boolean is952() {
-        return (antiCheat.is238() || !minecraftClient.player.isUsingItem() || (noSlow.isToggled() && noSlow.items.getValue().booleanValue())) ? false : true;
+    public boolean isUsingItemBlocked() {
+        return (antiCheat.isF2b2t() || !minecraftClient.player.isUsingItem() || (noSlow.isToggled() && noSlow.items.getValue().booleanValue())) ? false : true;
     }
 
-    public boolean is953() {
-        return is954() && minecraftClient.player.getPitch() > 0.0f;
+    public boolean isManualDescending() {
+        return isManualVerticalActive() && minecraftClient.player.getPitch() > 0.0f;
     }
 
-    public boolean is954() {
-        if (is1469()) {
+    public boolean isManualVerticalActive() {
+        if (isNotInGame()) {
             return false;
         }
-        return (minecraftClient.player.input.jumping || minecraftClient.player.input.sneaking) && this.vertical.getValue() == ElytraFlyMode.MANUAL && minecraftClient.player.isFallFlying() && is606();
+        return (minecraftClient.player.input.jumping || minecraftClient.player.input.sneaking) && this.vertical.getValue() == ElytraFlyMode.MANUAL && minecraftClient.player.isFallFlying() && hasElytra();
     }
 
-    public boolean is955() {
+    public boolean isReallyFallFlying() {
         if (flag) {
             return minecraftClient.player.isFallFlying();
         }
@@ -436,24 +458,24 @@ public class ElytraFly extends Module {
         return isFallFlying;
     }
 
-    public boolean is956() {
-        if (BaritoneHelper_3.obstaclePasserHelper.is702() || is1469() || flag) {
+    public boolean shouldSwapElytra() {
+        if (ClientServices.obstaclePasserHelper.isPathing() || isNotInGame() || flag) {
             return false;
         }
-        int i = FireworksHelper.get447(Items.ELYTRA);
+        int i = InventoryUtils.findInHotbar(Items.ELYTRA);
         if (i == -1) {
-            i = FireworksHelper.get443(Items.ELYTRA);
+            i = InventoryUtils.findSlot(Items.ELYTRA);
         }
         boolean z = i != -1;
         if (z) {
             this.stopwatch5.reset();
         }
-        boolean z2 = z | (!this.stopwatch5.is419(150L));
-        if (HoleSnapSearchHelper4.is2014(minecraftClient.player)) {
+        boolean z2 = z | (!this.stopwatch5.hasElapsedMs(150L));
+        if (PlayerUtils.hasElytraEquipped(minecraftClient.player)) {
             z2 = true;
         }
         if (z2) {
-            return isToggled() && (this.grimDurability.getValue().booleanValue() && this.grimDurability.is2349());
+            return isToggled() && (this.grimDurability.getValue().booleanValue() && this.grimDurability.isVisible());
         }
         return false;
     }

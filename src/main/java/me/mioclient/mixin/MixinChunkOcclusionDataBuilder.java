@@ -1,6 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+
 import me.mioclient.module.player.Freecam;
 import me.mioclient.module.render.Xray;
 import net.minecraft.client.render.chunk.ChunkOcclusionDataBuilder;
@@ -14,11 +17,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({ChunkOcclusionDataBuilder.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinChunkOcclusionDataBuilder.class */
 public class MixinChunkOcclusionDataBuilder {
-    private static Freecam freecam = (Freecam) BaritoneHelper_3.baritoneHelper_4.getModule117(Freecam.class);
+    private static Freecam freecam;
+
+    private static Freecam getFreecam() {
+
+        if (freecam == null && ClientServices.moduleInjector != null) {
+
+            try { freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class); } catch (Exception e) {}
+
+        }
+
+        return freecam;
+
+    }
 
     @Inject(method = {"markClosed"}, at = {@At("HEAD")}, cancellable = true)
     private void markClosedHook(BlockPos blockPos, CallbackInfo callbackInfo) {
-        if (Xray.getXray3073().isToggled() || freecam.isToggled()) {
+        Freecam freecam_lcl = getFreecam();
+
+        if (freecam_lcl == null) return;
+
+        if (Xray.getInstance().isToggled() || freecam_lcl.isToggled()) {
             callbackInfo.cancel();
         }
     }

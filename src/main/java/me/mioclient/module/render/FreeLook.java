@@ -1,11 +1,14 @@
 package me.mioclient.module.render;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.Helper_7;
-import me.mioclient.SearchHelper_2;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.RenderUtil;
+
+import me.mioclient.render.RenderConstants;
 import me.mioclient.api.Category;
 import me.mioclient.event.Listen;
-import me.mioclient.event.TickPostEvent;
+import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.Freecam;
 import net.minecraft.client.option.Perspective;
@@ -13,7 +16,7 @@ import net.minecraft.client.option.Perspective;
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/FreeLook.class */
 public class FreeLook extends Module {
-    public static Freecam freecam = (Freecam) BaritoneHelper_3.baritoneHelper_4.getModule117(Freecam.class);
+    public static Freecam freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
     public Perspective perspective;
 
     public FreeLook() {
@@ -26,7 +29,7 @@ public class FreeLook extends Module {
             return;
         }
         this.perspective = minecraftClient.options.getPerspective();
-        minecraftClient.options.setPerspective(getPerspective2612());
+        minecraftClient.options.setPerspective(getFreeLookPerspective());
     }
 
     @Override // me.mioclient.module.Module
@@ -36,16 +39,16 @@ public class FreeLook extends Module {
         }
     }
 
-    @Listen(get219= Helper_7.num5)
-    public void do32(TickPostEvent tickPostEvent) {
+    @Listen(get219= RenderConstants.num5)
+    public void onTickPost(TickPostEvent tickPostEvent) {
         if (freecam.isToggled()) {
             return;
         }
-        minecraftClient.options.setPerspective(getPerspective2612());
-        minecraftClient.crosshairTarget = minecraftClient.player.raycast(minecraftClient.player.getBlockInteractionRange(), SearchHelper_2.get536(), false);
+        minecraftClient.options.setPerspective(getFreeLookPerspective());
+        minecraftClient.crosshairTarget = minecraftClient.player.raycast(minecraftClient.player.getBlockInteractionRange(), RenderUtil.getPartialTick(), false);
     }
 
-    public Perspective getPerspective2612() {
+    public Perspective getFreeLookPerspective() {
         if (this.perspective == Perspective.FIRST_PERSON) {
             return Perspective.THIRD_PERSON_BACK;
         }

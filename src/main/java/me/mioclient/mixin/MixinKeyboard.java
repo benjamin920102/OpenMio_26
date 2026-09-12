@@ -1,8 +1,9 @@
 package me.mioclient.mixin;
 
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.CharEvent;
-import me.mioclient.event.KeyEvent;
+import me.mioclient.api.ClientAccessor;
+
+import me.mioclient.event.events.input.CharEvent;
+import me.mioclient.event.events.input.KeyEvent;
 import me.mioclient.module.misc.BetterChat;
 import net.minecraft.client.Keyboard;
 import net.minecraft.client.MinecraftClient;
@@ -27,8 +28,8 @@ public class MixinKeyboard {
     private void onKey(long j, int i, int i2, int i3, int i4, CallbackInfo callbackInfo) {
         if (i >= 0 && this.field_1678.currentScreen == null && i3 == 1) {
             KeyEvent keyEvent = new KeyEvent(i, false);
-            SearchHelper_4.baritoneHelper.getObject1794(keyEvent);
-            if (keyEvent.is2403()) {
+            ClientAccessor.eventBus.fireEvent(keyEvent);
+            if (keyEvent.isCancelled()) {
                 callbackInfo.cancel();
             }
         }
@@ -37,7 +38,7 @@ public class MixinKeyboard {
     @Inject(method = {"onChar"}, at = {@At("HEAD")})
     public void onChar(long j, int i, int i2, CallbackInfo callbackInfo) {
         if (this.field_1678.currentScreen == null && j == this.field_1678.getWindow().getHandle()) {
-            SearchHelper_4.baritoneHelper.getObject1794(new CharEvent(i));
+            ClientAccessor.eventBus.fireEvent(new CharEvent(i));
         }
     }
 

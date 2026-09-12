@@ -9,11 +9,9 @@
   "environment": "client",
   "entrypoints": {
     "main": [
-      "nick.Loader"
+      "nick.MioModInitializer"
     ],
-    "preLaunch": [
-      "nick.Plugin"
-    ]
+    "preLaunch": []
   },
   "mixins": [
     "mio.mixins.json"

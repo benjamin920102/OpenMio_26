@@ -1,4 +1,4 @@
 package baritone.api.command;
 public interface IBaritoneChatControl {
-    String FORCE_COMMAND_PREFIX = "§3";
+    String FORCE_COMMAND_PREFIX = "Â§3";
 }

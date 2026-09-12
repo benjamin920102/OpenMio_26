@@ -1,14 +1,22 @@
 package me.mioclient.module.render;
 
+import me.mioclient.event.events.render.HudRenderEvent;
+
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.util.math.ColorUtils;
+import me.mioclient.util.math.MathConstants;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.font.ClientTextRenderer;
+import me.mioclient.render.RenderUtil;
+import me.mioclient.util.math.ColorUtils;
+import me.mioclient.util.math.MathConstants;
+
 import java.awt.Color;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.FontsSearchHelper4;
-import me.mioclient.FreecamHelper;
-import me.mioclient.MatrixStackEvent_2;
-import me.mioclient.MixinMessageIndicatorHelper_2;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.SearchHelper4_8;
-import me.mioclient.SearchHelper_2;
+import me.mioclient.event.events.render.HudRenderEvent;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -27,46 +35,48 @@ public class Markers extends Module {
 
     public Markers() {
         super("Markers", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
     @Listen
-    public void onEvent(MatrixStackEvent_2 matrixStackEvent_2) {
-        float lerp = MathHelper.lerp(SearchHelper_2.get536(), minecraftClient.player.prevYaw, minecraftClient.player.getYaw());
+    public void onHudRender(HudRenderEvent matrixStackEvent_2) {
+        if (this.setting == null || this.setting2 == null) {
+            return;
+        }
+        float lerp = MathHelper.lerp(RenderUtil.getPartialTick(), minecraftClient.player.prevYaw, minecraftClient.player.getYaw());
         for (PlayerEntity playerEntity : minecraftClient.world.getPlayers()) {
             double distanceTo = minecraftClient.player.distanceTo((Entity) playerEntity);
             if (minecraftClient.player != playerEntity && distanceTo <= Double.longBitsToDouble(4629700416936869888L)) {
                 float longBitsToDouble = (float) (Double.longBitsToDouble(4607182418800017408L) - MathHelper.clamp((distanceTo - Double.longBitsToDouble(4628574517030027264L)) / Double.longBitsToDouble(4616189618054758400L), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
                 if (longBitsToDouble >= Double.longBitsToDouble(4591870180066957722L)) {
-                    float f = SearchHelper4_8.getFloatArray2486(getVec3d2809(minecraftClient.player), getVec3d2809(playerEntity))[0];
+                    float f = RotationManager.getRotations(getInterpolatedPos(minecraftClient.player), getInterpolatedPos(playerEntity))[0];
                     if (!this.setting2.getValue().booleanValue() || MathHelper.angleBetween(f, lerp) > ((Integer) minecraftClient.options.getFov().getValue()).intValue() / Float.intBitsToFloat(1073741824)) {
-                        double radians = Math.toRadians((f - lerp) - FreecamHelper.num2);
-                        float f2 = FontsSearchHelper4.fontsSearchHelper4.get1316(">") * Float.intBitsToFloat(1056964608);
-                        float clamp = MathHelper.clamp(minecraftClient.player.getPitch() + Float.intBitsToFloat(1106247680), -FreecamHelper.num2, FreecamHelper.num2) / FreecamHelper.num2;
-                        float cos = (float) ((Math.cos(radians) * this.setting.getValue().floatValue()) + (matrixStackEvent_2.getDrawContext474().getScaledWindowWidth() * FreecamHelper.val2));
-                        float sin = (float) ((Math.sin(radians) * this.setting.getValue().floatValue() * clamp) + (matrixStackEvent_2.getDrawContext474().getScaledWindowHeight() * FreecamHelper.val2));
-                        matrixStackEvent_2.getMatrixStack472().push();
-                        matrixStackEvent_2.getMatrixStack472().translate(cos, sin, 0.0f);
-                        matrixStackEvent_2.getMatrixStack472().multiply(RotationAxis.POSITIVE_Z.rotation((float) radians));
-                        FontsSearchHelper4.fontsSearchHelper4.do1689(matrixStackEvent_2.getDrawContext474(), ">", -f2, (float) ((-FontsSearchHelper4.fontsSearchHelper4.get93()) * FreecamHelper.val2), MixinMessageIndicatorHelper_2.getColor816(getColor2808(playerEntity), (int) (longBitsToDouble * Float.intBitsToFloat(1132396544))));
-                        matrixStackEvent_2.getMatrixStack472().pop();
+                        double radians = Math.toRadians((f - lerp) - MathConstants.num2);
+                        float f2 = ClientTextRenderer.INSTANCE.getStringWidth(">") * Float.intBitsToFloat(1056964608);
+                        float clamp = MathHelper.clamp(minecraftClient.player.getPitch() + Float.intBitsToFloat(1106247680), -MathConstants.num2, MathConstants.num2) / MathConstants.num2;
+                        float cos = (float) ((Math.cos(radians) * this.setting.getValue().floatValue()) + (matrixStackEvent_2.getDrawContext().getScaledWindowWidth() * MathConstants.val2));
+                        float sin = (float) ((Math.sin(radians) * this.setting.getValue().floatValue() * clamp) + (matrixStackEvent_2.getDrawContext().getScaledWindowHeight() * MathConstants.val2));
+                        matrixStackEvent_2.getMatrixStack().push();
+                        matrixStackEvent_2.getMatrixStack().translate(cos, sin, 0.0f);
+                        matrixStackEvent_2.getMatrixStack().multiply(RotationAxis.POSITIVE_Z.rotation((float) radians));
+                        ClientTextRenderer.INSTANCE.drawText(matrixStackEvent_2.getDrawContext(), ">", -f2, (float) ((-ClientTextRenderer.INSTANCE.getFontHeight()) * MathConstants.val2), ColorUtils.withAlpha(getMarkerColor(playerEntity), (int) (longBitsToDouble * Float.intBitsToFloat(1132396544))));
+                        matrixStackEvent_2.getMatrixStack().pop();
                     }
                 }
             }
         }
     }
 
-    public Color getColor2808(PlayerEntity playerEntity) {
-        if (BaritoneHelper_3.searchHelper4_14.is520(playerEntity)) {
-            return BaritoneHelper_3.searchHelper4_14.getColor528();
+    public Color getMarkerColor(PlayerEntity playerEntity) {
+        if (ClientServices.socialManager.isFriendEntity(playerEntity)) {
+            return ClientServices.socialManager.getFriendColor();
         }
-        if (BaritoneHelper_3.searchHelper4_14.is522(playerEntity)) {
-            return BaritoneHelper_3.searchHelper4_14.getColor529();
+        if (ClientServices.socialManager.isEnemyEntity(playerEntity)) {
+            return ClientServices.socialManager.getEnemyColor();
         }
-        return MixinMessageIndicatorHelper_2.getColor815(Color.red, Color.green, Float.intBitsToFloat(1065353216) - ((float) ((MathHelper.clamp(minecraftClient.player.getEyePos().distanceTo(playerEntity.getPos()), Double.longBitsToDouble(4620693217682128896L), Double.longBitsToDouble(4629700416936869888L)) - Double.longBitsToDouble(4620693217682128896L)) / Double.longBitsToDouble(4627448617123184640L))));
+        return ColorUtils.lerpColor(Color.red, Color.green, Float.intBitsToFloat(1065353216) - ((float) ((MathHelper.clamp(minecraftClient.player.getEyePos().distanceTo(playerEntity.getPos()), Double.longBitsToDouble(4620693217682128896L), Double.longBitsToDouble(4629700416936869888L)) - Double.longBitsToDouble(4620693217682128896L)) / Double.longBitsToDouble(4627448617123184640L))));
     }
 
-    public Vec3d getVec3d2809(PlayerEntity playerEntity) {
-        return new Vec3d(MathHelper.lerp(SearchHelper_2.get536(), playerEntity.prevX, playerEntity.getX()), MathHelper.lerp(SearchHelper_2.get536(), playerEntity.prevY, playerEntity.getY()), MathHelper.lerp(SearchHelper_2.get536(), playerEntity.prevZ, playerEntity.getZ()));
+    public Vec3d getInterpolatedPos(PlayerEntity playerEntity) {
+        return new Vec3d(MathHelper.lerp(RenderUtil.getPartialTick(), playerEntity.prevX, playerEntity.getX()), MathHelper.lerp(RenderUtil.getPartialTick(), playerEntity.prevY, playerEntity.getY()), MathHelper.lerp(RenderUtil.getPartialTick(), playerEntity.prevZ, playerEntity.getZ()));
     }
 }

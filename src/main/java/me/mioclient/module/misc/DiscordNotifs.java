@@ -1,5 +1,18 @@
 package me.mioclient.module.misc;
 
+import me.mioclient.event.events.client.ClientTickEvent;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.text.StringTemplate;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.client.ChatUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.command.ClientCommandRegistry;
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.client.ChatUtils;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -7,34 +20,34 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.ArgumentTypeHelper;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.ChatFilterSearchHelper4_2;
-import me.mioclient.FontsEvent;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.MixinMessageIndicatorHelper;
-import me.mioclient.PhaseESPHelper;
+import me.mioclient.util.text.StringTemplate;
+import me.mioclient.event.events.client.ClientTickEvent;
+import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.AddMessageEvent;
-import me.mioclient.event.DisconnectEvent;
+import me.mioclient.event.events.network.AddMessageEvent;
+import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import me.mioclient.module.client.Discord;
+import me.mioclient.module.Position;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/misc/DiscordNotifs.class */
 public class DiscordNotifs extends Module {
-    public Setting<Float> timeout;
-    public Setting<Boolean> timestamp;
-    public Setting<Boolean> queue;
-    public Setting<Boolean> disconnect;
-    public Setting<Boolean> dm;
-    public Setting<Boolean> chatMessages;
-    public Setting<Boolean> ignoreMio;
+    public Setting<Float> timeout = add(new NumberSetting<>("Timeout", 1.0f, 1.0f, 10.0f).setSuffix("s"));
+    public Setting<Boolean> timestamp = add(new BooleanSetting("Timestamp", false));
+    public Setting<Boolean> queue = add(new BooleanSetting("Queue", true));
+    public Setting<Boolean> disconnect = add(new BooleanSetting("Disconnect", true));
+    public Setting<Boolean> dm = add(new BooleanSetting("DM", true));
+    public Setting<Boolean> chatMessages = add(new BooleanSetting("ChatMessages", false));
+    public Setting<Boolean> ignoreMio = add(new BooleanSetting("IgnoreMio", true));
     public final DateTimeFormatter dateTimeFormatter;
     public final List<String> list;
     public final List<String> list2;
@@ -44,7 +57,6 @@ public class DiscordNotifs extends Module {
 
     public DiscordNotifs() {
         super("DiscordNotifs", "Sends chat messages to your Discord webhook.", Category.MISC, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         this.list = Collections.synchronizedList(new ArrayList());
         this.list2 = new ArrayList();
@@ -54,17 +66,17 @@ public class DiscordNotifs extends Module {
     @Override // me.mioclient.module.Module
     public void onEnable() {
         this.stopwatch.reset();
-        if (BaritoneHelper_3.discordNotifsHelper.getString1200() == null || BaritoneHelper_3.discordNotifsHelper.getString1200().isEmpty()) {
-            MixinMessageIndicatorHelper.do345(Text.literal("You don't have a webhook URL set. Set one by typing \"").append(new ArgumentTypeHelper().getArgumentTypeHelper2919(ChatFilterSearchHelper4_2.getString2982()).getString2921("\u0001webhook set <url>")).append("\"."), MixinMessageIndicatorHelper.getMessageSignatureData337(-10395), MixinMessageIndicatorHelper.MixinClientConnectionMode.mixinClientConnectionMode2);
+        if (ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty()) {
+            ChatUtils.sendPrefixedMessage(Text.literal("You don't have a webhook URL set. Set one by typing \"").append(new StringTemplate().arg(ClientCommandRegistry.getPrefix()).format("\u0001webhook set <url>")).append("\"."), ChatUtils.createSignature(-10395), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
         }
     }
 
     @Listen
-    public void onEvent(FontsEvent fontsEvent) {
+    public void onClientTick(ClientTickEvent fontsEvent) {
         if (minecraftClient.world != null) {
-            this.serverInfo = BaritoneHelper_3.holeSnapSearchHelper4_4.getServerInfo2622();
+            this.serverInfo = ClientServices.holeSnapRenderHelper.getServerInfo();
         }
-        if (BaritoneHelper_3.discordNotifsHelper.getString1200() == null || BaritoneHelper_3.discordNotifsHelper.getString1200().isEmpty() || !this.stopwatch.is418(this.timeout.getValue().floatValue(), TimeUnit.SECONDS) || this.list.isEmpty()) {
+        if (ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty() || !this.stopwatch.hasElapsed(this.timeout.getValue().floatValue(), TimeUnit.SECONDS) || this.list.isEmpty()) {
             return;
         }
         this.stopwatch.reset();
@@ -83,7 +95,7 @@ public class DiscordNotifs extends Module {
                 this.list2.add(str);
             }
             String sb2 = sb.toString();
-            BaritoneHelper_3.discordNotifsHelper.do1201("```%s```".formatted(sb2.substring(0, sb2.length() - 1)));
+            ClientServices.discordNotifsHelper.joinChannel("```%s```".formatted(sb2.substring(0, sb2.length() - 1)));
             Iterator<String> it = this.list2.iterator();
             while (it.hasNext()) {
                 this.list.remove(it.next());
@@ -94,28 +106,28 @@ public class DiscordNotifs extends Module {
 
     @Listen
     public void onAddMessage(AddMessageEvent addMessageEvent) {
-        if (addMessageEvent.is2403() || BaritoneHelper_3.discordNotifsHelper.getString1200() == null || BaritoneHelper_3.discordNotifsHelper.getString1200().isEmpty() || addMessageEvent.getKeyPearlMode1472() != KeyPearlMode.Pre || addMessageEvent.getString2283() == null) {
+        if (addMessageEvent.isCancelled() || ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty() || addMessageEvent.getPhase() != KeyPearlMode.Pre || addMessageEvent.getString() == null) {
             return;
         }
-        if (this.ignoreMio.getValue().booleanValue() && addMessageEvent.getMessageIndicator2284() == MixinMessageIndicatorHelper.messageIndicator) {
+        if (this.ignoreMio.getValue().booleanValue() && addMessageEvent.getIndicator() == ChatUtils.messageIndicator) {
             return;
         }
-        String string2283 = addMessageEvent.getString2283();
+        String string2283 = addMessageEvent.getString();
         String[] split = string2283.split("\n");
-        boolean is335 = MixinMessageIndicatorHelper.is335(string2283);
-        boolean is336 = MixinMessageIndicatorHelper.is336(string2283);
-        if (is335 || is336) {
+        boolean isIncomingWhisper = ChatUtils.isIncomingWhisper(string2283);
+        boolean isOutgoingWhisper = ChatUtils.isOutgoingWhisper(string2283);
+        if (isIncomingWhisper || isOutgoingWhisper) {
             if (this.dm.getValue().booleanValue()) {
-                do2825(split);
+                queueMessageLines(split);
             }
         } else if (!string2283.contains("Position in queue:") || split.length <= 15) {
             if (this.chatMessages.getValue().booleanValue()) {
-                do2825(split);
+                queueMessageLines(split);
             }
         } else if (this.string == null) {
             this.string = string2283;
         } else if (!this.string.equals(string2283) && this.queue.getValue().booleanValue()) {
-            do2825(split);
+            queueMessageLines(split);
             this.string = string2283;
         }
     }
@@ -125,11 +137,11 @@ public class DiscordNotifs extends Module {
         if (!this.disconnect.getValue().booleanValue() || this.serverInfo == null) {
             return;
         }
-        do2825("You have been disconnected from %s!".formatted(this.serverInfo.address).split("\n"));
+        queueMessageLines("You have been disconnected from %s!".formatted(this.serverInfo.address).split("\n"));
         this.serverInfo = null;
     }
 
-    public void do2825(String[] strArr) {
+    public void queueMessageLines(String[] strArr) {
         StringBuilder sb = new StringBuilder();
         for (String str : strArr) {
             if (!str.isEmpty()) {

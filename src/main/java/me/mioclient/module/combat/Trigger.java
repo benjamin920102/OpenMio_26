@@ -1,17 +1,24 @@
 package me.mioclient.module.combat;
 
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.mode.combat.KeyPearlMode;
+import me.mioclient.util.math.MathUtils;
+import me.mioclient.util.player.PlayerUtils;
+import me.mioclient.util.time.Stopwatch;
+
+import me.mioclient.api.ClientServices;
+import me.mioclient.util.math.MathUtils;
+import me.mioclient.util.player.PlayerUtils;
+
 import java.util.concurrent.TimeUnit;
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.HoleSnapSearchHelper4;
-import me.mioclient.KeyPearlMode;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PingSpoofHelper;
+import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.feature.MotionEvent;
+import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
-import me.mioclient.feature.Stopwatch;
+import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.EndCrystalEntity;
@@ -40,7 +47,6 @@ public class Trigger extends Module {
 
     public Trigger() {
         super("Trigger", "Attacks entities under your crosshair.", Category.COMBAT, new String[0]);
-        PhaseESPHelper.do1351(this);
         this.stopwatch = new Stopwatch();
     }
 
@@ -50,10 +56,13 @@ public class Trigger extends Module {
     /*
         Code decompiled incorrectly, please refer to instructions dump.
     */
-    public void do31(MotionEvent motionEvent) {
+    public void handleMotion(MotionEvent motionEvent) {
         boolean z;
         boolean z2;
-        if (motionEvent.getKeyPearlMode1472() == KeyPearlMode.Post || is1469()) {
+        if (this.setting == null || this.setting2 == null || this.setting3 == null || this.setting4 == null || this.setting5 == null || this.setting6 == null || this.setting7 == null || this.setting8 == null || this.setting9 == null || this.setting10 == null) {
+            return;
+        }
+        if (motionEvent.getPhase() == KeyPearlMode.Post || isNotInGame()) {
             return;
         }
         if ((!(minecraftClient.player.getMainHandStack().getItem() instanceof AxeItem) && !(minecraftClient.player.getMainHandStack().getItem() instanceof SwordItem) && this.setting2.getValue().booleanValue()) || !(minecraftClient.crosshairTarget instanceof EntityHitResult)) {
@@ -61,10 +70,10 @@ public class Trigger extends Module {
         }
         Entity entity = ((EntityHitResult) minecraftClient.crosshairTarget).getEntity();
         if (entity instanceof PlayerEntity) {
-            if (!BaritoneHelper_3.searchHelper4_14.is519(entity.getName().getString()) && this.setting6.getValue().booleanValue()) {
+            if (!ClientServices.socialManager.isFriend(entity.getName().getString()) && this.setting6.getValue().booleanValue()) {
                 z = true;
                 z2 = z;
-                if (z2 && this.setting7.getValue().booleanValue() && !HoleSnapSearchHelper4.is2013((PlayerEntity) entity)) {
+                if (z2 && this.setting7.getValue().booleanValue() && !PlayerUtils.hasArmor((PlayerEntity) entity)) {
                     z2 = false;
                 }
                 if (entity.isAlive()) {
@@ -72,10 +81,10 @@ public class Trigger extends Module {
                 }
                 if (z2 || (((entity instanceof PassiveEntity) && this.setting8.getValue().booleanValue()) || (((entity instanceof Monster) && this.setting9.getValue().booleanValue()) || ((entity instanceof EndCrystalEntity) && this.setting10.getValue().booleanValue())))) {
                     if (minecraftClient.player.getAttackCooldownProgress(Float.intBitsToFloat(1056964608)) >= Float.intBitsToFloat(1065353216)) {
-                        if (!this.stopwatch.is418(this.setting3.getValue().doubleValue() * Math.random(), TimeUnit.SECONDS) || minecraftClient.player.distanceTo(entity) > this.setting.getValue().floatValue()) {
+                        if (!this.stopwatch.hasElapsed(this.setting3.getValue().doubleValue() * Math.random(), TimeUnit.SECONDS) || minecraftClient.player.distanceTo(entity) > this.setting.getValue().floatValue()) {
                             return;
                         }
-                        do2935(PingSpoofHelper.is380(this.setting4.getValue().intValue()));
+                        performAttack(MathUtils.isChanceHit(this.setting4.getValue().intValue()));
                         this.stopwatch.reset();
                         return;
                     }
@@ -93,7 +102,7 @@ public class Trigger extends Module {
         }
     }
 
-    public void do2935(boolean z) {
+    public void performAttack(boolean z) {
         if (!z) {
             ((DuckMinecraftClient)(Object) minecraftClient).attack();
             return;

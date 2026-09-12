@@ -1,9 +1,12 @@
 package me.mioclient.mixin;
 
+import me.mioclient.event.events.world.BlockCollisionShapeEvent;
+
+import me.mioclient.api.ClientAccessor;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.VoxelShapeEvent;
+import me.mioclient.event.events.world.BlockCollisionShapeEvent;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.BlockPos;
@@ -34,7 +37,7 @@ public class MixinBlockCollisionSpliterator {
         if (this.field_25174 != MinecraftClient.getInstance().world) {
             return voxelShape;
         }
-        VoxelShapeEvent voxelShapeEvent = (VoxelShapeEvent) SearchHelper_4.baritoneHelper.getObject1794(VoxelShapeEvent.getVoxelShapeEvent665(voxelShape, this.field_25172, blockState));
-        return voxelShapeEvent.is2403() ? VoxelShapes.empty() : voxelShapeEvent.getVoxelShape669();
+        BlockCollisionShapeEvent voxelShapeEvent = (BlockCollisionShapeEvent) ClientAccessor.eventBus.fireEvent(BlockCollisionShapeEvent.create(voxelShape, this.field_25172, blockState));
+        return voxelShapeEvent.isCancelled() ? VoxelShapes.empty() : voxelShapeEvent.getShape();
     }
 }

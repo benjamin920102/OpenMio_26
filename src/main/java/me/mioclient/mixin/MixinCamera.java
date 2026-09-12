@@ -1,10 +1,13 @@
 package me.mioclient.mixin;
 
-import me.mioclient.BaritoneHelper_3;
-import me.mioclient.CameraYawHelper;
-import me.mioclient.SearchHelper_2;
-import me.mioclient.SearchHelper_4;
-import me.mioclient.event.UpdateSetPosEvent;
+import me.mioclient.api.ClientServices;
+
+import me.mioclient.api.ClientAccessor;
+import me.mioclient.api.ClientServices;
+import me.mioclient.render.RenderUtil;
+
+import me.mioclient.ducks.DuckEntityCamera;
+import me.mioclient.event.events.player.UpdateSetPosEvent;
 import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.player.Freecam;
 import me.mioclient.module.render.FreeLook;
@@ -34,11 +37,71 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin({Camera.class})
 /* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinCamera.class */
 public abstract class MixinCamera {
-    private static ViewClip viewclip = (ViewClip) BaritoneHelper_3.baritoneHelper_4.getModule117(ViewClip.class);
-    private static NoRender norender = (NoRender) BaritoneHelper_3.baritoneHelper_4.getModule117(NoRender.class);
-    private static ElytraFly elytrafly = (ElytraFly) BaritoneHelper_3.baritoneHelper_4.getModule117(ElytraFly.class);
-    private static Freecam freecam = (Freecam) BaritoneHelper_3.baritoneHelper_4.getModule117(Freecam.class);
-    private static FreeLook fl = (FreeLook) BaritoneHelper_3.baritoneHelper_4.getModule117(FreeLook.class);
+    private static ViewClip viewclip;
+
+    private static ViewClip getViewclip() {
+
+        if (viewclip == null && ClientServices.moduleInjector != null) {
+
+            try { viewclip = (ViewClip) ClientServices.moduleInjector.getModule(ViewClip.class); } catch (Exception e) {}
+
+        }
+
+        return viewclip;
+
+    }
+    private static NoRender norender;
+
+    private static NoRender getNorender() {
+
+        if (norender == null && ClientServices.moduleInjector != null) {
+
+            try { norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class); } catch (Exception e) {}
+
+        }
+
+        return norender;
+
+    }
+    private static ElytraFly elytrafly;
+
+    private static ElytraFly getElytrafly() {
+
+        if (elytrafly == null && ClientServices.moduleInjector != null) {
+
+            try { elytrafly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class); } catch (Exception e) {}
+
+        }
+
+        return elytrafly;
+
+    }
+    private static Freecam freecam;
+
+    private static Freecam getFreecam() {
+
+        if (freecam == null && ClientServices.moduleInjector != null) {
+
+            try { freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class); } catch (Exception e) {}
+
+        }
+
+        return freecam;
+
+    }
+    private static FreeLook fl;
+
+    private static FreeLook getFl() {
+
+        if (fl == null && ClientServices.moduleInjector != null) {
+
+            try { fl = (FreeLook) ClientServices.moduleInjector.getModule(FreeLook.class); } catch (Exception e) {}
+
+        }
+
+        return fl;
+
+    }
 
     @Shadow
     @Final
@@ -76,14 +139,22 @@ public abstract class MixinCamera {
 
     @Inject(method = {"clipToSpace"}, at = {@At("HEAD")}, cancellable = true)
     private void clipToSpaceHook(float f, CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        if (viewclip.isToggled()) {
-            callbackInfoReturnable.setReturnValue(Float.valueOf(viewclip.range.getValue().floatValue()));
+        ViewClip viewclip_lcl = getViewclip();
+
+        if (viewclip_lcl == null) return;
+
+        if (viewclip_lcl.isToggled()) {
+            callbackInfoReturnable.setReturnValue(Float.valueOf(viewclip_lcl.range.getValue().floatValue()));
         }
     }
 
     @Inject(method = {"updateEyeHeight"}, at = {@At("HEAD")}, cancellable = true)
     private void updateEyeHeightHook(CallbackInfo callbackInfo) {
-        if (norender.isToggled() && norender.newSneaking.getValue().booleanValue() && this.field_18711 != null) {
+        NoRender norender_lcl = getNorender();
+
+        if (norender_lcl == null) return;
+
+        if (norender_lcl.isToggled() && norender_lcl.newSneaking.getValue().booleanValue() && this.field_18711 != null) {
             callbackInfo.cancel();
             this.field_18722 = this.field_18721;
             PlayerEntity playerEntity = (this.field_18711) instanceof PlayerEntity ? (PlayerEntity) (this.field_18711) : null;
@@ -102,8 +173,12 @@ public abstract class MixinCamera {
 
     @Inject(method = {"moveBy"}, at = {@At("HEAD")}, cancellable = true)
     private void moveByHook(float f, float f2, float f3, CallbackInfo callbackInfo) {
-        if (viewclip.isToggled() && viewclip.smooth.getValue().booleanValue()) {
-            float f4 = viewclip.progress.get172();
+        ViewClip viewclip_lcl = getViewclip();
+
+        if (viewclip_lcl == null) return;
+
+        if (viewclip_lcl.isToggled() && viewclip_lcl.smooth.getValue().booleanValue()) {
+            float f4 = viewclip_lcl.progress.getValue();
             method_19322(new Vec3d(this.field_18712.x + (((this.field_18714.x() * f) + (this.field_18715.x() * f2) + (this.field_18716.x() * f3)) * f4), this.field_18712.y + (((this.field_18714.y() * f) + (this.field_18715.y() * f2) + (this.field_18716.y() * f3)) * f4), this.field_18712.z + (((this.field_18714.z() * f) + (this.field_18715.z() * f2) + (this.field_18716.z() * f3)) * f4)));
             callbackInfo.cancel();
         }
@@ -112,34 +187,48 @@ public abstract class MixinCamera {
     @ModifyArgs(method = {"update"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setPos(DDD)V"))
     private void onUpdateSetPosArgs(Args args) {
         UpdateSetPosEvent updateSetPosEvent = new UpdateSetPosEvent(((Double) args.get(0)).doubleValue(), ((Double) args.get(1)).doubleValue(), ((Double) args.get(2)).doubleValue());
-        SearchHelper_4.baritoneHelper.getObject1794(updateSetPosEvent);
-        if (updateSetPosEvent.is2403()) {
-            args.set(0, Double.valueOf(updateSetPosEvent.getVec3d1303().x));
-            args.set(1, Double.valueOf(updateSetPosEvent.getVec3d1303().y));
-            args.set(2, Double.valueOf(updateSetPosEvent.getVec3d1303().z));
+        ClientAccessor.eventBus.fireEvent(updateSetPosEvent);
+        if (updateSetPosEvent.isCancelled()) {
+            args.set(0, Double.valueOf(updateSetPosEvent.toVec3d().x));
+            args.set(1, Double.valueOf(updateSetPosEvent.toVec3d().y));
+            args.set(2, Double.valueOf(updateSetPosEvent.toVec3d().z));
         }
     }
 
     @ModifyArgs(method = {"update"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setRotation(FF)V"))
     private void onUpdateSetRotationArgs(Args args) {
-        if (elytrafly.isToggled() && elytrafly.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && elytrafly.pitchLock.getValue().booleanValue() && !elytrafly.silent.getValue().booleanValue()) {
-            args.set(1, elytrafly.pitch2.getValue());
+        Freecam freecam_lcl = getFreecam();
+        ElytraFly elytrafly_lcl = getElytrafly();
+
+        if (freecam_lcl == null) return;
+
+        if (elytrafly_lcl == null) return;
+
+        if (elytrafly_lcl.isToggled() && elytrafly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && elytrafly_lcl.pitchLock.getValue().booleanValue() && !elytrafly_lcl.silent.getValue().booleanValue()) {
+            args.set(1, elytrafly_lcl.pitch2.getValue());
         }
-        float f = SearchHelper_2.get536();
-        if (freecam.isToggled()) {
-            args.set(0, Float.valueOf((float) freecam.get177(f)));
-            args.set(1, Float.valueOf((float) freecam.get178(f)));
+        float f = RenderUtil.getPartialTick();
+        if (freecam_lcl.isToggled()) {
+            args.set(0, Float.valueOf((float) freecam_lcl.get177(f)));
+            args.set(1, Float.valueOf((float) freecam_lcl.get178(f)));
         }
     }
 
     @Inject(method = {"update"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setRotation(FF)V", ordinal = 0, shift = At.Shift.AFTER)})
     public void lockRotation(BlockView blockView, Entity entity, boolean z, boolean z2, float f, CallbackInfo callbackInfo) {
-        if (freecam.isToggled()) {
+        Freecam freecam_lcl = getFreecam();
+        FreeLook fl_lcl = getFl();
+
+        if (freecam_lcl == null) return;
+
+        if (fl_lcl == null) return;
+
+        if (freecam_lcl.isToggled()) {
             return;
         }
-        if (fl.isToggled() && (entity instanceof ClientPlayerEntity)) {
+        if (fl_lcl.isToggled() && (entity instanceof ClientPlayerEntity)) {
             MinecraftClient minecraftClient = MinecraftClient.getInstance();
-            CameraYawHelper cameraYawHelper = (CameraYawHelper) entity;
+            DuckEntityCamera cameraYawHelper = (DuckEntityCamera) entity;
             if (minecraftClient.player != null && this.hold) {
                 cameraYawHelper.setCameraYaw(minecraftClient.player.getYaw());
                 cameraYawHelper.setCameraPitch(minecraftClient.player.getPitch());
@@ -147,7 +236,7 @@ public abstract class MixinCamera {
             }
             method_19325(cameraYawHelper.getCameraYaw(), cameraYawHelper.getCameraPitch());
         }
-        if (fl.isToggled() || !(entity instanceof ClientPlayerEntity)) {
+        if (fl_lcl.isToggled() || !(entity instanceof ClientPlayerEntity)) {
             return;
         }
         this.hold = true;

@@ -1,14 +1,18 @@
 package me.mioclient.module.render;
 
+import me.mioclient.render.shape.BoxRenderer;
+import me.mioclient.util.math.ColorUtils;
+import me.mioclient.util.world.BlockPlacer;
+
+import me.mioclient.render.shape.BoxRenderer;
+import me.mioclient.util.world.BlockPlacer;
+import me.mioclient.util.math.ColorUtils;
+
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import me.mioclient.MatrixStackEvent;
-import me.mioclient.MixinMessageIndicatorHelper_2;
-import me.mioclient.PhaseESPHelper;
-import me.mioclient.PhaseESPSearchHelper4;
-import me.mioclient.PhaseESPSearchHelper4_2;
+import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -19,39 +23,42 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
+import me.mioclient.setting.BooleanSetting;
+import me.mioclient.setting.ColorSetting;
+import me.mioclient.setting.NumberSetting;
 
 /* compiled from: 0.java */
 /* loaded from: mio-yarn.jar:me/mioclient/module/render/PhaseESP.class */
 public class PhaseESP extends Module {
-    public Setting<Color> safe;
-    public Setting<Color> semiSafe;
-    public Setting<Color> unsafe;
-    public Setting<Boolean> outline;
-    public Setting<Float> alpha;
+    public Setting<Color> safe = add(new ColorSetting("Safe", new Color(540373280, true)).setThemeSync(true));
+    public Setting<Color> semiSafe = add(new ColorSetting("SemiSafe", new Color(637525248, true)).setThemeSync(true));
+    public Setting<Color> unsafe = add(new ColorSetting("Unsafe", new Color(634257408, true)).setThemeSync(true));
+    public Setting<Boolean> outline = add(new BooleanSetting("Outline", false).setVisible());
+    public Setting<Float> alpha = add(new NumberSetting<>("Alpha", 1.0f, 0.0f, 1.0f).requiresSettings(this.outline));
 
     /* compiled from: 0.java */
     /* loaded from: mio-yarn.jar:me/mioclient/module/render/PhaseESP$PhaseESPMode.class */
     public static enum PhaseESPMode {
         phaseESPMode {
             @Override
-            public Color getColor16(PhaseESP phaseESP) {
+            public Color getModeColor(PhaseESP phaseESP) {
                 return phaseESP.safe.getValue();
             }
         },
         phaseESPMode2 {
             @Override
-            public Color getColor16(PhaseESP phaseESP) {
+            public Color getModeColor(PhaseESP phaseESP) {
                 return phaseESP.semiSafe.getValue();
             }
         },
         phaseESPMode3 {
             @Override
-            public Color getColor16(PhaseESP phaseESP) {
+            public Color getModeColor(PhaseESP phaseESP) {
                 return phaseESP.unsafe.getValue();
             }
         };
 
-        public Color getColor16(PhaseESP phaseESP) {
+        public Color getModeColor(PhaseESP phaseESP) {
             return null;
         }
     }
@@ -70,57 +77,56 @@ public class PhaseESP extends Module {
 
 
 
-        public BlockPos getBlockPos12() {
+        public BlockPos getBlockPos() {
             return this.blockPos;
         }
 
-        public PhaseESPMode getPhaseESPMode841() {
+        public PhaseESPMode getMode() {
             return this.phaseESPMode;
         }
     }
 
     public PhaseESP() {
         super("PhaseESP", "Highlights safe blocks to phase into.", Category.RENDER, new String[0]);
-        PhaseESPHelper.do1351(this);
     }
 
     @Listen
-    public void onEvent(MatrixStackEvent.Inner_3 inner_3) {
+    public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
         Box expand = minecraftClient.player.getBoundingBox().withMaxY(minecraftClient.player.getBoundingBox().minY).expand(Double.longBitsToDouble(4576918229304087675L), 0.0d, Double.longBitsToDouble(4576918229304087675L));
-        if (PhaseESPSearchHelper4_2.is3045(minecraftClient.player.getBlockPos()) || minecraftClient.player.isInSwimmingPose()) {
+        if (BlockPlacer.isBlockCollidable(minecraftClient.player.getBlockPos()) || minecraftClient.player.isInSwimmingPose()) {
             return;
         }
-        BlockPos.stream(expand).filter(this::is8).map(blockPos -> {
-            return new Record(blockPos, getPhaseESPMode6(blockPos));
+        BlockPos.stream(expand).filter(this::isPhaseableBlock).map(blockPos -> {
+            return new Record(blockPos, classifyPhaseMode(blockPos));
         }).forEach(record -> {
             VoxelShape outlineShape = minecraftClient.world.getBlockState(record.blockPos).getOutlineShape(minecraftClient.world, record.blockPos);
             if (outlineShape.isEmpty()) {
                 outlineShape = VoxelShapes.cuboid(0.0d, 0.0d, 0.0d, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L));
             }
             Box offset = outlineShape.getBoundingBox().offset(record.blockPos);
-            PhaseESPSearchHelper4.do1590(inner_3.getMatrixStack472(), offset.withMaxY(record.blockPos.getY()), record.phaseESPMode.getColor16(this));
+            BoxRenderer.drawFilledBox(inner_3.getMatrixStack(), offset.withMaxY(record.blockPos.getY()), record.phaseESPMode.getModeColor(this));
             if (this.outline.getValue().booleanValue()) {
-                PhaseESPSearchHelper4.do1593(inner_3.getMatrixStack472(), offset.withMaxY(record.blockPos.getY()), MixinMessageIndicatorHelper_2.getColor817(record.phaseESPMode.getColor16(this), this.alpha.getValue().floatValue()), Float.intBitsToFloat(1065353216));
+                BoxRenderer.drawBoxOutline(inner_3.getMatrixStack(), offset.withMaxY(record.blockPos.getY()), ColorUtils.withAlphaPercent(record.phaseESPMode.getModeColor(this), this.alpha.getValue().floatValue()), Float.intBitsToFloat(1065353216));
             }
         });
     }
 
-    public PhaseESPMode getPhaseESPMode6(BlockPos blockPos) {
+    public PhaseESPMode classifyPhaseMode(BlockPos blockPos) {
         boolean z = minecraftClient.world.getBlockState(blockPos).getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480);
-        if (PhaseESPSearchHelper4_2.is3045(blockPos.down()) && z) {
+        if (BlockPlacer.isBlockCollidable(blockPos.down()) && z) {
             if (minecraftClient.world.getBlockState(blockPos.down()).getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480)) {
-                return (is7(blockPos) || is7(blockPos.down())) ? PhaseESPMode.phaseESPMode2 : PhaseESPMode.phaseESPMode;
+                return (isNotBedrock(blockPos) || isNotBedrock(blockPos.down())) ? PhaseESPMode.phaseESPMode2 : PhaseESPMode.phaseESPMode;
             }
         }
         return PhaseESPMode.phaseESPMode3;
     }
 
-    public boolean is7(BlockPos blockPos) {
-        return PhaseESPSearchHelper4_2.getBlock3044(blockPos) != Blocks.BEDROCK;
+    public boolean isNotBedrock(BlockPos blockPos) {
+        return BlockPlacer.getBlockAt(blockPos) != Blocks.BEDROCK;
     }
 
-    public boolean is8(BlockPos blockPos) {
+    public boolean isPhaseableBlock(BlockPos blockPos) {
         BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        return blockState.getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480) && PhaseESPSearchHelper4_2.is3045(blockPos) && !blockState.isReplaceable();
+        return blockState.getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480) && BlockPlacer.isBlockCollidable(blockPos) && !blockState.isReplaceable();
     }
 }

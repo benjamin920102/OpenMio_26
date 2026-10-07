@@ -1,26 +1,27 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({HandledScreen.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckHandledScreen.class */
+/* 26.2 port (verified): Yarn AbstractContainerScreen -> MojMap AbstractContainerScreen;
+   focusedSlot is hoveredSlot; x/y are leftPos/topPos; backgroundWidth/Height
+   are imageWidth/imageHeight. */
+@Mixin({AbstractContainerScreen.class})
 public interface DuckHandledScreen {
-    @Accessor("focusedSlot")
+    @Accessor("hoveredSlot")
     Slot mio$getFocusedSlot();
 
-    @Accessor("x")
+    @Accessor("leftPos")
     int getX();
 
-    @Accessor("y")
+    @Accessor("topPos")
     int getY();
 
-    @Accessor("backgroundWidth")
+    @Accessor("imageWidth")
     int getBgWidth();
 
-    @Accessor("backgroundHeight")
+    @Accessor("imageHeight")
     int getBgHeight();
 }

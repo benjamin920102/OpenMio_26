@@ -4,8 +4,6 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.JsonConfigurable;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -14,8 +12,6 @@ import java.util.Map;
 import java.util.Objects;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AliasManager.class */
 public final class AliasManager implements ClientAccessor, JsonConfigurable {
     public final Map<Module, String> map = new HashMap();
     public final Map<String, String> map2 = new HashMap();

@@ -4,57 +4,54 @@ import me.mioclient.mode.combat.KeyPearlMode;
 
 import me.mioclient.event.Event;
 
-import me.mioclient.mode.combat.KeyPearlMode;
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.Text;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
+import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/AddMessageEvent.class */
 public class AddMessageEvent extends Event {
     public final KeyPearlMode keyPearlMode;
-    public final MessageIndicator messageIndicator;
-    public MessageSignatureData signature;
-    public Text text;
-    public ChatHudLine.Visible visible;
+    public final GuiMessageTag GuiMessageTag;
+    public MessageSignature signature;
+    public Component text;
+    public GuiMessage.Line visible;
     public String string;
 
-    public AddMessageEvent(MessageIndicator messageIndicator, MessageSignatureData messageSignatureData, Text text) {
-        this.messageIndicator = messageIndicator;
-        this.signature = messageSignatureData;
+    public AddMessageEvent(GuiMessageTag GuiMessageTag, MessageSignature MessageSignature, Component text) {
+        this.GuiMessageTag = GuiMessageTag;
+        this.signature = MessageSignature;
         this.text = text;
         this.keyPearlMode = KeyPearlMode.Pre;
         this.string = text == null ? null : text.getString();
     }
 
-    public AddMessageEvent(ChatHudLine.Visible visible) {
+    public AddMessageEvent(GuiMessage.Line visible) {
         this.visible = visible;
         this.keyPearlMode = KeyPearlMode.Post;
-        this.messageIndicator = null;
+        this.GuiMessageTag = null;
     }
 
-    public MessageSignatureData getSignature() {
+    public MessageSignature getSignature() {
         return this.signature;
     }
 
-    public void setSignature(MessageSignatureData messageSignatureData) {
-        this.signature = messageSignatureData;
+    public void setSignature(MessageSignature MessageSignature) {
+        this.signature = MessageSignature;
     }
 
-    public Text getText() {
+    public Component getText() {
         return this.text;
     }
 
-    public void setText(Text text) {
+    public void setText(Component text) {
         this.text = text;
     }
 
-    public ChatHudLine.Visible getVisible() {
+    public GuiMessage.Line getVisible() {
         return this.visible;
     }
 
-    public void setVisible(ChatHudLine.Visible visible) {
+    public void setVisible(GuiMessage.Line visible) {
         this.visible = visible;
     }
 
@@ -66,7 +63,7 @@ public class AddMessageEvent extends Event {
         return this.string;
     }
 
-    public MessageIndicator getIndicator() {
-        return this.messageIndicator;
+    public GuiMessageTag getIndicator() {
+        return this.GuiMessageTag;
     }
 }

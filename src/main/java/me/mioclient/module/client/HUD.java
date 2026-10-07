@@ -6,18 +6,10 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.gui.screen.HudEditorScreen;
 import me.mioclient.mode.client.MixinTitleScreenMode;
 import me.mioclient.mode.client.ModuleListMode;
-import me.mioclient.render.hud.DraggableHudElement;
-import me.mioclient.util.anim.InterpolatedFloat;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.screen.HudEditorScreen;
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.hud.DraggableHudElement;
 import me.mioclient.util.anim.InterpolatedFloat;
 
@@ -25,12 +17,9 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
-import me.mioclient.event.events.render.HudRenderEvent;
-import me.mioclient.mode.client.MixinTitleScreenMode;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
@@ -38,20 +27,38 @@ import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
 import me.mioclient.module.exploit.AntiLevitation;
 import me.mioclient.module.render.NoRender;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.registry.entry.RegistryEntry;
-import me.mioclient.mode.client.ModuleListMode;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.core.Holder;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/HUD.class */
 public class HUD extends Module {
-    public static AntiLevitation antiLevitation = (AntiLevitation) ClientServices.moduleInjector.getModule(AntiLevitation.class);
-    public static NoRender norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving antiLevitation/norender null. */
+    private static AntiLevitation antiLevitation;
+    private static NoRender norender;
+
+    public static AntiLevitation getAntiLevitation() {
+        if (antiLevitation == null && ClientServices.moduleInjector != null) {
+            try {
+                antiLevitation = (AntiLevitation) ClientServices.moduleInjector.getModule(AntiLevitation.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiLevitation;
+    }
+
+    public static NoRender getNorender() {
+        if (norender == null && ClientServices.moduleInjector != null) {
+            try {
+                norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class);
+            } catch (Exception e) {
+            }
+        }
+        return norender;
+    }
     public final Predicate<Boolean> predicate;
     public Setting<Boolean> setting;
     public Setting<HUDMode> setting2;
@@ -70,8 +77,7 @@ public class HUD extends Module {
     public final InterpolatedFloat hUDHelper_2;
     public final InterpolatedFloat hUDHelper_22;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/client/HUD$HUDMode.class */
+    
     public enum HUDMode implements NamedValue {
         KEEP("Keep"),
         MOVE("Move"),
@@ -89,8 +95,7 @@ public class HUD extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/client/HUD$ModuleListMode.class */
+    
     public enum ModuleListMode implements NamedValue {
         ALPHABET("Alphabet"),
         LENGTH("Length");
@@ -110,7 +115,7 @@ public class HUD extends Module {
     public HUD() {
         super("HUD", "Draws useful HUD elements on your screen.", Category.CLIENT, new String[0]);
         this.predicate = bool -> {
-            Screen screen = minecraftClient.currentScreen;
+            Screen screen = minecraftClient.gui.screen();
             return !(screen instanceof AbstractClickGuiScreen) || ((AbstractClickGuiScreen) screen).getParentScreen() == null;
         };
         this.setting = add(new BooleanSetting("HudEditor", false, this.predicate));
@@ -147,7 +152,7 @@ public class HUD extends Module {
                 if (isNotInGame()) {
                     return;
                 }
-                minecraftClient.setScreen(ClientServices.getHud());
+                minecraftClient.gui.setScreen(ClientServices.getHud());
             }
         });
         setDrawn(false);
@@ -163,34 +168,36 @@ public class HUD extends Module {
     @Listen
     public void onHudRender(HudRenderEvent matrixStackEvent_2) {
         int i = 0;
-        if (this.setting2.getValue() == HUDMode.MOVE && !(minecraftClient.currentScreen instanceof InventoryScreen)) {
-            for (StatusEffectInstance statusEffectInstance : minecraftClient.player.getStatusEffects()) {
-                RegistryEntry effectType = statusEffectInstance.getEffectType();
-                if (!antiLevitation.isToggled() || (effectType != StatusEffects.SLOW_FALLING && effectType != StatusEffects.LEVITATION)) {
-                    if (!norender.isToggled() || !norender.darkness.getValue().booleanValue() || effectType != StatusEffects.DARKNESS) {
+        if (this.setting2.getValue() == HUDMode.MOVE && !(minecraftClient.gui.screen() instanceof InventoryScreen)) {
+            AntiLevitation antiLevitation_lcl = getAntiLevitation();
+            NoRender norender_lcl = getNorender();
+            for (MobEffectInstance statusEffectInstance : minecraftClient.player.getActiveEffects()) {
+                Holder effectType = statusEffectInstance.getEffect();
+                if (antiLevitation_lcl == null || !antiLevitation_lcl.isToggled() || (effectType != MobEffects.SLOW_FALLING && effectType != MobEffects.LEVITATION)) {
+                    if (norender_lcl == null || !norender_lcl.isToggled() || !norender_lcl.darkness.getValue().booleanValue() || effectType != MobEffects.DARKNESS) {
                         if (i == 0) {
                             i++;
                         }
-                        if (!((StatusEffect) statusEffectInstance.getEffectType().value()).isBeneficial()) {
+                        if (!((MobEffect) statusEffectInstance.getEffect().value()).isBeneficial()) {
                             i = 2;
                         }
                     }
                 }
             }
         }
-        if (minecraftClient.currentScreen instanceof InventoryScreen) {
+        if (minecraftClient.gui.screen() instanceof InventoryScreen) {
             i = 0;
         }
         this.hUDHelper_2.animate((24 * i) + 4);
         this.hUDHelper_2.getValue();
         float f = this.hUDHelper_22.getValue();
-        float scaledWidth = minecraftClient.getWindow().getScaledWidth();
-        float scaledHeight = minecraftClient.getWindow().getScaledHeight();
-        if (f > Float.intBitsToFloat(1065353216) && !(minecraftClient.currentScreen instanceof ChatScreen)) {
-            matrixStackEvent_2.getDrawContext().fill(2, (int) ((scaledHeight - Float.intBitsToFloat(1073741824)) - f), (int) (scaledWidth - Float.intBitsToFloat(1073741824)), (int) (scaledHeight - Float.intBitsToFloat(1073741824)), minecraftClient.options.getTextBackgroundColor(Integer.MIN_VALUE));
+        float scaledWidth = minecraftClient.getWindow().getGuiScaledWidth();
+        float scaledHeight = minecraftClient.getWindow().getGuiScaledHeight();
+        if (f > Float.intBitsToFloat(1065353216) && !(minecraftClient.gui.screen() instanceof ChatScreen)) {
+            matrixStackEvent_2.getDrawContext().fill(2, (int) ((scaledHeight - Float.intBitsToFloat(1073741824)) - f), (int) (scaledWidth - Float.intBitsToFloat(1073741824)), (int) (scaledHeight - Float.intBitsToFloat(1073741824)), (int) (minecraftClient.options.textBackgroundOpacity().get() * 255) << 24);
         }
         DraggableHudElement.flag = true;
-        if (!(minecraftClient.currentScreen instanceof HudEditorScreen)) {
+        if (!(minecraftClient.gui.screen() instanceof HudEditorScreen)) {
             ClientServices.getHud().renderAll(matrixStackEvent_2.getDrawContext(), 0.0d, 0.0d);
         }
         DraggableHudElement.flag = false;

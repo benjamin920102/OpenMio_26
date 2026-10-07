@@ -2,11 +2,9 @@ package me.mioclient.event.events.interaction;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/AttackBlockEvent.class */
 public final class AttackBlockEvent extends Event {
     public final BlockPos blockPos;
     public final Direction direction;

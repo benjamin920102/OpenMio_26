@@ -2,14 +2,12 @@ package me.mioclient.module.render.breakhighlight;
 
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.util.time.Stopwatch;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BreakProgressTracker.class */
 public final class BreakProgressTracker {
     public final Stopwatch stopwatch = new Stopwatch();
     public final int entityId;
@@ -28,7 +26,7 @@ public final class BreakProgressTracker {
     }
 
     public Entity getEntity() {
-        return MinecraftClient.getInstance().world.getEntityById(this.entityId);
+        return Minecraft.getInstance().level.getEntity(this.entityId);
     }
 
     public BlockPos getBlockPos() {
@@ -40,7 +38,7 @@ public final class BreakProgressTracker {
     }
 
     public float get2814(float f) {
-        return MathHelper.lerp(f, this.val2, this.val);
+        return Mth.lerp(f, this.val2, this.val);
     }
 
     public void setMiningProgress(float f) {
@@ -53,7 +51,7 @@ public final class BreakProgressTracker {
             this.val2 = this.val;
         }
         resetTimer();
-        this.val = MathHelper.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
+        this.val = Mth.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
     }
 
     public int get2093() {
@@ -73,6 +71,6 @@ public final class BreakProgressTracker {
         if ((this.val == Float.intBitsToFloat(1065353216) && this.stopwatch.hasElapsedMs(2000L)) || (entity181 = getEntity()) == null) {
             return true;
         }
-        return entity181.getEyePos().squaredDistanceTo(this.blockPos.toCenterPos()) >= Double.longBitsToDouble(4634204016564240384L);
+        return entity181.getEyePosition().distanceToSqr(Vec3.atCenterOf(this.blockPos)) >= Double.longBitsToDouble(4634204016564240384L);
     }
 }

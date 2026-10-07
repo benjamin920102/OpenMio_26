@@ -18,13 +18,7 @@ import me.mioclient.util.anim.InterpolatedFloat;
 import me.mioclient.util.anim.ValueAnimator;
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.setting.ColorPickerComponent;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.anim.InterpolatedFloat;
-import me.mioclient.util.anim.ValueAnimator;
 
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
@@ -36,28 +30,20 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Supplier;
 import me.mioclient.api.Setting;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.UI;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
-import me.mioclient.module.KeybindModule;
 import me.mioclient.setting.KeybindPresetSettingButton;
-import me.mioclient.module.HudModule;
-import me.mioclient.setting.StringSettingRow;
 import me.mioclient.setting.PresetSettingPresetSettingButton;
 import me.mioclient.setting.ProgressSettingPresetSettingButton;
 import me.mioclient.manager.ScissorStackManager;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.setting.SoundSettingRow;
 import me.mioclient.setting.SettingPresetSettingButton;
 import me.mioclient.setting.StopwatchSettingPresetSettingButton;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModuleButton.class */
 public class ModuleButton extends PanelComponent implements ClosableElement {
     public final ArrayList<GuiComponent> arrayList;
     public final InterpolatedFloat hUDHelper_2;
@@ -182,7 +168,7 @@ public class ModuleButton extends PanelComponent implements ClosableElement {
                 ClientServices.getClickGui().list.add(this);
             }
             this.presetEnumSettingHelper.recalculateLayout();
-            if (!ClientServices.getClickGui().getSearchField().getText().isEmpty()) {
+            if (!ClientServices.getClickGui().getSearchField().getValue().isEmpty()) {
                 flashHighlight();
             }
         }
@@ -214,7 +200,7 @@ public class ModuleButton extends PanelComponent implements ClosableElement {
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         this.progress.animateToggle(this.module.isToggled());
         float f = this.progress.getValue();
@@ -240,7 +226,7 @@ public class ModuleButton extends PanelComponent implements ClosableElement {
             String str = this.flag ? "-" : "+";
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, str, ((this.presetEnumSettingHelper.getX() + this.presetEnumSettingHelper.getTotalWidth()) - 4) - ClientTextRenderer.INSTANCE.getStringWidth(str), ((this.presetEnumSettingHelper.getY() + getTextOffsetY()) - f2) + this.num, getUI().textColor.getValue());
         }
-        net.minecraft.text.MutableText empty = Text.empty();
+        net.minecraft.network.chat.MutableComponent empty = Component.empty();
         if (this.module.isWip()) {
             empty.append("beta ");
         }
@@ -250,9 +236,9 @@ public class ModuleButton extends PanelComponent implements ClosableElement {
         if (!empty.getString().isEmpty()) {
             ClientTextRenderer.INSTANCE.drawScaledTextShadowObj(drawContext, empty, this.presetEnumSettingHelper.getX() + ClientTextRenderer.INSTANCE.getStringWidth(this.module.getName()) + getUI().modulePadding.getValue().intValue(), ((this.presetEnumSettingHelper.getY() + getTextOffsetY()) - f2) + this.num + Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1056964608), getUI().textColor.getValue());
         }
-        matrixStack.push();
+        matrixStack.pushPose();
         if (this.val > getRowHeight() || this.flag) {
-            int clamp = (int) MathHelper.clamp(this.val, getRowHeight(), (this.presetEnumSettingHelper.getFontHeight() * this.presetEnumSettingHelper.getAnimationProgress()) - this.num);
+            int clamp = (int) Mth.clamp(this.val, getRowHeight(), (this.presetEnumSettingHelper.getFontHeight() * this.presetEnumSettingHelper.getAnimationProgress()) - this.num);
             Shape2DRenderer.resetShadowOffset();
             ScissorStackManager.pushClipRegion(this.presetEnumSettingHelper.getX(), this.presetEnumSettingHelper.getY() + this.num, this.presetEnumSettingHelper.getTotalWidth(), clamp);
             Iterator<GuiComponent> it = this.arrayList.iterator();
@@ -262,7 +248,7 @@ public class ModuleButton extends PanelComponent implements ClosableElement {
             Shape2DRenderer.resetShadowOffset();
             ScissorStackManager.popClipRegion();
         }
-        matrixStack.pop();
+        matrixStack.popPose();
         if (getUI().descriptions.getValue().booleanValue() && containsPoint(d, d2)) {
             if (getUI().delay.getValue().intValue() == 0) {
                 ClientServices.getClickGui().setTooltipText(this.module.getDescription());

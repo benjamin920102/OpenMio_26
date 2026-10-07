@@ -1,9 +1,7 @@
 package me.mioclient.util.client;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SessionRankState.class */
 public final class SessionRankState {
     public static String username = null;
     public static int rank = -1;
@@ -11,7 +9,7 @@ public final class SessionRankState {
 
     public SessionRankState() {
         if (username == null) {
-            username = MinecraftClient.getInstance().getSession().getUsername();
+            username = Minecraft.getInstance().getUser().getName();
         }
     }
 

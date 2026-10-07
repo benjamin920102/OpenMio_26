@@ -2,8 +2,6 @@ package me.mioclient.util.math;
 
 import me.mioclient.loader.ModInitializerBridge;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MathConstants.class */
 public final class MathConstants {
     public static final int num = ((Integer) ModInitializerBridge.getObject1356(8242560)).intValue();
     public static final int num2 = ((Integer) ModInitializerBridge.getObject1356(6040919)).intValue();

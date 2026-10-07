@@ -3,10 +3,7 @@ package me.mioclient.gui.widget;
 import me.mioclient.util.time.Stopwatch;
 
 import java.util.ArrayList;
-import me.mioclient.util.time.Stopwatch;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Scroll.class */
 public class ScrollState {
     public static final int num = 5;
     public final java.util.List<String> list = new ArrayList();

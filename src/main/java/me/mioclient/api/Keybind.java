@@ -3,23 +3,17 @@ package me.mioclient.api;
 import me.mioclient.mode.misc.KeybindMode;
 import me.mioclient.util.client.InputState;
 
-import me.mioclient.util.client.InputState;
-
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import me.mioclient.mode.misc.KeybindMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/api/Keybind.class */
 public final class Keybind {
     public final int keyCode;
     public final KeybindMode keybindMode;
     public final boolean isMouse;
     public static final Keybind keybind = new Keybind(-1, KeybindMode.TOGGLE, false);
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/api/Keybind$KeybindMode.class */
+    
     public enum KeybindMode implements NamedValue {
         TOGGLE("Toggle", "toggle"),
         HOLD("Hold", "hold"),
@@ -95,9 +89,6 @@ public final class Keybind {
     public String getBindString() {
         return InputState.getString2602(this);
     }
-
-
-
 
     public int getKey() {
         return this.keyCode;

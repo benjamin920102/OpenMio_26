@@ -2,20 +2,14 @@ package me.mioclient.util.world;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.math.MathUtils;
-
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.math.MathUtils;
 
 import com.google.gson.annotations.SerializedName;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Waypoint.class */
 public class Waypoint implements NamedValue {
 
     @SerializedName("x")
@@ -38,7 +32,7 @@ public class Waypoint implements NamedValue {
 
     @SerializedName("toggled")
     public boolean toggled;
-    public transient Vec3d vec3d;
+    public transient Vec3 vec3d;
 
     public Waypoint(String str, double d, double d2, double d3, String str2, String str3) {
         this.x = roundCoord(d);
@@ -47,11 +41,11 @@ public class Waypoint implements NamedValue {
         this.dimension = str2;
         this.server = str3;
         this.name = str;
-        this.vec3d = new Vec3d(d, d2, d3);
+        this.vec3d = new Vec3(d, d2, d3);
         this.toggled = true;
     }
 
-    public Waypoint(String str, Vec3d vec3d, String str2, String str3) {
+    public Waypoint(String str, Vec3 vec3d, String str2, String str3) {
         this(str, vec3d.x, vec3d.y, vec3d.z, str2, str3);
     }
 
@@ -75,7 +69,7 @@ public class Waypoint implements NamedValue {
         return this.server;
     }
 
-    public double distanceTo(Vec3d vec3d) {
+    public double distanceTo(Vec3 vec3d) {
         return vec3d.distanceTo(this.vec3d);
     }
 
@@ -91,9 +85,9 @@ public class Waypoint implements NamedValue {
         this.toggled = z;
     }
 
-    public Vec3d toVec3d() {
+    public Vec3 toVec3d() {
         if (this.vec3d == null) {
-            this.vec3d = new Vec3d(this.x, this.y, this.z);
+            this.vec3d = new Vec3(this.x, this.y, this.z);
         }
         return this.vec3d;
     }
@@ -108,10 +102,10 @@ public class Waypoint implements NamedValue {
     }
 
     @Override // me.mioclient.api.NamedValue
-    public Text getAsText() {
-        return Text.literal(this.name).styled(style -> {
-            return style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(String.format("%s's info:\nx: %.1f\ny: %.1f\nz: %.1f\ndimension: %s\nserver: %s", this.name, Double.valueOf(this.x), Double.valueOf(this.y), Double.valueOf(this.z), this.dimension, this.server)).styled(style2 -> {
-                return style2.withFormatting(Formatting.GRAY);
+    public Component getAsText() {
+        return Component.literal(this.name).withStyle(style -> {
+            return style.withHoverEvent(new HoverEvent.ShowText(Component.literal(String.format("%s's info:\nx: %.1f\ny: %.1f\nz: %.1f\ndimension: %s\nserver: %s", this.name, Double.valueOf(this.x), Double.valueOf(this.y), Double.valueOf(this.z), this.dimension, this.server)).withStyle(style2 -> {
+                return style2.withColor(ChatFormatting.GRAY);
             })));
         });
     }

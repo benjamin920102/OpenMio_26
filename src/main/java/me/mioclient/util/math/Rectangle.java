@@ -4,8 +4,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Data_3.class */
 public final class Rectangle {
     public final float val;
     public final float val2;
@@ -60,9 +58,6 @@ public final class Rectangle {
         }
         return new Rectangle(f, f3, f2, f4);
     }
-
-
-
 
     public float getMinX() {
         return this.val;

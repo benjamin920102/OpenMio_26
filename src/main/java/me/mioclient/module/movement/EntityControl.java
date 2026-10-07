@@ -6,25 +6,20 @@ import me.mioclient.util.client.InputState;
 import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.client.InputState;
-import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.TickPreEvent;
 import me.mioclient.module.Module;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.Saddleable;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.vehicle.boat.Boat;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/EntityControl.class */
 public class EntityControl extends Module {
     public Setting<Boolean> entitySpeed = add(new BooleanSetting("EntitySpeed", true).setVisible());
     public Setting<Double> speed = add(new NumberSetting<>("Speed", 1.0, 0.1, 20.0, v -> this.entitySpeed.isShown()));
@@ -55,11 +50,11 @@ public class EntityControl extends Module {
         if (!MovementUtils.is2181()) {
             this.num = System.currentTimeMillis();
         }
-        if (minecraftClient.player.hasVehicle() && (vehicle = minecraftClient.player.getVehicle()) != null) {
+        if (minecraftClient.player.getVehicle() != null && (vehicle = minecraftClient.player.getVehicle()) != null) {
             if (this.copyYaw.getValue().booleanValue()) {
-                vehicle.setYaw(minecraftClient.player.getYaw(RenderUtil.getPartialTick()));
+                vehicle.setYRot(minecraftClient.player.getYRot());
             }
-            if (!(vehicle instanceof Saddleable) || ((Saddleable) vehicle).isSaddled()) {
+            if (!(vehicle instanceof net.minecraft.world.entity.LivingEntity living) || !living.getItemBySlot(EquipmentSlot.SADDLE).isEmpty() || vehicle instanceof net.minecraft.world.entity.animal.equine.AbstractHorse) {
                 double doubleValue = this.speed.getValue().doubleValue();
                 double floatValue = this.vertical.getValue().floatValue();
                 if (doubleValue >= Double.longBitsToDouble(4626322717216342016L)) {
@@ -71,14 +66,14 @@ public class EntityControl extends Module {
                 if (!this.entitySpeed.getValue().booleanValue() || isVehicleColliding()) {
                     return;
                 }
-                double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(RenderUtil.getPartialTick()), minecraftClient.player.input, doubleValue);
+                double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, doubleValue);
                 if (this.flight.getValue().booleanValue()) {
-                    if (vehicle instanceof BoatEntity) {
-                        ((BoatEntity) vehicle).setNoGravity(true);
+                    if (vehicle instanceof Boat) {
+                        ((Boat) vehicle).setNoGravity(true);
                     }
-                    if (minecraftClient.options.jumpKey.isPressed()) {
+                    if (minecraftClient.options.keyJump.isDown()) {
                         d = floatValue;
-                    } else if (this.glide.getValue().booleanValue() || InputState.isKeyBindingActive(minecraftClient.options.sprintKey)) {
+                    } else if (this.glide.getValue().booleanValue() || InputState.isKeyBindingActive(minecraftClient.options.keySprint)) {
                         d = -floatValue;
                     } else {
                         d = this.flag ? Double.longBitsToDouble(-4637266464074629120L) : Double.longBitsToDouble(4586105572780146688L);
@@ -86,7 +81,7 @@ public class EntityControl extends Module {
                 } else {
                     d = tickPreEvent.getY();
                 }
-                tickPreEvent.setMovement(new Vec3d(doubleArray2508[0], d, doubleArray2508[1]));
+                tickPreEvent.setMovement(new Vec3(doubleArray2508[0], d, doubleArray2508[1]));
                 this.flag = !this.flag;
             }
         }
@@ -94,7 +89,7 @@ public class EntityControl extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             this.num = System.currentTimeMillis();
         }
     }
@@ -104,6 +99,6 @@ public class EntityControl extends Module {
     }
 
     public boolean isVehicleColliding() {
-        return minecraftClient.player.hasVehicle() && minecraftClient.player.getVehicle().horizontalCollision && this.noCollision.getValue().booleanValue();
+        return minecraftClient.player.getVehicle() != null && minecraftClient.player.getVehicle().horizontalCollision && this.noCollision.getValue().booleanValue();
     }
 }

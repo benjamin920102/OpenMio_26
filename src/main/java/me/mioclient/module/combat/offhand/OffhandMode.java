@@ -3,25 +3,19 @@ package me.mioclient.module.combat.offhand;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import java.util.Iterator;
 import me.mioclient.module.combat.Offhand;
 import me.mioclient.module.exploit.XCarry;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.inventory.Slot;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/OffhandMode.class */
 public enum OffhandMode implements ClientAccessor, NamedValue {
     Totem("Totem", Items.TOTEM_OF_UNDYING),
     Crystal("Crystal", Items.END_CRYSTAL),
@@ -34,12 +28,37 @@ public enum OffhandMode implements ClientAccessor, NamedValue {
     Custom("Custom", Items.SHIELD) { // from class: me.mioclient.module.combat.offhand.OffhandMode.Inner_2
         @Override // me.mioclient.module.combat.offhand.OffhandMode
         public Item getOffhandItem(boolean z) {
-            return OffhandMode.offhand.custom.getValue().stream().findAny().orElse(null);
+            Offhand offhand_lcl = OffhandMode.getOffhand();
+            if (offhand_lcl == null) {
+                return null;
+            }
+            return offhand_lcl.custom.getValue().stream().findAny().orElse(null);
         }
     };
 
-    public static final XCarry xCarry = (XCarry) ClientServices.moduleInjector.getModule(XCarry.class);
-    public static final Offhand offhand = (Offhand) ClientServices.moduleInjector.getModule(Offhand.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving xCarry/offhand null. */
+    private static XCarry xCarry;
+    private static Offhand offhand;
+
+    public static XCarry getXCarry() {
+        if (xCarry == null && ClientServices.moduleInjector != null) {
+            try {
+                xCarry = (XCarry) ClientServices.moduleInjector.getModule(XCarry.class);
+            } catch (Exception e) {
+            }
+        }
+        return xCarry;
+    }
+
+    public static Offhand getOffhand() {
+        if (offhand == null && ClientServices.moduleInjector != null) {
+            try {
+                offhand = (Offhand) ClientServices.moduleInjector.getModule(Offhand.class);
+            } catch (Exception e) {
+            }
+        }
+        return offhand;
+    }
     public final String name;
     public final Item item;
 
@@ -50,19 +69,20 @@ public enum OffhandMode implements ClientAccessor, NamedValue {
 
     public int findOffhandItemSlot(boolean z) {
         Item item1241 = getOffhandItem(z);
-        if (item1241 == null || minecraftClient.player.getOffHandStack().isOf(item1241)) {
+        if (item1241 == null || minecraftClient.player.getOffhandItem().getItem() == item1241) {
             return -1;
         }
-        if ((minecraftClient.currentScreen instanceof ShulkerBoxScreen) || (minecraftClient.currentScreen instanceof GenericContainerScreen)) {
-            Iterator it = ClientAccessor.minecraftClient.player.currentScreenHandler.slots.iterator();
+        if ((minecraftClient.gui.screen() instanceof ShulkerBoxScreen) || (minecraftClient.gui.screen() instanceof ContainerScreen)) {
+            Iterator it = ClientAccessor.minecraftClient.player.containerMenu.slots.iterator();
             while (it.hasNext()) {
                 Slot slot = (Slot) it.next();
-                if (slot.getStack().isOf(item1241)) {
-                    return slot.id;
+                if (slot.getItem().getItem() == item1241) {
+                    return slot.getContainerSlot();
                 }
             }
         }
-        return InventoryUtils.findSlot(item1241, xCarry.isToggled());
+        XCarry xCarry_lcl = getXCarry();
+        return InventoryUtils.findSlot(item1241, xCarry_lcl != null && xCarry_lcl.isToggled());
     }
 
     public Item getOffhandItem(boolean z) {

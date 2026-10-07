@@ -1,16 +1,12 @@
 package me.mioclient.module.render.esp;
 
 import me.mioclient.api.NamedValue;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.network.chat.Component;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ESPRenderMode.class */
 public enum ESPRenderMode implements NamedValue {
-    BOX("Box"),
-    TEXT("Text"),
+    BOX("AABB"),
+    TEXT("Component"),
     BOTH("Both");
 
     public final String name;

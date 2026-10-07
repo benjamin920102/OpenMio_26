@@ -1,10 +1,8 @@
 package me.mioclient.module.combat.automine;
 
 import java.util.function.Consumer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MineTargetState.class */
 public class MineTargetState {
     public BlockPos blockPos;
     public BlockPos blockPos2;

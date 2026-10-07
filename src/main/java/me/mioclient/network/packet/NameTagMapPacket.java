@@ -4,16 +4,11 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.codec.NetworkMessage;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/NameTagMapPacket.class */
 public class NameTagMapPacket implements NetworkMessage {
     public HashMap<String, String> hashMap;
 

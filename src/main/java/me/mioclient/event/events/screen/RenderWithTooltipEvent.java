@@ -3,20 +3,18 @@ package me.mioclient.event.events.screen;
 import me.mioclient.event.Event;
 
 import java.util.List;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/RenderWithTooltipEvent.class */
 public class RenderWithTooltipEvent extends Event {
     public static int num;
     public static int num2;
     public final Screen screen;
-    public List<TooltipComponent> list;
+    public List<ClientTooltipComponent> list;
     public int x;
     public int y;
 
-    public RenderWithTooltipEvent(Screen screen, List<TooltipComponent> list, int i, int i2, int i3, int i4) {
+    public RenderWithTooltipEvent(Screen screen, List<ClientTooltipComponent> list, int i, int i2, int i3, int i4) {
         this.screen = screen;
         this.list = list;
         this.x = i;
@@ -29,11 +27,11 @@ public class RenderWithTooltipEvent extends Event {
         return this.screen;
     }
 
-    public List<TooltipComponent> getComponents() {
+    public List<ClientTooltipComponent> getComponents() {
         return this.list;
     }
 
-    public void setComponents(List<TooltipComponent> list) {
+    public void setComponents(List<ClientTooltipComponent> list) {
         this.list = list;
     }
 

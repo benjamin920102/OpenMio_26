@@ -2,16 +2,11 @@ package me.mioclient.module.render.chams;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.render.chams.ChamsColorApplier;
 
 import java.awt.Color;
 import me.mioclient.module.render.Chams;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChamsMode_2.class */
 public enum ChamsMode_2 implements NamedValue, ChamsColorApplier {
     BOTH("Both") { // from class: me.mioclient.module.render.chams.ChamsMode_2.Inner
         @Override // me.mioclient.module.render.chams.ChamsColorApplier

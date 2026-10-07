@@ -6,10 +6,7 @@ import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.hud.TextHudElement;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.modulelist.ModuleListEntry;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.hud.TextHudElement;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,14 +15,11 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
-import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.client.HUD;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/ModuleList.class */
 public class ModuleList extends me.mioclient.module.HudModule {
     public Setting<Boolean> setting;
     public Setting<HUD.ModuleListMode> setting2;

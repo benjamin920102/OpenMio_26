@@ -3,8 +3,6 @@ package me.mioclient.module.render;
 import me.mioclient.render.shape.BoxRenderer;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.render.shape.BoxRenderer;
-
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import java.awt.Color;
@@ -22,20 +20,17 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.core.Direction;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Tunnels.class */
 public class Tunnels extends Module {
     public Setting<Boolean> verticals = add(new BooleanSetting("Verticals", true));
     public Setting<Float> lineWidth = add(new NumberSetting<>("LineWidth", 1.0f, 0.1f, 3.0f));
@@ -43,38 +38,37 @@ public class Tunnels extends Module {
     public Setting<Integer> minLength = add(new NumberSetting<>("MinLength", 4, 1, 16).setSuffix("m"));
     public Setting<Color> fill = add(new ColorSetting("Fill", new Color(1358888960, true)).setThemeSync(true));
     public Setting<Color> outline = add(new ColorSetting("Outline", new Color(-65536, true)).setThemeSync(true));
-    public static final BlockPos.Mutable mutable = new BlockPos.Mutable();
+    public static final BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
     public final Stopwatch stopwatch;
     public final List<Inner> list;
     public final Queue<Inner> queue;
     public final ObjectSet<Inner> objectSet;
     public final ChunkUpdateHandler ChunkUpdateHandler;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Tunnels$Inner.class */
+    
+    
     public static class Inner {
         public final boolean flag;
-        public Box box;
+        public AABB box;
 
         public Inner(BlockPos blockPos, boolean z) {
-            this(new Box(blockPos), z);
+            this(new AABB(blockPos), z);
         }
 
-        public Inner(Box box, boolean z) {
+        public Inner(AABB box, boolean z) {
             this.box = box;
             this.flag = z;
         }
 
         public double get696() {
-            return Math.max(Math.max(this.box.getLengthX(), this.box.getLengthZ()), this.box.getLengthY());
+            return Math.max(Math.max(this.box.getXsize(), this.box.getZsize()), this.box.getYsize());
         }
 
         public boolean isAdjacentTo(Inner inner) {
             if (this.flag != inner.flag) {
                 return false;
             }
-            Box box = inner.box;
+            AABB box = inner.box;
             if (!this.flag) {
                 if (box.minY != this.box.minY) {
                     return false;
@@ -88,7 +82,7 @@ public class Tunnels extends Module {
         }
 
         public void expandBoundingBox(BlockPos blockPos) {
-            this.box = this.box.union(new Box(blockPos));
+            this.box = this.box.minmax(new AABB(blockPos));
         }
 
         public int hashCode() {
@@ -114,7 +108,7 @@ public class Tunnels extends Module {
             detectTunnelsInChunk(chunkPos);
         }, (chunkPos2, worldChunk2) -> {
             this.list.removeIf(inner -> {
-                return is1982(BlockPos.ofFloored(inner.box.getCenter()), chunkPos2);
+                return is1982(BlockPos.containing(inner.box.getCenter()), chunkPos2);
             });
         }, null);
     }
@@ -147,7 +141,7 @@ public class Tunnels extends Module {
                 });
             }
             this.list.removeIf(inner -> {
-                return Math.sqrt(minecraftClient.player.getEyePos().squaredDistanceTo(inner.box.getCenter())) > Double.longBitsToDouble(4643211215818981376L);
+                return Math.sqrt(minecraftClient.player.getEyePosition().distanceToSqr(inner.box.getCenter())) > Double.longBitsToDouble(4643211215818981376L);
             });
         }
     }
@@ -162,9 +156,9 @@ public class Tunnels extends Module {
                 if (inner.get696() >= this.minLength.getValue().intValue()) {
                     float floatValue = this.height.getValue().floatValue();
                     if (inner.flag) {
-                        floatValue = (float) inner.box.getLengthY();
+                        floatValue = (float) inner.box.getYsize();
                     }
-                    Box withMaxY = inner.box.withMaxY(inner.box.minY + floatValue);
+                    AABB withMaxY = inner.box.setMaxY(inner.box.minY + floatValue);
                     if (RotationManager.isInFrustum(withMaxY)) {
                         BoxRenderer.drawFilledBox(inner_3.getMatrixStack(), withMaxY, this.fill.getValue());
                         BoxRenderer.drawBoxOutline(inner_3.getMatrixStack(), withMaxY, this.outline.getValue(), this.lineWidth.getValue().floatValue());
@@ -185,7 +179,7 @@ public class Tunnels extends Module {
                 }
                 Inner next = it.next();
                 if (next.isAdjacentTo(poll)) {
-                    next.expandBoundingBox(BlockPos.ofFloored(poll.box.getCenter()));
+                    next.expandBoundingBox(BlockPos.containing(poll.box.getCenter()));
                     z = true;
                     break;
                 }
@@ -218,17 +212,17 @@ public class Tunnels extends Module {
     public void detectTunnelsInChunk(ChunkPos chunkPos) {
         boolean is1981;
         for (int i = 0; i < 16; i++) {
-            for (int bottomY = minecraftClient.world.getBottomY(); bottomY < minecraftClient.world.getTopY(); bottomY++) {
+            for (int bottomY = minecraftClient.level.getMinY(); bottomY < minecraftClient.level.getMaxY(); bottomY++) {
                 for (int i2 = 0; i2 < 16; i2++) {
-                    mutable.set(chunkPos.getStartX() + i, bottomY, chunkPos.getStartZ() + i2);
+                    mutable.set(chunkPos.getMinBlockX() + i, bottomY, chunkPos.getMinBlockZ() + i2);
                     if (isNonSolid(mutable) && ((is1981 = is1981(mutable)) || isTunnelCorridor(mutable))) {
                         if (is1981) {
                             this.queue.add(new Inner((BlockPos) mutable, true));
                         } else {
-                            Iterator it = Direction.Type.HORIZONTAL.iterator();
+                            Iterator it = Direction.Plane.HORIZONTAL.iterator();
                             while (true) {
                                 if (it.hasNext()) {
-                                    if (isTunnelCorridor(mutable.offset((Direction) it.next()))) {
+                                    if (isTunnelCorridor(mutable.relative((Direction) it.next()))) {
                                         this.queue.add(new Inner((BlockPos) mutable, false));
                                         break;
                                     }
@@ -242,31 +236,31 @@ public class Tunnels extends Module {
     }
 
     public boolean isTunnelCorridor(BlockPos blockPos) {
-        if (!isNonSolid(blockPos.up()) || isNonSolid(blockPos.down()) || isNonSolid(blockPos.up().up())) {
+        if (!isNonSolid(blockPos.above()) || isNonSolid(blockPos.below()) || isNonSolid(blockPos.above().above())) {
             return false;
         }
-        return (isNonSolid(blockPos.north()) && isNonSolid(blockPos.south()) && isNonSolid(blockPos.up().north()) && isNonSolid(blockPos.up().south())) ? (isNonSolid(blockPos.east()) || isNonSolid(blockPos.west()) || isNonSolid(blockPos.up().east()) || isNonSolid(blockPos.up().west())) ? false : true : isNonSolid(blockPos.east()) && isNonSolid(blockPos.west()) && isNonSolid(blockPos.up().east()) && isNonSolid(blockPos.up().west()) && !isNonSolid(blockPos.north()) && !isNonSolid(blockPos.south()) && !isNonSolid(blockPos.up().north()) && !isNonSolid(blockPos.up().south());
+        return (isNonSolid(blockPos.north()) && isNonSolid(blockPos.south()) && isNonSolid(blockPos.above().north()) && isNonSolid(blockPos.above().south())) ? (isNonSolid(blockPos.east()) || isNonSolid(blockPos.west()) || isNonSolid(blockPos.above().east()) || isNonSolid(blockPos.above().west())) ? false : true : isNonSolid(blockPos.east()) && isNonSolid(blockPos.west()) && isNonSolid(blockPos.above().east()) && isNonSolid(blockPos.above().west()) && !isNonSolid(blockPos.north()) && !isNonSolid(blockPos.south()) && !isNonSolid(blockPos.above().north()) && !isNonSolid(blockPos.above().south());
     }
 
     public boolean is1981(BlockPos blockPos) {
         if (!this.verticals.getValue().booleanValue()) {
             return false;
         }
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (it.hasNext()) {
-            BlockState blockState = minecraftClient.world.getBlockState(blockPos.offset((Direction) it.next()));
-            if (!blockState.isSolid() || blockState.isOf(Blocks.BAMBOO_BLOCK) || blockState.isOf(Blocks.BASALT)) {
+            BlockState blockState = minecraftClient.level.getBlockState(blockPos.relative((Direction) it.next()));
+            if (!blockState.isSolid() || blockState.is(Blocks.BAMBOO_BLOCK) || blockState.is(Blocks.BASALT)) {
                 return false;
             }
         }
-        Iterator it2 = Direction.Type.VERTICAL.iterator();
+        Iterator it2 = Direction.Plane.VERTICAL.iterator();
         while (it2.hasNext()) {
             Direction direction = (Direction) it2.next();
-            BlockPos offset = blockPos.offset(direction);
+            BlockPos offset = blockPos.relative(direction);
             if (!isNonSolid(offset)) {
                 return false;
             }
-            if (!isNonSolid(offset.offset(direction))) {
+            if (!isNonSolid(offset.relative(direction))) {
                 return false;
             }
         }
@@ -274,10 +268,10 @@ public class Tunnels extends Module {
     }
 
     public boolean is1982(BlockPos blockPos, ChunkPos chunkPos) {
-        return blockPos.getX() >= chunkPos.getStartX() && blockPos.getX() <= chunkPos.getEndX() && blockPos.getZ() >= chunkPos.getStartZ() && blockPos.getZ() <= chunkPos.getEndZ();
+        return blockPos.getX() >= chunkPos.getMinBlockX() && blockPos.getX() <= chunkPos.getMaxBlockX() && blockPos.getZ() >= chunkPos.getMinBlockZ() && blockPos.getZ() <= chunkPos.getMaxBlockZ();
     }
 
     public boolean isNonSolid(BlockPos blockPos) {
-        return !minecraftClient.world.getBlockState(blockPos).isSolid();
+        return !minecraftClient.level.getBlockState(blockPos).isSolid();
     }
 }

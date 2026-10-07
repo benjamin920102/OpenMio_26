@@ -5,19 +5,17 @@ import me.mioclient.ducks.DuckSimpleOption;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.block.Block;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Xray.class */
 public class Xray extends Module {
     public static Xray xray;
     public Setting<Boolean> bypass = add(new BooleanSetting("Bypass", false));
-    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", Registries.BLOCK));
+    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", BuiltInRegistries.BLOCK));
     public double val;
 
     public Xray() {
@@ -29,13 +27,13 @@ public class Xray extends Module {
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        this.val = ((Double) minecraftClient.options.getGamma().getValue()).doubleValue();
-        ((DuckSimpleOption<Double>)(Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
+        this.val = ((Double) minecraftClient.options.gamma().get()).doubleValue();
+        ((DuckSimpleOption<Double>)(Object) minecraftClient.options.gamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        ((DuckSimpleOption<Double>)(Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
+        ((DuckSimpleOption<Double>)(Object) minecraftClient.options.gamma()).forceSetValue(Double.valueOf(this.val));
     }
 
     @Override // me.mioclient.module.Module
@@ -49,7 +47,8 @@ public class Xray extends Module {
 
     public boolean isBlockExposed(BlockPos blockPos) {
         for (Direction direction : Direction.values()) {
-            if (!minecraftClient.world.getBlockState(blockPos.offset(direction)).isOpaque()) {
+            // 26.2: BlockState.isOpaque() was removed; isSolidRender() is the full-cube opaque check.
+            if (!minecraftClient.level.getBlockState(blockPos.relative(direction)).isSolidRender()) {
                 return true;
             }
         }
@@ -57,8 +56,9 @@ public class Xray extends Module {
     }
 
     public void reloadWorldRenderer() {
-        if (minecraftClient.world != null) {
-            minecraftClient.worldRenderer.reload();
+        if (minecraftClient.level != null) {
+            // 26.2: LevelRenderer.reload() was removed; LevelExtractor owns chunk rebuilds now.
+            minecraftClient.levelExtractor.allChanged();
         }
     }
 

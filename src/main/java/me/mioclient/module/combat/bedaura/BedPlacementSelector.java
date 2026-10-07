@@ -7,30 +7,22 @@ import me.mioclient.mode.player.AutoCraftMode;
 import me.mioclient.util.combat.ExplosionDamageCalculator;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.combat.ExplosionDamageCalculator;
-
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.module.combat.BedAura;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import me.mioclient.mode.player.AutoCraftMode;
-import me.mioclient.util.world.WorldUtils;
-import me.mioclient.api.ClientFunction;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.manager.RotationManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BedPlacementSelector.class */
 public class BedPlacementSelector implements ClientFunction<LivingEntity, BedPlacement> {
-    public static final BlockPos.Mutable mutable = new BlockPos.Mutable();
+    public static final BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
     public final BedAura bedAura;
     public Direction direction;
-    public Vec3d vec3d;
+    public Vec3 vec3d;
     public float val;
 
     public BedPlacementSelector(BedAura bedAura) {
@@ -41,7 +33,7 @@ public class BedPlacementSelector implements ClientFunction<LivingEntity, BedPla
     /* renamed from: getBedAuraData964, reason: merged with bridge method [inline-methods] */
     public BedPlacement selectTarget(LivingEntity livingEntity) {
         this.val = this.bedAura.range2.getValue().floatValue();
-        Vec3d pos = livingEntity.getPos();
+        Vec3 pos = livingEntity.position();
         float intBitsToFloat = Float.intBitsToFloat(1073741824);
         BedPlacement bedAuraData = null;
         float f = -intBitsToFloat;
@@ -79,20 +71,20 @@ public class BedPlacementSelector implements ClientFunction<LivingEntity, BedPla
     }
 
     public BedPlacement getBedAuraData965(LivingEntity livingEntity, BlockPos blockPos) {
-        if (!minecraftClient.world.getBlockState(blockPos).isReplaceable()) {
+        if (!minecraftClient.level.getBlockState(blockPos).canBeReplaced()) {
             if (!this.bedAura.isBedPartAt(blockPos, BedPart.HEAD)) {
                 return null;
             }
         }
         BlockPos blockPos2 = null;
         Direction direction = null;
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (true) {
             if (!it.hasNext()) {
                 break;
             }
             Direction direction2 = (Direction) it.next();
-            BlockPos offset = blockPos.offset(direction2);
+            BlockPos offset = blockPos.relative(direction2);
             if (!BlockPlacer.isSpaceFree(offset, true, false)) {
                 if (!this.bedAura.isBedPartAt(offset, BedPart.FOOT)) {
                     continue;
@@ -108,25 +100,25 @@ public class BedPlacementSelector implements ClientFunction<LivingEntity, BedPla
         if (blockPos2 == null) {
             return null;
         }
-        float f = ExplosionDamageCalculator.getBedDamage(blockPos.toCenterPos(), livingEntity, this.bedAura.getPredictedBox(livingEntity));
+        float f = ExplosionDamageCalculator.getBedDamage(Vec3.atCenterOf(blockPos), livingEntity, this.bedAura.getPredictedBox(livingEntity));
         if (f < this.bedAura.minDamage.getValue().floatValue()) {
             return null;
         }
-        float f2 = ExplosionDamageCalculator.getBedDamage(blockPos.toCenterPos(), minecraftClient.player);
+        float f2 = ExplosionDamageCalculator.getBedDamage(Vec3.atCenterOf(blockPos), minecraftClient.player);
         if (f2 > this.bedAura.maxSelfDamage.getValue().floatValue()) {
             return null;
         }
         if (this.vec3d == null && !this.bedAura.rotate.getValue().booleanValue()) {
-            this.vec3d = blockPos2.toCenterPos().offset(direction, Double.longBitsToDouble(4602678819172646912L));
+            this.vec3d = Vec3.atCenterOf(blockPos2).relative(direction, Double.longBitsToDouble(4602678819172646912L));
         }
-        return new BedPlacement(blockPos2, blockPos.toImmutable(), f, f2, getBlockHitResult969(direction, blockPos2));
+        return new BedPlacement(blockPos2, blockPos.immutable(), f, f2, getBlockHitResult969(direction, blockPos2));
     }
 
     public Direction getDirection966(Direction direction, BlockPos blockPos, boolean z) {
         boolean booleanValue = this.bedAura.airPlace.getValue().booleanValue();
         for (Direction direction2 : Direction.values()) {
-            BlockPos offset = blockPos.offset(direction2);
-            if (offset.getY() < minecraftClient.world.getTopY() && (WorldUtils.isStashBlock(offset) || booleanValue)) {
+            BlockPos offset = blockPos.relative(direction2);
+            if (offset.getY() < minecraftClient.level.getMaxY() && (WorldUtils.isStashBlock(offset) || booleanValue)) {
                 if (z) {
                     if (!BlockPlacer.getInteractableSides(offset).contains(direction2.getOpposite())) {
                         continue;
@@ -143,22 +135,22 @@ public class BedPlacementSelector implements ClientFunction<LivingEntity, BedPla
         return null;
     }
 
-    public Vec3d getBedPlacementEyePosition(Direction direction, Direction direction2, BlockPos blockPos) {
-        for (Vec3d vec3d : getList968(blockPos, direction)) {
-            if (vec3d.distanceTo(minecraftClient.player.getEyePos()) <= this.val && direction2 == Direction.fromRotation(RotationManager.getRotationsTo(vec3d)[0])) {
+    public Vec3 getBedPlacementEyePosition(Direction direction, Direction direction2, BlockPos blockPos) {
+        for (Vec3 vec3d : getList968(blockPos, direction)) {
+            if (vec3d.distanceTo(minecraftClient.player.getEyePosition()) <= this.val && direction2 == Direction.fromYRot(RotationManager.getRotationsTo(vec3d)[0])) {
                 return vec3d;
             }
         }
         return null;
     }
 
-    public List<Vec3d> getList968(BlockPos blockPos, Direction direction) {
+    public List<Vec3> getList968(BlockPos blockPos, Direction direction) {
         return direction == null ? AutoCraftMode.X8.getWorldCorners(blockPos) : AutoCraftMode.X8.getVisibleFaceCorners(blockPos, direction);
     }
 
     public BlockHitResult getBlockHitResult969(Direction direction, BlockPos blockPos) {
-        if ((!this.bedAura.airPlace.getValue().booleanValue() || WorldUtils.isStashBlock(blockPos.offset(direction))) && !(this.bedAura.liquidPlace.getValue().booleanValue() && WorldUtils.hasFluid(blockPos))) {
-            return new BlockHitResult(this.vec3d, direction.getOpposite(), blockPos.offset(direction), false);
+        if ((!this.bedAura.airPlace.getValue().booleanValue() || WorldUtils.isStashBlock(blockPos.relative(direction))) && !(this.bedAura.liquidPlace.getValue().booleanValue() && WorldUtils.hasFluid(blockPos))) {
+            return new BlockHitResult(this.vec3d, direction.getOpposite(), blockPos.relative(direction), false);
         }
         this.vec3d = getBedPlacementEyePosition((Direction) null, this.direction, blockPos);
         return new BlockHitResult(this.vec3d, direction, blockPos, false);

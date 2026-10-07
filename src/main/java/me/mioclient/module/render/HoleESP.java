@@ -3,18 +3,10 @@ package me.mioclient.module.render;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.shape.BoxRenderer;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.world.HoleData;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.HoleData;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.shape.BoxRenderer;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.awt.Color;
 import me.mioclient.event.events.render.MatrixStackEvent;
@@ -23,17 +15,14 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/HoleESP.class */
 public class HoleESP extends Module {
     public Setting<HoleESPMode> fill = add(new EnumSetting<>("Fill", HoleESPMode.GRADIENT));
     public Setting<Float> lineWidth = add(new NumberSetting<>("LineWidth", 1.0f, 0.1f, 3.0f));
@@ -52,8 +41,7 @@ public class HoleESP extends Module {
     public Setting<Color> trappedFill = add(new ColorSetting("TrappedFill", new Color(233622784, true), v -> this.trapped.isShown()).setThemeSync(true));
     public Setting<Color> trappedOutline = add(new ColorSetting("TrappedOutline", new Color(-1073745408, true), v -> this.safe.isShown()).setThemeSync(true));
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/HoleESP$HoleESPMode.class */
+    
     public enum HoleESPMode implements NamedValue {
         NONE("None"),
         SOLID("Solid"),
@@ -80,15 +68,14 @@ public class HoleESP extends Module {
         return String.valueOf(ClientServices.holeSnapOverlayHelper.getHoles().size());
     }
 
-    /* JADX WARN: Failed to find 'out' block for switch in B:41:0x03c7. Please report as an issue. */
     @Listen
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        double lerp = MathHelper.lerp(inner_3.getTickDelta(), minecraftClient.player.prevY, minecraftClient.player.getY());
-        Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
-        Box box = new Box(PlayerUtils.getRoundedBlockPos());
+        double lerp = Mth.lerp(inner_3.getTickDelta(), minecraftClient.player.yo, minecraftClient.player.getY());
+        Vec3 pos = minecraftClient.gameRenderer.mainCamera().position();
+        AABB box = new AABB(PlayerUtils.getRoundedBlockPos());
         for (HoleData holeSnapData : ClientServices.holeSnapOverlayHelper.getHoles()) {
             if (RotationManager.isInFrustum(holeSnapData.getBox()) && (this.trapped.getValue().booleanValue() || !holeSnapData.isTrapped())) {
-                if (holeSnapData.getBlockPos().isWithinDistance((Position) pos, this.radius.getValue().intValue())) {
+                if (holeSnapData.getBlockPos().closerToCenterThan(pos, this.radius.getValue().intValue())) {
                     if (!minecraftClient.player.getBoundingBox().intersects(holeSnapData.getBox()) || !this.hideOwn.getValue().booleanValue() || this.fade.getValue().booleanValue()) {
                         Color value = this.safeFill.getValue();
                         Color value2 = this.safeOutline.getValue();
@@ -99,10 +86,10 @@ public class HoleESP extends Module {
                             value = this.unsafeFill.getValue();
                             value2 = this.unsafeOutline.getValue();
                         }
-                        double distanceTo = pos.distanceTo(holeSnapData.getBlockPos().toCenterPos());
+                        double distanceTo = pos.distanceTo(Vec3.atCenterOf(holeSnapData.getBlockPos()));
                         boolean z = holeSnapData.getBox().intersects(box) && this.hideOwn.getValue().booleanValue();
                         if (this.fade.getValue().booleanValue() && (distanceTo >= this.fadeRadius.getValue().floatValue() || z)) {
-                            float intBitsToFloat = Float.intBitsToFloat(1065353216) - ((float) MathHelper.clamp((distanceTo - this.fadeRadius.getValue().floatValue()) / (this.radius.getValue().intValue() - this.fadeRadius.getValue().floatValue()), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
+                            float intBitsToFloat = Float.intBitsToFloat(1065353216) - ((float) Mth.clamp((distanceTo - this.fadeRadius.getValue().floatValue()) / (this.radius.getValue().intValue() - this.fadeRadius.getValue().floatValue()), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
                             if (z) {
                                 intBitsToFloat = (float) (lerp - Math.floor(lerp));
                             }
@@ -111,13 +98,13 @@ public class HoleESP extends Module {
                         }
                         switch (this.fill.getValue().ordinal()) {
                             case 1:
-                                BoxRenderer.drawFilledBox(inner_3.getMatrixStack(), holeSnapData.getBox().withMaxY(holeSnapData.getBlockPos().getY() + this.height.getValue().floatValue()), value);
+                                BoxRenderer.drawFilledBox(inner_3.getMatrixStack(), holeSnapData.getBox().setMaxY(holeSnapData.getBlockPos().getY() + this.height.getValue().floatValue()), value);
                                 break;
                             case 2:
-                                BoxRenderer.drawFadingBox(inner_3.getMatrixStack(), holeSnapData.getBox().withMaxY(holeSnapData.getBlockPos().getY() + 1), value);
+                                BoxRenderer.drawFadingBox(inner_3.getMatrixStack(), holeSnapData.getBox().setMaxY(holeSnapData.getBlockPos().getY() + 1), value);
                                 break;
                         }
-                        BoxRenderer.drawBoxOutline(inner_3.getMatrixStack(), holeSnapData.getBox().withMaxY(holeSnapData.getBlockPos().getY() + this.height.getValue().floatValue()), value2, this.lineWidth.getValue().floatValue());
+                        BoxRenderer.drawBoxOutline(inner_3.getMatrixStack(), holeSnapData.getBox().setMaxY(holeSnapData.getBlockPos().getY() + this.height.getValue().floatValue()), value2, this.lineWidth.getValue().floatValue());
                     }
                 }
             }

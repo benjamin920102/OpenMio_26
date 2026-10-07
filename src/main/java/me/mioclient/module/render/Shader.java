@@ -3,20 +3,10 @@ package me.mioclient.module.render;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shader.OutlineShaderPass;
+import me.mioclient.render.shader.OutlineShader;
 import me.mioclient.render.shader.ShaderFramebufferSwapper;
-import me.mioclient.render.shader.ShaderPassRegistry;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.player.EntityUtil;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shader.OutlineShaderPass;
-import me.mioclient.render.shader.ShaderFramebufferSwapper;
-import me.mioclient.render.shader.ShaderPassRegistry;
+import me.mioclient.render.shader.ShaderRegistry;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.player.EntityUtil;
 
@@ -32,26 +22,25 @@ import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.Freecam;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.passive.FishEntity;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.passive.SquidEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
-import net.minecraft.entity.projectile.thrown.ExperienceBottleEntity;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.animal.fish.AbstractFish;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.squid.Squid;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownExperienceBottle;
+import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.CameraType;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Shader.class */
 public class Shader extends Module {
     public static Freecam freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
     public static NoRender norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class);
@@ -97,31 +86,30 @@ public class Shader extends Module {
     public final ObjectArrayList<Entity> objectArrayList;
     public float val;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Shader$MixinHeldItemRendererMode.class */
+    
     public enum MixinHeldItemRendererMode implements NamedValue {
         SOLID("Solid", () -> {
-            return ShaderPassRegistry.shaderFramebufferHelper;
+            return ShaderRegistry.shaderFramebufferHelper;
         }),
         RAINBOW("Rainbow", () -> {
-            return ShaderPassRegistry.shaderFramebufferHelper2;
+            return ShaderRegistry.shaderFramebufferHelper2;
         }),
         GRADIENT("Gradient", () -> {
-            return ShaderPassRegistry.shaderFramebufferHelper3;
+            return ShaderRegistry.shaderFramebufferHelper3;
         }),
         BLOOM("Bloom", () -> {
-            return ShaderPassRegistry.shaderFramebufferHelper4;
+            return ShaderRegistry.shaderFramebufferHelper4;
         });
 
         public final String name;
-        public final Supplier<OutlineShaderPass> supplier;
+        public final Supplier<OutlineShader> supplier;
 
         MixinHeldItemRendererMode(String str, Supplier supplier) {
             this.name = str;
             this.supplier = supplier;
         }
 
-        public OutlineShaderPass getShaderPass() {
+        public OutlineShader getOutlineShader() {
             return this.supplier.get();
         }
 
@@ -131,8 +119,7 @@ public class Shader extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Shader$Mode.class */
+    
     public enum Mode implements NamedValue {
         NONE("None"),
         DOTS("Dots"),
@@ -169,22 +156,26 @@ public class Shader extends Module {
 
     @Listen(get219= -99999999)
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        OutlineShaderPass shaderFramebufferHelper21 = this.shader.getValue().getShaderPass();
+        ShaderRegistry.init();
+        OutlineShader outlineShader = this.shader.getValue().getOutlineShader();
+        if (outlineShader == null) {
+            return;
+        }
         this.objectArrayList.clear();
-        for (Entity entity : minecraftClient.world.getEntities()) {
+        for (Entity entity : minecraftClient.level.entitiesForRendering()) {
             if (shouldRenderEntity(entity)) {
                 this.objectArrayList.add(entity);
             }
         }
         this.objectArrayList.sort(Comparator.comparing(entity2 -> {
-            return Double.valueOf(minecraftClient.gameRenderer.getCamera().getPos().squaredDistanceTo(entity2.getPos()));
+            return Double.valueOf(minecraftClient.gameRenderer.mainCamera().position().distanceToSqr(entity2.position()));
         }));
-        ShaderFramebufferSwapper.swapAndRender(shaderFramebufferHelper21, false, () -> {
-            inner_3.getMatrixStack().push();
+        ShaderFramebufferSwapper.swapAndRender(outlineShader, false, () -> {
+            inner_3.getMatrixStack().pushPose();
             this.objectArrayList.forEach(entity3 -> {
-                renderEntityToOutline(inner_3, entity3, shaderFramebufferHelper21);
+                renderEntityToOutline(inner_3, entity3, outlineShader);
             });
-            inner_3.getMatrixStack().pop();
+            inner_3.getMatrixStack().popPose();
         });
     }
 
@@ -193,23 +184,16 @@ public class Shader extends Module {
         this.val = getClusterAlpha((Entity) this.objectArrayList.stream().min(Comparator.comparing(this::getClusterAlpha)).orElse(null));
     }
 
-    public void renderEntityToOutline(MatrixStackEvent matrixStackEvent, Entity entity, OutlineShaderPass shaderFramebufferHelper) {
+    public void renderEntityToOutline(MatrixStackEvent matrixStackEvent, Entity entity, OutlineShader shaderFramebufferHelper) {
         if (entity.isAlive() || this.dead.getValue().booleanValue()) {
-            Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
-            float f = matrixStackEvent.getTickDelta();
-            double lerp = MathHelper.lerp(f, entity.lastRenderX, entity.getX()) - pos.x;
-            double lerp2 = MathHelper.lerp(f, entity.lastRenderY, entity.getY()) - pos.y;
-            double lerp3 = MathHelper.lerp(f, entity.lastRenderZ, entity.getZ()) - pos.z;
-            float lerp4 = MathHelper.lerp(f, entity.prevYaw, entity.getYaw());
-            shaderFramebufferHelper.outlineVertexConsumerProvider.setColor(255, 255, 255, 255);
-            minecraftClient.getEntityRenderDispatcher().render(entity, lerp, lerp2, lerp3, lerp4, f, matrixStackEvent.getMatrixStack(), shaderFramebufferHelper.outlineVertexConsumerProvider, 0);
+            me.mioclient.render.RenderUtil.INSTANCE.renderEntity(entity, matrixStackEvent.getTickDelta(), matrixStackEvent.getMatrixStack(), null);
         }
     }
 
     public float getClusterAlpha(Entity entity) {
         if (entity != null && norender.isToggled() && norender.noCluster.getValue().booleanValue()) {
-            double distanceTo = minecraftClient.player.getPos().distanceTo(entity.getPos());
-            float width = entity.getWidth();
+            double distanceTo = minecraftClient.player.position().distanceTo(entity.position());
+            float width = entity.getBbWidth();
             if (distanceTo <= width && entity != minecraftClient.player) {
                 float f = (float) (distanceTo / width);
                 float intValue = norender.clusterAlpha.getValue().intValue() / Float.intBitsToFloat(1132396544);
@@ -219,33 +203,68 @@ public class Shader extends Module {
         return Float.intBitsToFloat(1065353216);
     }
 
+    /* Picks the outline post chain for the current mode. SOLID uses the crisp
+       outline/fill/both variants, BLOOM the bloom chain, GRADIENT/RAINBOW the
+       animated-effect variants (static uniforms ship in the JSONs; per-frame UBO
+       animation is a follow-up). Null means vanilla compositing only. */
+    public net.minecraft.resources.Identifier pickActiveOutlineChain() {
+        if (!isToggled()) {
+            return null;
+        }
+        if (this.shader.getValue() == MixinHeldItemRendererMode.BLOOM) {
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_bloom");
+        }
+        boolean fill = this.fill.getValue().getAlpha() != 0;
+        boolean outline = this.outline2.getValue().getAlpha() != 0;
+        if (!fill && !outline) {
+            return null;
+        }
+        if (this.shader.getValue() == MixinHeldItemRendererMode.RAINBOW) {
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_rainbow_" + alphaBucket());
+        }
+        if (this.shader.getValue() == MixinHeldItemRendererMode.GRADIENT) {
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_gradient_" + alphaBucket());
+        }
+        if (fill && outline) {
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_both_" + alphaBucket());
+        }
+        if (fill) {
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_fill_" + alphaBucket());
+        }
+        return net.minecraft.resources.Identifier.fromNamespaceAndPath("mio", "outline_outline");
+    }
+
+    public int alphaBucket() {
+        return Math.max(20, Math.min(100, Math.round((this.fill.getValue().getAlpha() / 255.0f) * 5.0f) * 20));
+    }
+
     public Color applyClusterAlpha(Color color) {
         float f = this.val;
-        if (ShaderPassRegistry.flag2) {
+        if (ShaderRegistry.flag2) {
             f = Float.intBitsToFloat(1065353216);
         }
         return ColorUtils.withAlpha(color, (int) (f * color.getAlpha()));
     }
 
     public float getOverlayAlpha() {
-        return ShaderPassRegistry.flag2 ? this.overlayAlpha.getValue().floatValue() : this.overlayAlpha.getValue().floatValue() * this.val;
+        return ShaderRegistry.flag2 ? this.overlayAlpha.getValue().floatValue() : this.overlayAlpha.getValue().floatValue() * this.val;
     }
 
     public boolean shouldRenderEntity(Entity entity) {
         float intValue = this.range2.getValue().intValue();
-        if (entity instanceof EndCrystalEntity) {
+        if (entity instanceof EndCrystal) {
             intValue = this.range.getValue().intValue();
         }
         if (entity instanceof ItemEntity) {
             intValue = this.range3.getValue().intValue();
         }
         boolean z = !RotationManager.isInFrustum(entity.getBoundingBox()) || minecraftClient.player.distanceTo(entity) > intValue;
-        if (((entity instanceof PlayerEntity) && ((PlayerEntity) entity).isDead()) || z || EntityUtil.isFirstPersonView(entity)) {
+        if (((entity instanceof Player) && ((Player) entity).isRemoved()) || z || EntityUtil.isFirstPersonView(entity)) {
             return false;
         }
-        boolean z2 = minecraftClient.gameRenderer.getCamera().isThirdPerson() || freecam.isToggled();
-        if (!(entity instanceof PlayerEntity)) {
-            return ((entity instanceof ItemEntity) && this.items.getValue().booleanValue()) || ((entity instanceof ExperienceBottleEntity) && this.exp.getValue().booleanValue()) || ((((entity instanceof PassiveEntity) || (entity instanceof FishEntity) || (entity instanceof SquidEntity)) && this.animals.getValue().booleanValue()) || (((entity instanceof Monster) && this.hostiles.getValue().booleanValue()) || (((entity instanceof EnderPearlEntity) && this.pearls.getValue().booleanValue()) || (((entity instanceof EndCrystalEntity) && this.crystals.getValue().booleanValue()) || ((entity instanceof AbstractMinecartEntity) && this.minecarts.getValue().booleanValue())))));
+        boolean z2 = minecraftClient.options.getCameraType() != CameraType.FIRST_PERSON || freecam.isToggled();
+        if (!(entity instanceof Player)) {
+            return ((entity instanceof ItemEntity) && this.items.getValue().booleanValue()) || ((entity instanceof ThrownExperienceBottle) && this.exp.getValue().booleanValue()) || ((((entity instanceof Animal) || (entity instanceof AbstractFish) || (entity instanceof Squid)) && this.animals.getValue().booleanValue()) || (((entity instanceof Monster) && this.hostiles.getValue().booleanValue()) || (((entity instanceof ThrownEnderpearl) && this.pearls.getValue().booleanValue()) || (((entity instanceof EndCrystal) && this.crystals.getValue().booleanValue()) || ((entity instanceof AbstractMinecart) && this.minecarts.getValue().booleanValue())))));
         }
         if (z2 && this.self.getValue().booleanValue() && entity == minecraftClient.player) {
             return true;
@@ -254,10 +273,10 @@ public class Shader extends Module {
     }
 
     public boolean isHandFillDisabled() {
-        return ShaderPassRegistry.flag2 && !this.fill2.getValue().booleanValue();
+        return ShaderRegistry.flag2 && !this.fill2.getValue().booleanValue();
     }
 
     public boolean isHandOutlineDisabled() {
-        return ShaderPassRegistry.flag2 && !this.outline.getValue().booleanValue();
+        return ShaderRegistry.flag2 && !this.outline.getValue().booleanValue();
     }
 }

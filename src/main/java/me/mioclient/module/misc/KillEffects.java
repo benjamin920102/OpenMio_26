@@ -14,12 +14,7 @@ import me.mioclient.util.io.FileIO;
 import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.io.FileIO;
-import me.mioclient.util.player.PlayerUtils;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
@@ -36,41 +31,33 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.util.client.SoundPlayer;
-import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.player.AttackHookPostEvent;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.IRC;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.math.random.ThreadSafeRandom;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.RandomSource;
 import org.apache.commons.io.FileUtils;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/KillEffects.class */
 public class KillEffects extends Module {
     public Setting<Boolean> killSound = add(new BooleanSetting("KillSound", false).setVisible());
     public Setting<Boolean> players = add(new BooleanSetting("Players", false, v -> this.killSound.isShown()).setVisible());
@@ -93,7 +80,7 @@ public class KillEffects extends Module {
     public Setting<Boolean> random = add(new BooleanSetting("Random", true).requiresSettings(this.autoEZ));
     public Setting<Boolean> refresh = add(new BooleanSetting("Refresh", false).requiresSettings(this.autoEZ));
     public static IRC iRC = (IRC) ClientServices.moduleInjector.getModule(IRC.class);
-    public static final Random random2 = new ThreadSafeRandom(System.currentTimeMillis());
+    public static final RandomSource random2 = RandomSource.create();
     public final ConcurrentHashMap<UUID, Integer> concurrentHashMap;
     public final ObjectList<UUID> objectList;
     public int num;
@@ -152,33 +139,33 @@ public class KillEffects extends Module {
 
     @Listen
     public void onAttackHookPost(AttackHookPostEvent attackHookPostEvent) {
-        PlayerEntity playerEntity;
+        Player playerEntity;
         if (attackHookPostEvent.getPhase() == KeyPearlMode.Post || isNotInGame()) {
             return;
         }
-        PlayerEntity entity181 = (attackHookPostEvent.getEntity()) instanceof PlayerEntity ? (PlayerEntity) (attackHookPostEvent.getEntity()) : null;
-        if (!(entity181 instanceof PlayerEntity) || (playerEntity = entity181) == minecraftClient.player) {
+        Player entity181 = (attackHookPostEvent.getEntity()) instanceof Player ? (Player) (attackHookPostEvent.getEntity()) : null;
+        if (!(entity181 instanceof Player) || (playerEntity = entity181) == minecraftClient.player) {
             return;
         }
         if (ClientServices.socialManager.isFriend(playerEntity.getName().getString()) || EntityUtil.getEntityHealth((Entity) playerEntity) <= 0.0f) {
             return;
         }
         try {
-            this.concurrentHashMap.put(playerEntity.getUuid(), Integer.valueOf(minecraftClient.player.age));
+            this.concurrentHashMap.put(playerEntity.getUUID(), Integer.valueOf(minecraftClient.player.tickCount));
         } catch (Exception e) {
         }
     }
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof DeathMessageS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundPlayerCombatKillPacket) {
             this.num = -1;
         }
     }
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        PlayerEntity playerByUuid = null;
+        Player playerByUuid = null;
         String string3005;
         if (isNotInGame()) {
             return;
@@ -192,10 +179,10 @@ public class KillEffects extends Module {
                 }
             }
             if (this.thunder.getValue().booleanValue() && this.self2.getValue().booleanValue()) {
-                spawnLightning(minecraftClient.player.getPos());
+                spawnLightning(minecraftClient.player.position());
             }
             if (this.ashes.getValue().booleanValue() && this.self3.getValue().booleanValue()) {
-                spawnAshParticles(minecraftClient.player.getPos());
+                spawnAshParticles(minecraftClient.player.position());
             }
         }
         this.objectList.clear();
@@ -204,12 +191,12 @@ public class KillEffects extends Module {
             while (it.hasNext()) {
                 UUID uuid = (UUID) it.next();
                 try {
-                    playerByUuid = minecraftClient.world.getPlayerByUuid(uuid);
+                    playerByUuid = minecraftClient.level.getPlayerByUUID(uuid);
                 } catch (Exception e) {
                 }
                 if (playerByUuid == null) {
                     this.objectList.add(uuid);
-                } else if (minecraftClient.player.age - this.concurrentHashMap.get(uuid).intValue() > 20) {
+                } else if (minecraftClient.player.tickCount - this.concurrentHashMap.get(uuid).intValue() > 20) {
                     this.objectList.add(uuid);
                 } else if (playerByUuid.getHealth() <= 0.0f) {
                     this.objectList.add(uuid);
@@ -228,10 +215,10 @@ public class KillEffects extends Module {
                         }
                     }
                     if (this.thunder.getValue().booleanValue() && (PlayerUtils.hasArmor((LivingEntity) playerByUuid) || !this.ignoreNakeds.getValue().booleanValue())) {
-                        spawnLightning(playerByUuid.getPos());
+                        spawnLightning(playerByUuid.position());
                     }
                     if (this.ashes.getValue().booleanValue()) {
-                        spawnAshParticles(playerByUuid.getPos());
+                        spawnAshParticles(playerByUuid.position());
                     }
                     if (this.killSound.getValue().booleanValue() && this.players.getValue().booleanValue() && this.volume.getValue().floatValue() > 0.0f) {
                         SoundPlayer searchHelper4_429702 = ClientServices.killstreakSoundManager.findSoundPlayer(this.sound.getValue());
@@ -259,7 +246,7 @@ public class KillEffects extends Module {
         }
     }
 
-    public void registerAttackTarget(PlayerEntity playerEntity) {
+    public void registerAttackTarget(Player playerEntity) {
         if (isNotInGame() || playerEntity == minecraftClient.player) {
             return;
         }
@@ -267,7 +254,7 @@ public class KillEffects extends Module {
             return;
         }
         try {
-            this.concurrentHashMap.put(playerEntity.getUuid(), Integer.valueOf(minecraftClient.player.age));
+            this.concurrentHashMap.put(playerEntity.getUUID(), Integer.valueOf(minecraftClient.player.tickCount));
         } catch (Exception e) {
         }
     }
@@ -284,9 +271,7 @@ public class KillEffects extends Module {
                 this.num2 = 0;
             } catch (Exception e) {
                 if (this.autoEZ.getValue().booleanValue()) {
-                    ChatUtils.sendPrefixedMessage(Text.literal(new StringTemplate().arg(String.valueOf(e)).format("Failed to update AutoEZ lines: \u0001")).styled(style -> {
-                        return style.withColor(Formatting.RED);
-                    }), ChatUtils.createSignature(-9634482), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
+                    ChatUtils.sendPrefixedMessage(Component.literal(new StringTemplate().arg(String.valueOf(e)).format("Failed to update AutoEZ lines: \u0001")), ChatUtils.createSignature(-9634482), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
                     try {
                         Files.createFile(path1566, new FileAttribute[0]);
                     } catch (Exception e2) {
@@ -314,20 +299,33 @@ public class KillEffects extends Module {
         }
     }
 
-    public void spawnLightning(Vec3d vec3d) {
+    public void spawnLightning(Vec3 vec3d) {
+        // 26.2: LightningBolt(EntityType, Level) + setVisualOnly(true) for client-side-only kill effect.
+        if (minecraftClient.level == null) {
+            return;
+        }
         for (int i = 0; i < this.lightnings.getValue().intValue(); i++) {
-            Entity lightningEntity = new LightningEntity(EntityType.LIGHTNING_BOLT, minecraftClient.world);
-            ((LightningEntity) lightningEntity).setPosition(vec3d);
-            ((LightningEntity) lightningEntity).refreshPositionAfterTeleport(vec3d);
-            minecraftClient.world.addEntity(lightningEntity);
+            LightningBolt lightningEntity = new LightningBolt(EntityTypes.LIGHTNING_BOLT, minecraftClient.level);
+            lightningEntity.setVisualOnly(true);
+            lightningEntity.setPos(vec3d.x, vec3d.y, vec3d.z);
+            minecraftClient.level.addEntity(lightningEntity);
         }
     }
 
-    public void spawnAshParticles(Vec3d vec3d) {
-        for (int i = 0; i < random2.nextInt(35) + 25; i++) {
-            Particle addParticle = minecraftClient.particleManager.addParticle((ParticleEffect) (random2.nextBoolean() ? ParticleTypes.ASH : ParticleTypes.WHITE_ASH), vec3d.getX() + (random2.nextGaussian() * Double.longBitsToDouble(4597454643433098445L)), (vec3d.getY() + Double.longBitsToDouble(4611686018427387904L)) - (random2.nextGaussian() * Double.longBitsToDouble(4602949035107339469L)), vec3d.getZ() + (random2.nextGaussian() * Double.longBitsToDouble(4597454643433098445L)), 0.0d, Double.longBitsToDouble(-4631501856787818086L) - (random2.nextGaussian() * Double.longBitsToDouble(4602678819172646912L)), 0.0d);
-            if (addParticle != null) {
-                addParticle.maxAge += 15;
+    public void spawnAshParticles(Vec3 vec3d) {
+        // 26.2: ParticleEngine#createParticle(ParticleOptions, x, y, z, vx, vy, vz) + add(Particle).
+        if (minecraftClient.level == null || minecraftClient.particleEngine == null) {
+            return;
+        }
+        for (int i = 0; i < 24; i++) {
+            double vx = (random2.nextDouble() - 0.5) * 0.6;
+            double vy = random2.nextDouble() * 0.8 + 0.2;
+            double vz = (random2.nextDouble() - 0.5) * 0.6;
+            Particle p = minecraftClient.particleEngine.createParticle(ParticleTypes.ASH,
+                    vec3d.x + (random2.nextDouble() - 0.5) * 0.8, vec3d.y + random2.nextDouble() * 0.6, vec3d.z + (random2.nextDouble() - 0.5) * 0.8,
+                    vx, vy, vz);
+            if (p != null) {
+                minecraftClient.particleEngine.add(p);
             }
         }
     }

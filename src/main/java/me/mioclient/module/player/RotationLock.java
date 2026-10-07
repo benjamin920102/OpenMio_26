@@ -5,11 +5,7 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.MathConstants;
-
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -21,10 +17,19 @@ import me.mioclient.module.render.FreeLook;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/RotationLock.class */
 public class RotationLock extends Module {
-    public static FreeLook freelook = (FreeLook) ClientServices.moduleInjector.getModule(FreeLook.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving freelook null. */
+    private static FreeLook freelook;
+
+    public static FreeLook getFreelook() {
+        if (freelook == null && ClientServices.moduleInjector != null) {
+            try {
+                freelook = (FreeLook) ClientServices.moduleInjector.getModule(FreeLook.class);
+            } catch (Exception e) {
+            }
+        }
+        return freelook;
+    }
     public Setting<Boolean> yaw = add(new BooleanSetting("Yaw", true).setVisible());
     public Setting<Boolean> custom = add(new BooleanSetting("Custom", false).requiresSettings(this.yaw));
     public Setting<Float> value2 = add(new NumberSetting<>("Value", 0.0f, -180.0f, 180.0f).requiresSettings(this.yaw, this.custom));
@@ -39,7 +44,8 @@ public class RotationLock extends Module {
 
     @Listen(get219= RenderConstants.num)
     public void onMotion(MotionEvent motionEvent) {
-        if (motionEvent.getPhase() == KeyPearlMode.Pre && freelook.isToggled()) {
+        FreeLook freelook_lcl = getFreelook();
+        if (motionEvent.getPhase() == KeyPearlMode.Pre && freelook_lcl != null && freelook_lcl.isToggled()) {
             if (this.yaw.getValue().booleanValue()) {
                 motionEvent.setYaw(getYaw());
             }
@@ -51,7 +57,8 @@ public class RotationLock extends Module {
 
     @Listen(get219= RenderConstants.num)
     public void onRotation(RotationEvent event_3) {
-        if (freelook.isToggled()) {
+        FreeLook freelook_lcl = getFreelook();
+        if (freelook_lcl != null && freelook_lcl.isToggled()) {
             if (this.yaw.getValue().booleanValue()) {
                 event_3.setYaw(getYaw());
                 event_3.cancel();
@@ -66,15 +73,15 @@ public class RotationLock extends Module {
     @Listen
     public void onTick(TickEvent tickEvent) {
         if (this.yaw.getValue().booleanValue()) {
-            minecraftClient.player.setYaw(getYaw());
+            minecraftClient.player.setYRot(getYaw());
         }
         if (this.pitch.getValue().booleanValue()) {
-            minecraftClient.player.setPitch(getPitch());
+            minecraftClient.player.setXRot(getPitch());
         }
     }
 
     public float getYaw() {
-        return !this.custom.getValue().booleanValue() ? Math.round((minecraftClient.player.getYaw() + Float.intBitsToFloat(1065353216)) / MathConstants.num) * MathConstants.num : this.value2.getValue().floatValue();
+        return !this.custom.getValue().booleanValue() ? Math.round((minecraftClient.player.getYRot() + Float.intBitsToFloat(1065353216)) / MathConstants.num) * MathConstants.num : this.value2.getValue().floatValue();
     }
 
     public float getPitch() {

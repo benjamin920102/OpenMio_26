@@ -8,11 +8,6 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.util.registry.RegistrySuggestionProvider;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.math.ColorUtils;
-
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -29,23 +24,20 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
-import net.minecraft.util.Formatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.ChatFormatting;
 import org.jetbrains.annotations.NotNull;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.ObjectSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_32.class */
 public final class ModuleSettingCommand extends CommandFeature {
     public final Module module;
 
@@ -55,7 +47,7 @@ public final class ModuleSettingCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("state", BoolArgumentType.bool()).suggests((commandContext, suggestionsBuilder) -> {
             return suggestionsBuilder.buildFuture();
         }).executes(commandContext2 -> {
@@ -67,15 +59,15 @@ public final class ModuleSettingCommand extends CommandFeature {
                 return 1;
             }
             ((ObjectSetting<?>) option).getValue().clear();
-            ChatUtils.sendPrefixedMessage(Text.literal(this.module.getName()).append(Text.literal(" ").append(option.getName()).styled(style -> {
-                return style.withFormatting(Formatting.GRAY);
+            ChatUtils.sendPrefixedMessage(Component.literal(this.module.getName()).append(Component.literal(" ").append(option.getName()).withStyle(style -> {
+                return style.applyFormat(ChatFormatting.GRAY);
             })).append(": Cleared"), ChatUtils.signatureOfModule(this.module), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
             return 1;
         })).then(CommandFeature.argument("value", new SettingValueArgumentType(this.module, "setting")).executes(commandContext4 -> {
             Setting<?> option = ModuleSettingArgumentType.getOption(commandContext4, this.module, "setting");
             String str = (String) commandContext4.getArgument("value", String.class);
             try {
-                Formatting formatting = null;
+                ChatFormatting formatting = null;
                 if (option instanceof EntityListObjectSetting) {
                     EntityListObjectSetting entityListObjectSetting = (EntityListObjectSetting) option;
                     Collection<String> collection53 = RegistrySuggestionProvider.getProvider(entityListObjectSetting.getRegistry()).getGroupEntries(str);
@@ -85,34 +77,34 @@ public final class ModuleSettingCommand extends CommandFeature {
                         if (stream.anyMatch(entityListObjectSetting::containsString)) {
                             Objects.requireNonNull(entityListObjectSetting);
                             collection53.forEach(entityListObjectSetting::removeFromString);
-                            formatting = Formatting.RED;
+                            formatting = ChatFormatting.RED;
                         } else {
                             Objects.requireNonNull(entityListObjectSetting);
                             collection53.forEach(entityListObjectSetting::addToSetFromString);
-                            formatting = Formatting.GREEN;
+                            formatting = ChatFormatting.GREEN;
                         }
                     }
                 }
                 if (formatting == null) {
                     option.loadFromString(str);
                 }
-                MutableText text2532 = (MutableText)(formatSettingValue(option));
+                MutableComponent text2532 = (MutableComponent)(formatSettingValue(option));
                 if (option instanceof ObjectSetting) {
                     ObjectSetting objectSetting = (ObjectSetting) option;
                     if (formatting == null) {
-                        formatting = objectSetting.containsString(str) ? Formatting.GREEN : Formatting.RED;
+                        formatting = objectSetting.containsString(str) ? ChatFormatting.GREEN : ChatFormatting.RED;
                     }
-                    Formatting formatting2 = formatting;
-                    text2532 = Text.literal(str).styled(style -> {
-                        return style.withFormatting(formatting2);
+                    ChatFormatting formatting2 = formatting;
+                    text2532 = Component.literal(str).withStyle(style -> {
+                        return style.applyFormat(formatting2);
                     });
                 }
-                ChatUtils.sendPrefixedMessage(Text.literal(this.module.getName()).append(Text.literal(" ").append(option.getName()).styled(style2 -> {
-                    return style2.withFormatting(Formatting.GRAY);
-                })).append(": ").append((Text) text2532), ChatUtils.signatureOfModule(this.module), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
+                ChatUtils.sendPrefixedMessage(Component.literal(this.module.getName()).append(Component.literal(" ").append(option.getName()).withStyle(style2 -> {
+                    return style2.applyFormat(ChatFormatting.GRAY);
+                })).append(": ").append((Component) text2532), ChatUtils.signatureOfModule(this.module), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
                 return 1;
             } catch (Throwable th) {
-                ChatUtils.sendPrefixedMessage(Text.literal("Invalid value: ").append(str), ChatUtils.signatureOfModule(this.module), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+                ChatUtils.sendPrefixedMessage(Component.literal("Invalid value: ").append(str), ChatUtils.signatureOfModule(this.module), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                 return 1;
             }
         })).then(CommandFeature.literal("reset").executes(commandContext5 -> {
@@ -120,25 +112,25 @@ public final class ModuleSettingCommand extends CommandFeature {
             return 1;
         })).executes(commandContext6 -> {
             Setting<?> option = ModuleSettingArgumentType.getOption(commandContext6, this.module, "setting");
-            ChatUtils.sendMessage(Text.literal(this.module.getName()).append(Text.literal(" ").append(option.getName()).styled(style -> {
-                return style.withFormatting(Formatting.GRAY);
+            ChatUtils.sendMessage(Component.literal(this.module.getName()).append(Component.literal(" ").append(option.getName()).withStyle(style -> {
+                return style.applyFormat(ChatFormatting.GRAY);
             })).append(": ").append(formatSettingValue(option)), ChatUtils.signatureOfModule(this.module));
             return 1;
         })).then(CommandFeature.literal("Enabled").then(CommandFeature.argument("state", BoolArgumentType.bool()).executes(commandContext7 -> {
             this.module.setToggled(((Boolean) commandContext7.getArgument("state", Boolean.class)).booleanValue());
             return 1;
         })).executes(commandContext8 -> {
-            ChatUtils.sendMessage(Text.literal("Module ").append(Text.literal(this.module.getName()).styled(style -> {
-                return style.withFormatting(Formatting.GRAY);
-            })).append(" is ").append(Text.literal(this.module.isToggled() ? "enabled" : "disabled").styled(style2 -> {
-                return this.module.isToggled() ? style2.withFormatting(Formatting.GREEN) : style2.withFormatting(Formatting.RED);
+            ChatUtils.sendMessage(Component.literal("Module ").append(Component.literal(this.module.getName()).withStyle(style -> {
+                return style.applyFormat(ChatFormatting.GRAY);
+            })).append(" is ").append(Component.literal(this.module.isToggled() ? "enabled" : "disabled").withStyle(style2 -> {
+                return this.module.isToggled() ? style2.applyFormat(ChatFormatting.GREEN) : style2.applyFormat(ChatFormatting.RED);
             })), ChatUtils.signatureOfModule(this.module));
             return 1;
         })).executes(commandContext9 -> {
-            MutableText empty = Text.empty();
+            MutableComponent empty = Component.empty();
             empty.append(getMutableText2529()).append(" [%s - %s]".formatted(this.module.getKeybind().getBindString(), this.module.getKeybind().getMode().getName()));
             for (Setting<?> setting : this.module.getRegistry()) {
-                MutableText literal = Text.literal(new StringTemplate().arg(setting.getName()).format("\n\u0001: "));
+                MutableComponent literal = Component.literal(new StringTemplate().arg(setting.getName()).format("\n\u0001: "));
                 Objects.requireNonNull(setting);
                 int typeSwitchIndex = setting instanceof EnumSetting ? 0
                 : setting instanceof ObjectSetting ? 1
@@ -146,28 +138,28 @@ public final class ModuleSettingCommand extends CommandFeature {
                 : -1;
         switch (typeSwitchIndex) {
                     case 0:
-                        literal.append(Text.literal(ClientTextRenderer.capitalize(((Enum) ((EnumSetting) setting).getValue()).name())).formatted(Formatting.GRAY));
+                        literal.append(Component.literal(ClientTextRenderer.capitalize(((Enum) ((EnumSetting) setting).getValue()).name())).withStyle(ChatFormatting.GRAY));
                         break;
                     case 1:
-                        literal.append(Text.literal(String.join(", ", ((ObjectSetting) setting).getValueStrings())).formatted(Formatting.GRAY));
+                        literal.append(Component.literal(String.join(", ", ((ObjectSetting) setting).getValueStrings())).withStyle(ChatFormatting.GRAY));
                         break;
                     case 2:
                         ColorSetting colorSetting = (ColorSetting) setting;
-                        literal.append(Text.literal(getString2530(colorSetting)).styled(style -> {
+                        literal.append(Component.literal(getString2530(colorSetting)).withStyle(style -> {
                             return style.withColor(colorSetting.getValue().hashCode());
                         }));
                         break;
                     default:
-                        literal.append(Text.literal(setting.getValue().toString()).formatted(Formatting.GRAY));
+                        literal.append(Component.literal(setting.getValue().toString()).withStyle(ChatFormatting.GRAY));
                         break;
                 }
                 String string2921 = new StringTemplate().arg(setting.getName()).arg(this.module.getName().toLowerCase()).arg(ClientCommandRegistry.getPrefix()).format("\u0001\u0001 \u0001 ");
-                literal.styled(style2 -> {
-                    return style2.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, string2921));
+                literal.withStyle(style2 -> {
+                    return style2.withClickEvent(new ClickEvent.SuggestCommand( string2921));
                 });
-                empty.append((Text) literal);
+                empty.append((Component) literal);
             }
-            ChatUtils.sendMessage((Text) empty, ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage((Component) empty, ChatUtils.createSignature(-1));
             return 1;
         });
         literalArgumentBuilder.then(CommandFeature.literal("reset").executes(commandContext10 -> {
@@ -180,18 +172,16 @@ public final class ModuleSettingCommand extends CommandFeature {
     }
 
     @NotNull
-    public MutableText getMutableText2529() {
-        MutableText literal = Text.literal(this.module.getName());
-        literal.styled(style -> {
-            return ChatUtils.withDynamicColor(style, () -> {
-                return this.module.isToggled() ? Formatting.GREEN.getColorValue() : Formatting.RED.getColorValue();
-            });
+    public MutableComponent getMutableText2529() {
+        MutableComponent literal = Component.literal(this.module.getName());
+        literal.withStyle(style -> {
+            return style.withColor(this.module.isToggled() ? ChatFormatting.GREEN : ChatFormatting.RED);
         });
-        literal.styled(style2 -> {
-            return style2.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(this.module.getDescription().split("\n")[0])));
+        literal.withStyle(style2 -> {
+            return style2.withHoverEvent(new HoverEvent.ShowText(Component.literal(this.module.getDescription().split("\n")[0])));
         });
-        literal.styled(style3 -> {
-            return style3.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, new StringTemplate().arg(this.module.getName()).arg(ClientCommandRegistry.getPrefix()).format("\u0001toggle \u0001")));
+        literal.withStyle(style3 -> {
+            return style3.withClickEvent(new ClickEvent.RunCommand(new StringTemplate().arg(this.module.getName()).arg(ClientCommandRegistry.getPrefix()).format("\u0001toggle \u0001")));
         });
         return literal;
     }
@@ -204,25 +194,25 @@ public final class ModuleSettingCommand extends CommandFeature {
     public CompletableFuture<Suggestions> suggestClear(CommandContext<?> commandContext, SuggestionsBuilder suggestionsBuilder) {
         try {
             if (ModuleSettingArgumentType.getOption(commandContext, this.module, "setting") instanceof ObjectSetting) {
-                return CommandSource.suggestMatching(new String[]{"clear"}, suggestionsBuilder);
+                return SharedSuggestionProvider.suggest(new String[]{"clear"}, suggestionsBuilder);
             }
         } catch (Exception e) {
         }
         return Suggestions.empty();
     }
 
-    public Text formatSettingValue(Setting<?> setting) {
-        MutableText literal = Text.literal(setting.getValue().toString());
+    public Component formatSettingValue(Setting<?> setting) {
+        MutableComponent literal = Component.literal(setting.getValue().toString());
         if (setting instanceof ColorSetting) {
-            literal = Text.literal(ColorUtils.colorToHex(((ColorSetting) setting).getValue(), true)).styled(style -> {
+            literal = Component.literal(ColorUtils.colorToHex(((ColorSetting) setting).getValue(), true)).withStyle(style -> {
                 return style.withColor(setting.getValue().hashCode());
             });
         } else if (setting instanceof ObjectSetting) {
-            literal = Texts.join(((ObjectSetting) setting).getValueStrings(), Text.literal(", ").styled(style2 -> {
-                return style2.withFormatting(Formatting.GRAY);
-            }), Text::literal);
+            literal = ComponentUtils.formatList(((ObjectSetting) setting).getValueStrings(), Component.literal(", ").withStyle(style2 -> {
+                return style2.applyFormat(ChatFormatting.GRAY);
+            }), Component::literal);
         } else if (setting instanceof SoundIdentifierSetting) {
-            literal = Text.literal(((SoundIdentifierSetting) setting).getValue().getName());
+            literal = Component.literal(((SoundIdentifierSetting) setting).getValue().getName());
         }
         return literal;
     }

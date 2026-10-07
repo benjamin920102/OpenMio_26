@@ -16,8 +16,6 @@ import java.util.Iterator;
 import java.util.List;
 import me.mioclient.module.misc.StashFinder;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchHelper4_15.class */
 public final class StashRegistry extends NamedRegistryList<StashEntry> implements ClientAccessor, JsonConfigurable {
     public static StashFinder stashFinder = (StashFinder) ClientServices.moduleInjector.getModule(StashFinder.class);
 

@@ -2,16 +2,15 @@ package me.mioclient.event.events.interaction;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/InteractBlockEvent.class */
+/* 26.2 port: Yarn InteractionHand -> MojMap InteractionHand. */
 public class InteractBlockEvent extends Event {
     public final BlockHitResult blockHitResult;
-    public final Hand hand;
+    public final InteractionHand hand;
 
-    public InteractBlockEvent(BlockHitResult blockHitResult, Hand hand) {
+    public InteractBlockEvent(BlockHitResult blockHitResult, InteractionHand hand) {
         this.blockHitResult = blockHitResult;
         this.hand = hand;
     }
@@ -20,7 +19,7 @@ public class InteractBlockEvent extends Event {
         return this.blockHitResult;
     }
 
-    public Hand getHand() {
+    public InteractionHand getHand() {
         return this.hand;
     }
 }

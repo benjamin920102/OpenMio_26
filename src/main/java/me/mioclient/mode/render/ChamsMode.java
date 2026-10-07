@@ -2,18 +2,13 @@ package me.mioclient.mode.render;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.render.chams.ChamsColorApplier;
 
 import java.awt.Color;
 import me.mioclient.module.render.Chams;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChamsMode.class */
 public enum ChamsMode implements NamedValue, ChamsColorApplier {
     BOTH("Both"),
     FILL("Fill") { // from class: me.mioclient.mode.render.ChamsMode.Inner_3
@@ -30,7 +25,7 @@ public enum ChamsMode implements NamedValue, ChamsColorApplier {
     },
     PLAIN("Plain") { // from class: me.mioclient.mode.render.ChamsMode.Inner
         @Override // me.mioclient.module.render.chams.ChamsColorApplier
-        public void applyChamsRender(Chams chams, Entity entity, MatrixStack matrixStack) {
+        public void applyChamsRender(Chams chams, Entity entity, PoseStack matrixStack) {
         }
     },
     OFF("Off");

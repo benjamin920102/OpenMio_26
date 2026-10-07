@@ -10,14 +10,9 @@ import me.mioclient.setting.SoundIdentifierSetting;
 import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.util.anim.AnimationProgress;
-import me.mioclient.util.client.ChatUtils;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.client.ChatUtils;
 
 import java.awt.Color;
@@ -27,34 +22,24 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.mode.setting.HoleSnapMode;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.event.events.render.HudRenderEvent;
-import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.network.AddMessageEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.network.ChatEvent;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/BetterChat.class */
 public class BetterChat extends Module {
     public static BetterChat betterChat;
     public Setting<Boolean> timestamps = add(new BooleanSetting("Timestamps", false).setVisible());
@@ -87,9 +72,8 @@ public class BetterChat extends Module {
     public static boolean flag2 = false;
     public static PMSound pMSound = (PMSound) ClientServices.moduleInjector.getModule(PMSound.class);
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/BetterChat$BetterChatMode.class */
+    
+    
     public enum BetterChatMode implements NamedValue {
         HOURS(new SimpleDateFormat("HH"), "Hours"),
         MINUTES(new SimpleDateFormat("HH:mm"), "Minutes"),
@@ -117,8 +101,7 @@ public class BetterChat extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/BetterChat$BetterChatMode_2.class */
+    
     public enum BetterChatMode_2 implements NamedValue {
         VERTICAL("Vertical"),
         HORIZONTAL("Horizontal"),
@@ -154,7 +137,7 @@ public class BetterChat extends Module {
         if (sendImmediatelyEvent.isCancelled()) {
             return;
         }
-        if ((sendImmediatelyEvent.getPacket() instanceof ChatMessageC2SPacket) || (sendImmediatelyEvent.getPacket() instanceof CommandExecutionC2SPacket)) {
+        if ((sendImmediatelyEvent.getPacket() instanceof ServerboundChatPacket) || (sendImmediatelyEvent.getPacket() instanceof ServerboundChatCommandPacket)) {
             this.flag3 = true;
         }
     }
@@ -174,7 +157,7 @@ public class BetterChat extends Module {
         String string2649 = event.getMessage();
         if (!pattern.matcher(string2649).matches() && this.customSuffix.getValue().booleanValue()) {
             String string2921 = new StringTemplate().arg(this.suffix.getValue()).format(" \u0001");
-            event.setMessage(new StringTemplate().arg(string2921.substring(0, MathHelper.clamp(256 - string2649.length(), 0, string2921.length()))).arg(string2649).format("\u0001\u0001"));
+            event.setMessage(new StringTemplate().arg(string2921.substring(0, Mth.clamp(256 - string2649.length(), 0, string2921.length()))).arg(string2649).format("\u0001\u0001"));
         }
     }
 
@@ -187,15 +170,16 @@ public class BetterChat extends Module {
     public void applyTimestamp(AddMessageEvent addMessageEvent) {
         if (this.timestamps.getValue().booleanValue()) {
             if (isSystemIndicator(addMessageEvent.getIndicator()) || !this.onlyServer.getValue().booleanValue()) {
-                MutableText append = Text.empty().append(Text.literal(this.leftBracket.getValue()).styled(style -> {
-                    return style.withColor(this.bracketsColor.getValue().hashCode());
-                })).append(Text.literal(this.format.getValue().formatDate(new Date())).styled(style2 -> {
-                    return style2.withColor(this.textColor.getValue().hashCode());
-                })).append(Text.literal(this.rightBracket.getValue()).styled(style3 -> {
-                    return style3.withColor(this.bracketsColor.getValue().hashCode());
-                })).append(" ");
+                // 26.2: Style#withColor(int) is the styling path (ChatUtils.withDynamicColor wraps it).
+                int bracketColor = this.bracketsColor.getValue().getRGB();
+                int timeColor = this.textColor.getValue().getRGB();
+                MutableComponent append = Component.empty()
+                        .append(Component.literal(this.leftBracket.getValue()).withStyle(s -> s.withColor(bracketColor)))
+                        .append(Component.literal(this.format.getValue().formatDate(new Date())).withStyle(s -> s.withColor(timeColor)))
+                        .append(Component.literal(this.rightBracket.getValue()).withStyle(s -> s.withColor(bracketColor)))
+                        .append(" ");
                 if (this.rainbow.getValue().booleanValue()) {
-                    append = Text.empty().append(ChatUtils.gradientText(append.getString(), () -> {
+                    append = Component.empty().append(ChatUtils.gradientText(append.getString(), () -> {
                         return Integer.valueOf(this.rainbowAmount.getValue().intValue() * 10);
                     }, this.textColor.getValue()));
                 }
@@ -207,7 +191,7 @@ public class BetterChat extends Module {
     public void playMentionSound(AddMessageEvent addMessageEvent) {
         if (this.mentionSound.getValue().booleanValue()) {
             String lowerCase = addMessageEvent.getText().getString().toLowerCase();
-            if ((pMSound.isToggled() && ChatUtils.isIncomingWhisper(lowerCase)) || this.flag3 || !lowerCase.contains(minecraftClient.getSession().getUsername().toLowerCase())) {
+            if ((pMSound.isToggled() && ChatUtils.isIncomingWhisper(lowerCase)) || this.flag3 || !lowerCase.contains(minecraftClient.getUser().getName().toLowerCase())) {
                 return;
             }
             ClientServices.killstreakSoundManager.findSoundPlayer(this.soundMode.getValue()).play(this.volume.getValue().floatValue());
@@ -220,8 +204,8 @@ public class BetterChat extends Module {
         }
     }
 
-    public boolean isSystemIndicator(MessageIndicator messageIndicator) {
-        return messageIndicator == MessageIndicator.system() || messageIndicator == MessageIndicator.singlePlayer() || messageIndicator == MessageIndicator.notSecure();
+    public boolean isSystemIndicator(GuiMessageTag messageIndicator) {
+        return messageIndicator == null || messageIndicator == GuiMessageTag.system() || messageIndicator == GuiMessageTag.systemSinglePlayer() || messageIndicator == GuiMessageTag.chatNotSecure();
     }
 
     public boolean isAnimationEnabled() {

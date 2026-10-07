@@ -4,17 +4,15 @@ import me.mioclient.render.shader.ShaderProgram;
 
 import me.mioclient.api.ClientAccessor;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.nio.ByteBuffer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4fStack;
+import com.mojang.blaze3d.systems.RenderSystem;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryUtil;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MeshBuilder.class */
 public class MeshBuilder implements ClientAccessor {
     public boolean flag = false;
     public double val = Double.longBitsToDouble(4607182418800017408L);
@@ -36,8 +34,6 @@ public class MeshBuilder implements ClientAccessor {
     public double val3;
     public boolean flag4;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ByteBufferSearchHelper4$Mode.class */
     public enum Mode {
         Float(1, 4, false),
         Vec2(2, 4, false),
@@ -59,8 +55,6 @@ public class MeshBuilder implements ClientAccessor {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ByteBufferSearchHelper4$Mode_2.class */
     public enum Mode_2 {
         Lines(2),
         Triangles(3);
@@ -126,7 +120,7 @@ public class MeshBuilder implements ClientAccessor {
         this.num8 = 0;
         this.num9 = 0;
         this.flag2 = true;
-        Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
+        Vec3 pos = minecraftClient.gameRenderer.mainCamera().position();
         this.val2 = pos.x;
         this.val3 = pos.z;
     }
@@ -224,7 +218,7 @@ public class MeshBuilder implements ClientAccessor {
         this.flag2 = false;
     }
 
-    public void beginDraw(MatrixStack matrixStack) {
+    public void beginDraw(PoseStack matrixStack) {
         GlStateWrapper.saveState();
         if (this.flag) {
             GlStateWrapper.enableDepthTest();
@@ -238,14 +232,14 @@ public class MeshBuilder implements ClientAccessor {
             Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
             modelViewStack.pushMatrix();
             if (matrixStack != null) {
-                modelViewStack.mul(matrixStack.peek().getPositionMatrix());
+                modelViewStack.mul(matrixStack.last().pose());
             }
-            modelViewStack.translate(0.0f, (float) (-minecraftClient.gameRenderer.getCamera().getPos().y), 0.0f);
+            modelViewStack.translate(0.0f, (float) (-minecraftClient.gameRenderer.mainCamera().position().y), 0.0f);
         }
         this.flag4 = true;
     }
 
-    public void drawMesh(MatrixStack matrixStack) {
+    public void drawMesh(PoseStack matrixStack) {
         if (this.flag2) {
             endBuild();
         }
@@ -255,7 +249,9 @@ public class MeshBuilder implements ClientAccessor {
                 beginDraw(matrixStack);
             }
             finishBuild();
-            ShaderProgram.framebufferHelper_3.setProjectionUniforms();
+            if (ShaderProgram.framebufferHelper_3 != null) {
+                ShaderProgram.framebufferHelper_3.setProjectionUniforms();
+            }
             GlStateWrapper.bindVertexArray(this.num2);
             GlStateWrapper.drawElements(this.mode_2.getIndexCount(), this.num9, 5125);
             GlStateWrapper.bindVertexArray(0);

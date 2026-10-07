@@ -1,4 +1,5 @@
 package me.mioclient.module.combat;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.event.events.player.RotationTickEvent;
 
@@ -10,47 +11,49 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.combat.bedaura.BedDetonationSelector;
 import me.mioclient.module.combat.bedaura.BedPlacement;
 import me.mioclient.module.combat.bedaura.BedPlacementSelector;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BedItem;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BedItem;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/BedAura.class */
 public final class BedAura extends Module {
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static AntiCheat antiCheat;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<Boolean> place = add(new BooleanSetting("Place", true).setVisible());
     public Setting<Integer> delay2 = add(new NumberSetting<>("Delay", 1, 1, 20).requiresSettings(this.place));
     public Setting<Float> range2 = add(new NumberSetting<>("Range", 4.0f, 0.1f, 6.0f).requiresSettings(this.place));
@@ -80,12 +83,12 @@ public final class BedAura extends Module {
     public final BedDetonationSelector bedAuraSearchHelper46;
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
-    public PlayerEntity playerEntity;
+    public Player playerEntity;
     public BedPlacement bedAuraData;
     public BlockPos blockPos;
 
     public BedAura() {
-        super("BedAura", new StringTemplate().arg(String.valueOf(Formatting.RED)).format("Blows your enemies up using beds. \n\u0001Doesn't work in the overworld."), Category.COMBAT, new String[0]);
+        super("BedAura", new StringTemplate().arg(String.valueOf(ChatFormatting.RED)).format("Blows your enemies up using beds. \n\u0001Doesn't work in the overworld."), Category.COMBAT, new String[0]);
         this.bedAuraHelper = new BedPlacementSelector(this);
         this.bedAuraSearchHelper46 = new BedDetonationSelector(this);
         this.stopwatch = new Stopwatch();
@@ -106,7 +109,7 @@ public final class BedAura extends Module {
         if (this.playerEntity == null) {
             return null;
         }
-        return this.playerEntity.getGameProfile().getName();
+        return this.playerEntity.getGameProfile().name();
     }
 
     @Listen
@@ -134,14 +137,14 @@ public final class BedAura extends Module {
         }
     }
 
-    public PlayerEntity getTargetPlayer() {
-        PlayerEntity playerEntity = null;
+    public Player getTargetPlayer() {
+        Player playerEntity = null;
         float intBitsToFloat = Float.intBitsToFloat(1203982208);
-        for (PlayerEntity playerEntity2 : minecraftClient.world.getPlayers()) {
+        for (Player playerEntity2 : minecraftClient.level.players()) {
             if (playerEntity2 != minecraftClient.player && !ClientServices.socialManager.isFriendEntity(playerEntity2)) {
-                if (intBitsToFloat > minecraftClient.player.getEyePos().distanceTo(playerEntity2.getPos())) {
+                if (intBitsToFloat > minecraftClient.player.getEyePosition().distanceTo(playerEntity2.position())) {
                     playerEntity = playerEntity2;
-                    intBitsToFloat = (float) minecraftClient.player.getEyePos().distanceTo(playerEntity2.getPos());
+                    intBitsToFloat = (float) minecraftClient.player.getEyePosition().distanceTo(playerEntity2.position());
                 }
             }
         }
@@ -152,7 +155,7 @@ public final class BedAura extends Module {
         int i = InventoryUtils.findInHotbar(itemStack -> {
             return itemStack.getItem() instanceof BedItem;
         });
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         if (i == -1) {
             return;
         }
@@ -165,25 +168,25 @@ public final class BedAura extends Module {
         float[] floatArray2486;
         if (bedAuraData != null && BlockPlacer.isSpaceFree(bedAuraData.getBedPos(), true)) {
             if (this.rotate.getValue().booleanValue()) {
-                floatArray2486 = RotationManager.getRotationsTo(bedAuraData.getHitResult().getPos());
+                floatArray2486 = RotationManager.getRotationsTo(bedAuraData.getHitResult().getLocation());
             } else {
-                floatArray2486 = RotationManager.getRotations(bedAuraData.getBedPos().toCenterPos(), bedAuraData.getHeadPos().toCenterPos());
+                floatArray2486 = RotationManager.getRotations(Vec3.atCenterOf(bedAuraData.getBedPos()), Vec3.atCenterOf(bedAuraData.getHeadPos()));
             }
             ClientServices.RotationManager.requestRotations(floatArray2486, 500);
             BlockHitResult blockHitResult157 = bedAuraData.getHitResult();
             ClientServices.antiPhaseHelper.withSneakPress(() -> {
-                PacketSender.sendInteractBlock(Hand.MAIN_HAND, blockHitResult157);
+                PacketSender.sendInteractBlock(InteractionHand.MAIN_HAND, blockHitResult157);
             });
-            minecraftClient.player.swingHand(Hand.MAIN_HAND);
-            Box enclosing = Box.enclosing(bedAuraData.getBedPos(), bedAuraData.getHeadPos());
-            Box expand = enclosing.withMaxY(enclosing.minY + Double.longBitsToDouble(4603241769126068224L)).expand(Double.longBitsToDouble(4566758108763783168L));
+            minecraftClient.player.swing(InteractionHand.MAIN_HAND);
+            AABB enclosing = AABB.encapsulatingFullBlocks(bedAuraData.getBedPos(), bedAuraData.getHeadPos());
+            AABB expand = enclosing.setMaxY(enclosing.minY + Double.longBitsToDouble(4603241769126068224L)).inflate(Double.longBitsToDouble(4566758108763783168L));
             if (this.render.getValue().booleanValue()) {
                 ClientServices.antiPhaseBlockHelper.addHighlight(this, expand);
             }
             if (this.instant.getValue().booleanValue()) {
                 ClientServices.antiPhaseHelper.withSneakRelease(() -> {
-                    PacketSender.sendInteractBlock(Hand.MAIN_HAND, new BlockHitResult(bedAuraData.getBedPos().toCenterPos(), getInteractDirection(bedAuraData.getBedPos(), Direction.UP), bedAuraData.getBedPos(), false));
-                    minecraftClient.player.swingHand(Hand.MAIN_HAND);
+                    PacketSender.sendInteractBlock(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(bedAuraData.getBedPos()), getInteractDirection(bedAuraData.getBedPos(), Direction.UP), bedAuraData.getBedPos(), false));
+                    minecraftClient.player.swing(InteractionHand.MAIN_HAND);
                 });
             }
             this.stopwatch.reset();
@@ -194,18 +197,18 @@ public final class BedAura extends Module {
         if (blockPos == null) {
             return;
         }
-        BlockHitResult blockHitResult = new BlockHitResult(blockPos.toCenterPos(), getInteractDirection(blockPos, Direction.UP), blockPos, false);
+        BlockHitResult blockHitResult = new BlockHitResult(Vec3.atCenterOf(blockPos), getInteractDirection(blockPos, Direction.UP), blockPos, false);
         ClientServices.antiPhaseHelper.withSneakRelease(() -> {
-            minecraftClient.interactionManager.interactBlock(minecraftClient.player, Hand.MAIN_HAND, blockHitResult);
-            minecraftClient.player.swingHand(Hand.MAIN_HAND);
+            minecraftClient.gameMode.useItemOn(minecraftClient.player, InteractionHand.MAIN_HAND, blockHitResult);
+            minecraftClient.player.swing(InteractionHand.MAIN_HAND);
         });
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (true) {
             if (!it.hasNext()) {
                 break;
             }
-            BlockPos offset = blockPos.offset((Direction) it.next());
-            if (minecraftClient.world.getBlockState(offset).getBlock() instanceof BedBlock) {
+            BlockPos offset = blockPos.relative((Direction) it.next());
+            if (minecraftClient.level.getBlockState(offset).getBlock() instanceof BedBlock) {
                 ClientServices.stashFinderHelper.breakBlockWithSnapshot(offset);
                 break;
             }
@@ -218,7 +221,7 @@ public final class BedAura extends Module {
         int i;
         if (this.refill.getValue().booleanValue()) {
             int intValue = this.slot.getValue().intValue() - 1;
-            if ((minecraftClient.player.getInventory().getStack(intValue).getItem() instanceof BedItem) || (i = InventoryUtils.findInInventory(itemStack -> {
+            if ((minecraftClient.player.getInventory().getItem(intValue).getItem() instanceof BedItem) || (i = InventoryUtils.findInInventory(itemStack -> {
                 return itemStack.getItem() instanceof BedItem;
             }, true)) == -1) {
                 return;
@@ -236,17 +239,17 @@ public final class BedAura extends Module {
     }
 
     public boolean isBedPartAt(BlockPos blockPos, BedPart bedPart) {
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        return (blockState.getBlock() instanceof BedBlock) && blockState.get(BedBlock.PART) == bedPart;
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        return (blockState.getBlock() instanceof BedBlock) && blockState.getValue(BedBlock.PART) == bedPart;
     }
 
     public boolean isDelayElapsed(Stopwatch stopwatch, Setting<Integer> setting) {
         return stopwatch.hasElapsedMs((long) (((float) (50 * setting.getValue().intValue())) * (this.tPSSync.getValue().booleanValue() ? ClientServices.holeSnapRenderHelper.getTickRateFactor() : Float.intBitsToFloat(1065353216))));
     }
 
-    public Box getPredictedBox(LivingEntity livingEntity) {
-        if (livingEntity instanceof PlayerEntity) {
-            PlayerEntity playerEntity = (PlayerEntity) livingEntity;
+    public AABB getPredictedBox(LivingEntity livingEntity) {
+        if (livingEntity instanceof Player) {
+            Player playerEntity = (Player) livingEntity;
             if (this.extrapolation.getValue().booleanValue()) {
                 return ClientServices.mainhandHelper.getPredictedBox(playerEntity, this.ticks.getValue().intValue());
             }

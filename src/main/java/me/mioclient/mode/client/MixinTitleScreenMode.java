@@ -2,11 +2,6 @@ package me.mioclient.mode.client;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.math.ColorUtils;
-
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.math.ColorUtils;
 
@@ -14,8 +9,6 @@ import java.awt.Color;
 import me.mioclient.module.client.HUD;
 import me.mioclient.setting.ColorSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MixinTitleScreenMode.class */
 public enum MixinTitleScreenMode implements NamedValue {
     NONE("None") { // from class: me.mioclient.mode.client.MixinTitleScreenMode.Inner_3
         @Override // me.mioclient.mode.client.MixinTitleScreenMode

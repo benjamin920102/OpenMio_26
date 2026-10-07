@@ -6,18 +6,10 @@ import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.render.shape.Shape2DRenderer;
-
 import java.awt.Color;
-import me.mioclient.util.time.Stopwatch;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StopwatchPresetSettingButton.class */
 public abstract class StopwatchPresetSettingButton extends PanelComponent {
     public final int num;
     public final int num2;
@@ -35,7 +27,7 @@ public abstract class StopwatchPresetSettingButton extends PanelComponent {
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         if (this.stopwatch.hasElapsedMs(getTickDelay())) {
             onTickElapsed();
@@ -47,7 +39,7 @@ public abstract class StopwatchPresetSettingButton extends PanelComponent {
 
     public abstract int getTickDelay();
 
-    public void drawGridCell(MatrixStack matrixStack, int i, int i2, Color color) {
+    public void drawGridCell(PoseStack matrixStack, int i, int i2, Color color) {
         Shape2DRenderer.drawRect(matrixStack, getPanel().getX() + (i * getCellWidth()), getPanel().getY() + this.num + (i2 * getCellHeight()), getPanel().getX() + (i * getCellWidth()) + getCellWidth(), getPanel().getY() + this.num + (i2 * getCellHeight()) + getCellHeight(), color);
     }
 

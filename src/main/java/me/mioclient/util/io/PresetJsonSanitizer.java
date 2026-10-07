@@ -2,8 +2,6 @@ package me.mioclient.util.io;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
@@ -12,8 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetJsonSanitizer.class */
 public class PresetJsonSanitizer {
     public static final PresetJsonSanitizer presetHelperModeHelper_2 = new PresetJsonSanitizer();
 

@@ -3,10 +3,8 @@ package me.mioclient.event.events.entity;
 import me.mioclient.event.Event;
 
 import java.awt.Color;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EntityEvent.class */
 public class EntityModelRenderEvent extends Event {
     public static final EntityModelRenderEvent entityEvent = new EntityModelRenderEvent();
     public Entity entity;

@@ -2,8 +2,6 @@ package me.mioclient.event.events.interaction;
 
 import me.mioclient.event.Event;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedMineEvent.class */
 public class SlotChangeEvent extends Event {
     public final int num;
 

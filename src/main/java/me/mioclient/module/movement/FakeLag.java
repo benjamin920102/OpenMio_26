@@ -5,13 +5,10 @@ import me.mioclient.event.events.network.PacketSendEvent;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.shape.BoxRenderer;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BoxRenderer;
 
 import java.awt.Color;
 import java.util.ArrayDeque;
@@ -21,30 +18,25 @@ import me.mioclient.render.RenderConstants;
 import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.common.CommonPongC2SPacket;
-import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Box;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ServerboundPongPacket;
+import net.minecraft.network.protocol.game.ServerboundSwingPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.world.phys.AABB;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/FakeLag.class */
 public class FakeLag extends Module {
     public final Queue<Packet<?>> queue;
     public Setting<FakeLagMode> mode = add(new EnumSetting<>("Mode", FakeLagMode.BLINK));
@@ -65,10 +57,9 @@ public class FakeLag extends Module {
     public Setting<Float> lineWidth = add(new NumberSetting<>("LineWidth", 1.0f, 0.1f, 2.0f, v -> this.render.isShown()));
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
-    public Box box;
+    public AABB box;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/FakeLag$FakeLagMode.class */
+    
     public enum FakeLagMode implements NamedValue {
         BLINK("Blink"),
         PULSE("Pulse");
@@ -138,7 +129,7 @@ public class FakeLag extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if ((channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) && this.mode.getValue() == FakeLagMode.PULSE) {
+        if ((channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) && this.mode.getValue() == FakeLagMode.PULSE) {
             this.stopwatch2.setTime(-1L);
         }
     }
@@ -157,7 +148,7 @@ public class FakeLag extends Module {
     }
 
     public boolean shouldQueuePacket(Packet<?> packet) {
-        return ((packet instanceof PlayerMoveC2SPacket) && this.movement.getValue().booleanValue()) || ((packet instanceof PlayerInteractBlockC2SPacket) && this.interact.getValue().booleanValue()) || (((packet instanceof PlayerInteractEntityC2SPacket) && this.interactEntity.getValue().booleanValue()) || (((packet instanceof PlayerActionC2SPacket) && this.digging.getValue().booleanValue()) || (((packet instanceof HandSwingC2SPacket) && this.swing.getValue().booleanValue()) || (((packet instanceof UpdateSelectedSlotC2SPacket) && this.swap.getValue().booleanValue()) || (packet instanceof CommonPongC2SPacket) || this.all.getValue().booleanValue()))));
+        return ((packet instanceof ServerboundMovePlayerPacket) && this.movement.getValue().booleanValue()) || ((packet instanceof ServerboundUseItemOnPacket) && this.interact.getValue().booleanValue()) || (((packet instanceof ServerboundInteractPacket) && this.interactEntity.getValue().booleanValue()) || (((packet instanceof ServerboundPlayerActionPacket) && this.digging.getValue().booleanValue()) || (((packet instanceof ServerboundSwingPacket) && this.swing.getValue().booleanValue()) || (((packet instanceof ServerboundSetCarriedItemPacket) && this.swap.getValue().booleanValue()) || (packet instanceof ServerboundPongPacket) || this.all.getValue().booleanValue()))));
     }
 
     public void do604() {

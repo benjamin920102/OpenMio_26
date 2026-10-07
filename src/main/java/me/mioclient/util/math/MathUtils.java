@@ -6,14 +6,12 @@ import me.mioclient.render.RenderUtil;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Random;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.manager.RotationManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MathUtils.class */
 public class MathUtils implements ClientAccessor {
     public static double floorToDecimals(double d, int i) {
         if (i < 0) {
@@ -49,30 +47,30 @@ public class MathUtils implements ClientAccessor {
         return f * MathConstants.val5;
     }
 
-    public static Vec3d getRotationVector(float f, float f2) {
+    public static Vec3 getRotationVector(float f, float f2) {
         float f3 = getRadians(f);
         float f4 = getRadians(-f2);
-        float cos = MathHelper.cos(f4);
-        float sin = MathHelper.sin(f4);
-        float cos2 = MathHelper.cos(f3);
-        return new Vec3d(sin * cos2, -MathHelper.sin(f3), cos * cos2);
+        float cos = Mth.cos(f4);
+        float sin = Mth.sin(f4);
+        float cos2 = Mth.cos(f3);
+        return new Vec3(sin * cos2, -Mth.sin(f3), cos * cos2);
     }
 
-    public static double getCameraDistanceScale(Vec3d vec3d, double d) {
-        return getDistanceScale(minecraftClient.gameRenderer.getCamera().getPos(), vec3d, d);
+    public static double getCameraDistanceScale(Vec3 vec3d, double d) {
+        return getDistanceScale(minecraftClient.gameRenderer.mainCamera().position(), vec3d, d);
     }
 
-    public static double getDistanceScale(Vec3d vec3d, Vec3d vec3d2, double d) {
+    public static double getDistanceScale(Vec3 vec3d, Vec3 vec3d2, double d) {
         double distanceTo = vec3d.distanceTo(vec3d2);
-        double intValue = ((Integer) minecraftClient.options.getFov().getValue()).intValue() / Double.longBitsToDouble(4637440978796412928L);
+        double intValue = ((Integer) minecraftClient.options.fov().get()).intValue() / Double.longBitsToDouble(4637440978796412928L);
         if (intValue < Double.longBitsToDouble(4607182418800017408L)) {
             intValue = Double.longBitsToDouble(4607182418800017408L);
         }
         return distanceTo <= Double.longBitsToDouble(4621819117588971520L) / d ? Math.min(Double.longBitsToDouble(4607182418800017408L), d) * intValue : distanceTo * d * Double.longBitsToDouble(4591870180066957722L) * intValue;
     }
 
-    public static float getYawDifference(PlayerEntity playerEntity) {
-        return MathHelper.angleBetween(minecraftClient.player.getYaw(), RotationManager.getRotationsTo(playerEntity.getPos())[0]);
+    public static float getYawDifference(Player playerEntity) {
+        return Mth.degreesDifferenceAbs(minecraftClient.player.getYRot(), RotationManager.getRotationsTo(playerEntity.position())[0]);
     }
 
     public static double snapToNearestBound(double d, double d2, double d3) {
@@ -88,18 +86,18 @@ public class MathUtils implements ClientAccessor {
     }
 
     public static float interpolateWithTick(float f, float f2) {
-        return MathHelper.lerp(RenderUtil.getPartialTick(), f, f2);
+        return Mth.lerp(RenderUtil.getPartialTick(), f, f2);
     }
 
     public static double interpolateWithTick(double d, double d2) {
-        return MathHelper.lerp(RenderUtil.getPartialTick(), d, d2);
+        return Mth.lerp(RenderUtil.getPartialTick(), d, d2);
     }
 
     public static double getCameraDistanceToBlock(BlockPos blockPos) {
-        return getCameraDistance(blockPos.toCenterPos());
+        return getCameraDistance(Vec3.atCenterOf(blockPos));
     }
 
-    public static double getCameraDistance(Vec3d vec3d) {
-        return minecraftClient.gameRenderer.getCamera().getPos().distanceTo(vec3d);
+    public static double getCameraDistance(Vec3 vec3d) {
+        return minecraftClient.gameRenderer.mainCamera().position().distanceTo(vec3d);
     }
 }

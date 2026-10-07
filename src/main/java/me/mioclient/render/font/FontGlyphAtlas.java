@@ -2,10 +2,10 @@ package me.mioclient.render.font;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.Identifier;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -20,17 +20,26 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import me.mioclient.module.client.Fonts;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.lwjgl.BufferUtils;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FontGlyphAtlas.class */
 public class FontGlyphAtlas {
-    public static Fonts fonts = (Fonts) ClientServices.moduleInjector.getModule(Fonts.class);
+    /* Resolved lazily — eager static init ran before the module registry was ready. */
+    private static Fonts fonts;
+
+    public static Fonts getFonts() {
+        if (fonts == null && ClientServices.moduleInjector != null) {
+            try {
+                fonts = (Fonts) ClientServices.moduleInjector.getModule(Fonts.class);
+            } catch (Exception e) {
+            }
+        }
+        return fonts;
+    }
     public final Font font;
     public final boolean flag;
     public final boolean flag2;
@@ -39,9 +48,15 @@ public class FontGlyphAtlas {
     public AbstractTexture abstractTexture;
     public final HashMap<Character, Inner> hashMap = new HashMap<>();
     public int num2 = -1;
+    /* 26.2 backend: the atlas lives in this vanilla-managed DynamicTexture. It must be
+       registered under a fixed id so RenderTypes/blits can sample it through the GPU backend. */
+    public static final Identifier ATLAS_ID = Identifier.fromNamespaceAndPath("mio", "font_atlas");
+    private static AbstractTexture registeredTexture;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/FontHelper$Inner.class */
+    public static AbstractTexture getRegisteredTexture() {
+        return registeredTexture;
+    }
+
     static class Inner {
         public int x;
         public int y;
@@ -82,7 +97,6 @@ public class FontGlyphAtlas {
     }
 
     public void resetTrajectoryData() {
-        this.abstractTexture.clearGlId();
         this.abstractTexture.close();
         this.hashMap.clear();
     }
@@ -109,7 +123,8 @@ public class FontGlyphAtlas {
         createGraphics.setColor(new Color(255, 255, 255, 0));
         createGraphics.fillRect(0, 0, this.num, this.num);
         createGraphics.setColor(Color.white);
-        if (fonts.antiAlias.getValue().booleanValue() && fonts.isToggled()) {
+        Fonts fonts_lcl = getFonts();
+        if (fonts_lcl != null && fonts_lcl.antiAlias.getValue().booleanValue() && fonts_lcl.isToggled()) {
             createGraphics.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
             createGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             createGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -155,48 +170,60 @@ public class FontGlyphAtlas {
             byte[] byteArray = byteArrayOutputStream.toByteArray();
             ByteBuffer put = BufferUtils.createByteBuffer(byteArray.length).put(byteArray);
             put.flip();
-            this.abstractTexture = new NativeImageBackedTexture(NativeImage.read(put));
+            this.abstractTexture = new LinearFontTexture(() -> "mio-font-atlas", NativeImage.read(put));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void bindAtlasTexture() {
-        GlStateManager._bindTexture(this.abstractTexture.getGlId());
-        if (fonts.antiAlias.getValue().booleanValue()) {
-            GlStateManager._texParameter(3553, 10240, 9729);
-        } else {
-            GlStateManager._texParameter(3553, 10240, 9728);
-        }
-        RenderSystem.setShaderTexture(0, this.abstractTexture.getGlId());
+        // 26.2: GPU-driven textures have no GL id to bind; the atlas lives in the DynamicTexture above.
     }
 
     public void unbindAtlasTexture() {
-        RenderSystem.setShaderTexture(0, 0);
-        if (fonts.antiAlias.getValue().booleanValue()) {
-            GlStateManager._texParameter(3553, 10240, 9728);
+        // 26.2: no-op, see bindAtlasTexture.
+    }
+
+    public void ensureRegistered() {
+        if (this.abstractTexture == null || registeredTexture == this.abstractTexture) {
+            return;
+        }
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null) {
+                return;
+            }
+            TextureManager textureManager = mc.getTextureManager();
+            if (textureManager == null) {
+                return;
+            }
+            try {
+                textureManager.release(ATLAS_ID);
+            } catch (Exception ignored) {
+            }
+            textureManager.register(ATLAS_ID, this.abstractTexture);
+            registeredTexture = this.abstractTexture;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    public float renderGlyphQuad(MatrixStack matrixStack, VertexConsumer vertexConsumer, char c, float f, float f2, float f3, float f4, float f5, float f6) {
+    public float renderGlyphQuad(PoseStack matrixStack, VertexConsumer vertexConsumer, char c, float f, float f2, float f3, float f4, float f5, float f6) {
         Inner inner = this.hashMap.get(Character.valueOf(c));
         if (inner == null) {
             return 0.0f;
         }
-        float f7 = f3 * RenderSystem.getShaderColor()[0];
-        float f8 = f5 * RenderSystem.getShaderColor()[1];
-        float f9 = f4 * RenderSystem.getShaderColor()[2];
-        float f10 = f6 * RenderSystem.getShaderColor()[3];
         float f11 = inner.x / (float) this.num;
         float f12 = inner.y / (float) this.num;
         float f13 = inner.num / (float) this.num;
         float f14 = inner.num2 / (float) this.num;
         float f15 = inner.num;
         float f16 = inner.num2;
-        vertexConsumer.vertex(matrixStack.peek().getPositionMatrix(), f, f2 + f16, ClientTextRenderer.getCurrentShadowOffset()).color(f7, f8, f9, f10).texture(f11, f12 + f14);
-        vertexConsumer.vertex(matrixStack.peek().getPositionMatrix(), f + f15, f2 + f16, ClientTextRenderer.getCurrentShadowOffset()).color(f7, f8, f9, f10).texture(f11 + f13, f12 + f14);
-        vertexConsumer.vertex(matrixStack.peek().getPositionMatrix(), f + f15, f2, ClientTextRenderer.getCurrentShadowOffset()).color(f7, f8, f9, f10).texture(f11 + f13, f12);
-        vertexConsumer.vertex(matrixStack.peek().getPositionMatrix(), f, f2, ClientTextRenderer.getCurrentShadowOffset()).color(f7, f8, f9, f10).texture(f11, f12);
+        PoseStack.Pose pose = matrixStack.last();
+        vertexConsumer.addVertex(pose, f, f2 + f16, ClientTextRenderer.getCurrentShadowOffset()).setColor(f3, f5, f4, f6).setUv(f11, f12 + f14);
+        vertexConsumer.addVertex(pose, f + f15, f2 + f16, ClientTextRenderer.getCurrentShadowOffset()).setColor(f3, f5, f4, f6).setUv(f11 + f13, f12 + f14);
+        vertexConsumer.addVertex(pose, f + f15, f2, ClientTextRenderer.getCurrentShadowOffset()).setColor(f3, f5, f4, f6).setUv(f11 + f13, f12);
+        vertexConsumer.addVertex(pose, f, f2, ClientTextRenderer.getCurrentShadowOffset()).setColor(f3, f5, f4, f6).setUv(f11, f12);
         return f15 - Float.intBitsToFloat(1090519040);
     }
 

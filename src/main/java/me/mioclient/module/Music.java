@@ -5,16 +5,11 @@ import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.util.client.MusicTrackState;
 
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.client.MusicTrackState;
 
 import java.nio.file.Path;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.apache.commons.lang3.SystemUtils;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Music.class */
 public class Music extends me.mioclient.module.HudModule {
     public static Path path;
 
@@ -32,7 +27,7 @@ public class Music extends me.mioclient.module.HudModule {
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         if (isTrackInactive()) {
             return;
         }

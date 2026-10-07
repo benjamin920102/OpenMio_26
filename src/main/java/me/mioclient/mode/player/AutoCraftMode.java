@@ -2,56 +2,51 @@ package me.mioclient.mode.player;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.math.MathConstants;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.math.MathConstants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Vec3i;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoCraftMode.class */
 public enum AutoCraftMode implements ClientAccessor, NamedValue {
-    FAST("Fast", new Vec3d(MathConstants.val2, MathConstants.val2, MathConstants.val2)),
-    X2("X2", new Vec3d(MathConstants.val2, 0.05d, MathConstants.val2), new Vec3d(MathConstants.val2, 1.0d, MathConstants.val2)),
-    X4("X4", new Vec3d(0.05d, 0.05d, 0.05d), new Vec3d(0.05d, 0.05d, 0.95d), new Vec3d(0.95d, 0.05d, 0.05d), new Vec3d(0.95d, 0.05d, 0.95d)),
-    X8("X8", new Vec3d(0.05d, 0.05d, 0.05d), new Vec3d(0.05d, 0.05d, 0.95d), new Vec3d(0.05d, 0.95d, 0.05d), new Vec3d(0.05d, 0.95d, 0.95d), new Vec3d(0.95d, 0.05d, 0.05d), new Vec3d(0.95d, 0.05d, 0.95d), new Vec3d(0.95d, 0.95d, 0.05d), new Vec3d(0.95d, 0.95d, 0.95d));
+    FAST("Fast", new Vec3(MathConstants.val2, MathConstants.val2, MathConstants.val2)),
+    X2("X2", new Vec3(MathConstants.val2, 0.05d, MathConstants.val2), new Vec3(MathConstants.val2, 1.0d, MathConstants.val2)),
+    X4("X4", new Vec3(0.05d, 0.05d, 0.05d), new Vec3(0.05d, 0.05d, 0.95d), new Vec3(0.95d, 0.05d, 0.05d), new Vec3(0.95d, 0.05d, 0.95d)),
+    X8("X8", new Vec3(0.05d, 0.05d, 0.05d), new Vec3(0.05d, 0.05d, 0.95d), new Vec3(0.05d, 0.95d, 0.05d), new Vec3(0.05d, 0.95d, 0.95d), new Vec3(0.95d, 0.05d, 0.05d), new Vec3(0.95d, 0.05d, 0.95d), new Vec3(0.95d, 0.95d, 0.05d), new Vec3(0.95d, 0.95d, 0.95d));
 
-    public final List<Vec3d> list = new ArrayList();
+    public final List<Vec3> list = new ArrayList();
     public final String name;
 
-    AutoCraftMode(String str, Vec3d... vec3dArr) {
+    AutoCraftMode(String str, Vec3... vec3dArr) {
         this.name = str;
         this.list.addAll(Arrays.asList(vec3dArr));
     }
 
-    public List<Vec3d> getCornerOffsets() {
+    public List<Vec3> getCornerOffsets() {
         return this.list;
     }
 
-    public List<Vec3d> getWorldCorners(BlockPos blockPos) {
+    public List<Vec3> getWorldCorners(BlockPos blockPos) {
         return (List) getCornerOffsets().stream().map(vec3d -> {
-            Vec3d add = vec3d.add(Vec3d.of((Vec3i) blockPos));
+            Vec3 add = vec3d.add(new Vec3((Vec3i) blockPos));
             return (this != X4 || minecraftClient.player.getEyeY() <= ((double) (blockPos.getY() + 1))) ? add : add.add(0.0d, 0.9d, 0.0d);
         }).collect(Collectors.toList());
     }
 
-    public List<Vec3d> getVisibleFaceCorners(BlockPos blockPos, Direction direction) {
+    public List<Vec3> getVisibleFaceCorners(BlockPos blockPos, Direction direction) {
         ArrayList arrayList = new ArrayList();
-        for (Vec3d vec3d : this.list) {
-            if (!isAxisAligned(direction.getOffsetX(), (int) vec3d.x)) {
-                if (!isAxisAligned(direction.getOffsetY(), (int) vec3d.y)) {
-                    if (!isAxisAligned(direction.getOffsetZ(), (int) vec3d.z)) {
-                        arrayList.add(vec3d.add(Vec3d.of((Vec3i) blockPos)));
+        for (Vec3 vec3d : this.list) {
+            if (!isAxisAligned(direction.getStepX(), (int) vec3d.x)) {
+                if (!isAxisAligned(direction.getStepY(), (int) vec3d.y)) {
+                    if (!isAxisAligned(direction.getStepZ(), (int) vec3d.z)) {
+                        arrayList.add(vec3d.add(new Vec3((Vec3i) blockPos)));
                     }
                 }
             }

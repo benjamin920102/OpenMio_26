@@ -5,15 +5,9 @@ import me.mioclient.network.FriendListSync;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.codec.NetworkMessage;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
-import me.mioclient.network.FriendListSync;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FriendListPacket.class */
 public class FriendListPacket implements NetworkMessage {
     public String[] stringArr;
     public boolean flag;

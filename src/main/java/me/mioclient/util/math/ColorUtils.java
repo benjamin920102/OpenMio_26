@@ -3,8 +3,6 @@ package me.mioclient.util.math;
 import java.awt.Color;
 import me.mioclient.module.client.UI;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ColorUtils.class */
 public class ColorUtils {
     public static final Color color = new Color(0, 0, 0, 0);
 

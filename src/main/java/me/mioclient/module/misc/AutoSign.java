@@ -9,15 +9,10 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
-import net.minecraft.network.packet.s2c.play.SignEditorOpenS2CPacket;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AutoSign.class */
 public class AutoSign extends Module {
     public static final DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
     public Setting<String> line1 = add(new StringSetting("Line1", "get mioclient"));
@@ -31,12 +26,19 @@ public class AutoSign extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        SignEditorOpenS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof SignEditorOpenS2CPacket ? (SignEditorOpenS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof SignEditorOpenS2CPacket) {
-            SignEditorOpenS2CPacket signEditorOpenS2CPacket = packet904;
-            PacketSender.sendPacket(new UpdateSignC2SPacket(signEditorOpenS2CPacket.getPos(), signEditorOpenS2CPacket.isFront(), resolveSignText(this.line1), resolveSignText(this.line2), resolveSignText(this.line3), resolveSignText(this.line4)));
-            channelRead0Event.cancel();
+        // 26.2: server opens the editor via ClientboundOpenSignEditorPacket; answer with ServerboundSignUpdatePacket.
+        if (!(channelRead0Event.getPacket() instanceof net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket open)) {
+            return;
         }
+        if (isNotInGame()) {
+            return;
+        }
+        minecraftClient.execute(() -> {
+            minecraftClient.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSignUpdatePacket(
+                    open.getPos(), open.isFrontText(),
+                    resolveSignText(this.line1), resolveSignText(this.line2),
+                    resolveSignText(this.line3), resolveSignText(this.line4)));
+        });
     }
 
     public String resolveSignText(Setting<String> setting) {

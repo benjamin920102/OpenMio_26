@@ -6,14 +6,12 @@ import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.mode.combat.ScaffoldHelperMode;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import me.mioclient.event.EventBus;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.authlib.GameProfile;
 import me.mioclient.ducks.DuckClientPlayerEntityMovement;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.PushOutOfBlocksEvent;
 import me.mioclient.event.events.player.SprintUpdateEvent;
@@ -26,14 +24,15 @@ import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.movement.EntityControl;
 import me.mioclient.module.movement.NoSlow;
 import me.mioclient.module.movement.Sprint;
-import net.minecraft.client.input.Input;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.MovementType;
-import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.network.protocol.game.ServerboundSwingPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -43,12 +42,13 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import me.mioclient.manager.RotationManager;
-import me.mioclient.mode.combat.ScaffoldHelperMode;
 
-/* compiled from: 0.java */
-@Mixin({ClientPlayerEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientPlayerEntity.class */
-public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity implements ClientAccessor, DuckClientPlayerEntityMovement {
+/* 26.2 port: Yarn LocalPlayer -> MojMap LocalPlayer. sendMovementPackets is now
+   private sendPosition(); Yarn tickMovement is now aiStep(); setYaw/setPitch/getYaw/getPitch
+   and isOnGround are setYRot/setXRot/getYRot/getXRot and onGround(); input is ClientInput
+   (jump state via input.keyPresses.jump()); connection.sendPacket is connection.send. */
+@Mixin({LocalPlayer.class})
+public abstract class MixinClientPlayerEntity extends AbstractClientPlayer implements ClientAccessor, DuckClientPlayerEntityMovement {
     private static ElytraFly elytrafly;
 
     private static ElytraFly getElytrafly() {
@@ -116,37 +116,25 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
     }
 
     @Shadow
-    public Input field_3913;
+    public ClientInput input;
 
     @Unique
     private MotionEvent motionEvent;
 
-    public MixinClientPlayerEntity(ClientWorld clientWorld, GameProfile gameProfile) {
+    public MixinClientPlayerEntity(ClientLevel clientWorld, GameProfile gameProfile) {
         super(clientWorld, gameProfile);
         this.motionEvent = new MotionEvent();
     }
 
     @Shadow
-    protected abstract void method_3148(float f, float f2);
+    protected abstract void updateAutoJump(float f, float f2);
 
     @Shadow
-    public abstract float getPitch(float f);
-
-    @Shadow
-    public abstract float getYaw(float f);
-
-    @Shadow
-    public abstract void method_33689();
-
-    @Shadow
-    public abstract boolean isUsingItem();
-
-    @Shadow
-    private void method_3136() {
+    private void sendPosition() {
     }
 
-    @Inject(method = {"swingHand"}, at = {@At("HEAD")}, cancellable = true)
-    public void swingHandHook(Hand hand, CallbackInfo callbackInfo) {
+    @Inject(method = {"swing"}, at = {@At("HEAD")}, cancellable = true)
+    public void swingHandHook(InteractionHand hand, CallbackInfo callbackInfo) {
         Swing swing_lcl = getSwing();
 
         if (swing_lcl == null) return;
@@ -155,15 +143,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
             return;
         }
         if (swing_lcl.hand.getValue() != Swing.ScaffoldHelperMode.PACKET) {
-            super.swingHand(swing_lcl.hand.getValue().getHand());
+            super.swing(swing_lcl.hand.getValue().getHand());
         }
-        minecraftClient.player.networkHandler.sendPacket(new HandSwingC2SPacket(hand));
+        minecraftClient.player.connection.send(new ServerboundSwingPacket(hand));
         callbackInfo.cancel();
     }
 
-    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;tick()V", shift = At.Shift.BEFORE)})
+    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;tick()V", shift = At.Shift.BEFORE)})
     public void tickPost(CallbackInfo callbackInfo) {
-        if (minecraftClient.player == null || minecraftClient.world == null) {
+        if (minecraftClient.player == null || minecraftClient.level == null) {
             return;
         }
         eventBus.fireEvent(new TickPostEvent());
@@ -171,15 +159,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
     @Inject(method = {"tick"}, at = {@At("RETURN")})
     public void tick(CallbackInfo callbackInfo) {
-        if (minecraftClient.player == null || minecraftClient.world == null) {
+        if (minecraftClient.player == null || minecraftClient.level == null) {
             return;
         }
         eventBus.fireEvent(new TickEvent());
     }
 
     @Inject(method = {"move"}, at = {@At("HEAD")}, cancellable = true)
-    private void move(MovementType movementType, Vec3d vec3d, CallbackInfo callbackInfo) {
-        Vec3d vec3d2 = new Vec3d(vec3d.x, vec3d.y, vec3d.z);
+    private void move(MoverType movementType, Vec3 vec3d, CallbackInfo callbackInfo) {
+        Vec3 vec3d2 = new Vec3(vec3d.x, vec3d.y, vec3d.z);
         MoveEvent moveEvent = new MoveEvent(vec3d, movementType);
         eventBus.fireEvent(moveEvent);
         if (moveEvent.isCancelled()) {
@@ -193,16 +181,16 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         double x = getX();
         double z = getZ();
         super.move(moveEvent.getMovementType(), moveEvent.getMovement());
-        method_3148((float) (getX() - x), (float) (getZ() - z));
+        updateAutoJump((float) (getX() - x), (float) (getZ() - z));
     }
 
-    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;tick()V", shift = At.Shift.AFTER)}, cancellable = true)
+    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;tick()V", shift = At.Shift.AFTER)}, cancellable = true)
     private void tickPreHook(CallbackInfo callbackInfo) {
         resetEvent();
         eventBus.fireEvent(this.motionEvent);
-        setPosition(this.motionEvent.getX(), this.motionEvent.getY(), this.motionEvent.getZ());
-        setYaw(this.motionEvent.getRotationYaw());
-        setPitch(this.motionEvent.getRotationPitch());
+        setPos(this.motionEvent.getX(), this.motionEvent.getY(), this.motionEvent.getZ());
+        setYRot(this.motionEvent.getRotationYaw());
+        setXRot(this.motionEvent.getRotationPitch());
         setOnGround(this.motionEvent.isOnGround());
         if (this.motionEvent.isCancelled()) {
             callbackInfo.cancel();
@@ -212,15 +200,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
     @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Ljava/util/List;iterator()Ljava/util/Iterator;", shift = At.Shift.BEFORE)}, cancellable = true)
     private void tickPostHook(CallbackInfo callbackInfo) {
         if (this.motionEvent.getX() != this.motionEvent.getOriginalX() || this.motionEvent.getY() != this.motionEvent.getOriginalY() || this.motionEvent.getZ() != this.motionEvent.getOriginalZ()) {
-            setPosition(new Vec3d(this.motionEvent.getOriginalX(), this.motionEvent.getOriginalY(), this.motionEvent.getOriginalZ()));
+            setPos(new Vec3(this.motionEvent.getOriginalX(), this.motionEvent.getOriginalY(), this.motionEvent.getOriginalZ()));
         }
         resetRotations();
-        if (isOnGround() == this.motionEvent.isOnGround()) {
+        if (onGround() == this.motionEvent.isOnGround()) {
             setOnGround(this.motionEvent.isPreMotion());
         }
     }
 
-    @Inject(method = {"sendMovementPackets"}, at = {@At("RETURN")})
+    @Inject(method = {"sendPosition"}, at = {@At("RETURN")})
     private void sendMovementPacketsPostHook(CallbackInfo callbackInfo) {
         MotionEvent motionEvent = new MotionEvent(KeyPearlMode.Post, this.motionEvent);
         if (this.motionEvent.isCancelled()) {
@@ -229,22 +217,22 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         eventBus.fireEvent(motionEvent);
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getX()D")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getX()D")})
     private double getXHook(double d) {
         return this.motionEvent.getX();
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getY()D")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getY()D")})
     private double getYHook(double d) {
         return this.motionEvent.getY();
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getZ()D")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D")})
     private double getZHook(double d) {
         return this.motionEvent.getZ();
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getYaw()F")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F")})
     private float getYawHook(float f) {
         if (this.motionEvent.getOriginalYaw() == f && this.motionEvent.getOriginalYaw() != this.motionEvent.getYaw()) {
             return this.motionEvent.getYaw();
@@ -252,7 +240,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         return f;
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getPitch()F")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F")})
     private float getPitchHook(float f) {
         if (this.motionEvent.getOriginalPitch() == f && this.motionEvent.getOriginalPitch() != this.motionEvent.getPitch()) {
             return this.motionEvent.getPitch();
@@ -260,13 +248,13 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         return f;
     }
 
-    @ModifyExpressionValue(method = {"sendMovementPackets"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isOnGround()Z")})
+    @ModifyExpressionValue(method = {"sendPosition"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;onGround()Z")})
     private boolean isOnGroundHook(boolean z) {
         return this.motionEvent.isOnGround();
     }
 
-    @Redirect(method = {"tickMovement"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;setSprinting(Z)V", ordinal = 3), require = 0)
-    private void setSprintingHook(ClientPlayerEntity clientPlayerEntity, boolean z) {
+    @Redirect(method = {"aiStep"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;setSprinting(Z)V", ordinal = 3), require = 0)
+    private void setSprintingHook(LocalPlayer clientPlayerEntity, boolean z) {
         Sprint sprint_lcl = getSprint();
 
         if (sprint_lcl == null) return;
@@ -274,12 +262,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         clientPlayerEntity.setSprinting(sprint_lcl.isToggled() && sprint_lcl.is2181());
     }
 
-    @Inject(method = {"tickMovement"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;canStartSprinting()Z")})
+    @Inject(method = {"aiStep"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;canStartSprinting()Z")})
     private void onSprintUpdate(CallbackInfo callbackInfo) {
         eventBus.fireEvent(new SprintUpdateEvent());
     }
 
-    @ModifyExpressionValue(method = {"tickMovement"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z")})
+    /* 26.2 port: aiStep no longer calls isUsingItem — item slowdown now flows
+       through LocalPlayer.isSlowDueToUsing (bytecode-verified owner). Same
+       cancel-to-false semantics for NoSlow's TickMovementEvent. */
+    @ModifyExpressionValue(method = {"aiStep"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isSlowDueToUsingItem()Z")})
     private boolean tickMovementHook(boolean z) {
         TickMovementEvent tickMovementEvent = new TickMovementEvent();
         eventBus.fireEvent(tickMovementEvent);
@@ -289,7 +280,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         return z;
     }
 
-    @Inject(method = {"pushOutOfBlocks"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"moveTowardsClosestSpace"}, at = {@At("HEAD")}, cancellable = true)
     private void pushOutOfBlocksHook(double d, double d2, CallbackInfo callbackInfo) {
         PushOutOfBlocksEvent pushOutOfBlocksEvent = new PushOutOfBlocksEvent();
         eventBus.fireEvent(pushOutOfBlocksEvent);
@@ -298,37 +289,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         }
     }
 
-    @Inject(method = {"getMountJumpStrength"}, at = {@At("HEAD")}, cancellable = true)
-    private void getJumpMountStrengthHook(CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        EntityControl entitycontrol_lcl = getEntitycontrol();
-
-        if (entitycontrol_lcl == null) return;
-
-        if (entitycontrol_lcl.isToggled() && entitycontrol_lcl.horseJump.getValue().booleanValue()) {
-            callbackInfoReturnable.setReturnValue(Float.valueOf(1.0f));
-        }
-    }
-
-    @Inject(method = {"tickNausea"}, at = {@At("HEAD")})
-    private void updateNauseaHook(CallbackInfo callbackInfo) {
-        NoSlow noslow_lcl = getNoslow();
-
-        if (noslow_lcl == null) return;
-
-        if (noslow_lcl.isToggled() && noslow_lcl.portals.getValue().booleanValue() && this.portalManager != null) {
-            this.portalManager.setInPortal(false);
-        }
-    }
-
-    @Inject(method = {"tickMovement"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isFallFlying()Z", shift = At.Shift.BEFORE)})
+    @Inject(method = {"aiStep"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isFallFlying()Z", shift = At.Shift.BEFORE)})
     private void tickMovementElytra(CallbackInfo callbackInfo) {
         ElytraFly elytrafly_lcl = getElytrafly();
 
         if (elytrafly_lcl == null) return;
 
         if (elytrafly_lcl.isToggled() && elytrafly_lcl.hasElytra()) {
-            boolean z = minecraftClient.player.input.jumping;
-            if ((elytrafly_lcl.mode.getValue() != ElytraFly.ElytraFlyPredicateMode.PACKET || (elytrafly_lcl.vertical2.getValue().booleanValue() && minecraftClient.player.input.jumping)) && z) {
+            boolean z = minecraftClient.player.input.keyPresses.jump();
+            if ((elytrafly_lcl.mode.getValue() != ElytraFly.ElytraFlyPredicateMode.PACKET || (elytrafly_lcl.vertical2.getValue().booleanValue() && minecraftClient.player.input.keyPresses.jump())) && z) {
                 elytrafly_lcl.sendStartFallFlying();
             } else {
                 ClientServices.holeSnapHelper.releaseTickRate(elytrafly);
@@ -336,44 +305,29 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         }
     }
 
-    @Inject(method = {"shouldSlowDown"}, at = {@At("HEAD")}, cancellable = true)
-    private void shouldSlowdown(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        NoSlow noslow_lcl = getNoslow();
-
-        if (noslow_lcl == null) return;
-
-        boolean z = minecraftClient.player.isCrawling() && noslow_lcl.crawl.getValue().booleanValue();
-        boolean z2 = !z && minecraftClient.player.isSneaking() && noslow_lcl.sneak.getValue().booleanValue();
-        if (noslow_lcl.isToggled()) {
-            if (z || z2) {
-                callbackInfoReturnable.setReturnValue(false);
-            }
-        }
-    }
-
-    @Override // me.mioclient.mixin.ducks.PlayerMovementMixin
+    @Override
     public void sendMovementPacketsWrapper() {
-        method_3136();
+        sendPosition();
     }
 
-    @Override // me.mioclient.mixin.ducks.PlayerMovementMixin
+    @Override
     public void superTick() {
         super.tick();
     }
 
-    @Override // me.mioclient.mixin.ducks.PlayerMovementMixin
+    @Override
     public void resetEvent() {
-        this.motionEvent = new MotionEvent(KeyPearlMode.Pre, getX(), getBoundingBox().minY, getZ(), getYaw(), getPitch(), isOnGround());
+        this.motionEvent = new MotionEvent(KeyPearlMode.Pre, getX(), getBoundingBox().minY, getZ(), getYRot(), getXRot(), onGround());
     }
 
-    @Override // me.mioclient.mixin.ducks.PlayerMovementMixin
+    @Override
     public void resetRotations() {
-        ClientServices.RotationManager.applyRotationsOnce((!hasVehicle() || this.motionEvent.hasModifiedRotation()) ? this.motionEvent.getYaw() : getVehicle().getYaw(), this.motionEvent.getPitch());
-        if (getYaw() == this.motionEvent.getRotationYaw()) {
-            setYaw(this.motionEvent.getOriginalYaw());
+        ClientServices.RotationManager.applyRotationsOnce((!(getVehicle() != null) || this.motionEvent.hasModifiedRotation()) ? this.motionEvent.getYaw() : getVehicle().getYRot(), this.motionEvent.getPitch());
+        if (getYRot() == this.motionEvent.getRotationYaw()) {
+            setYRot(this.motionEvent.getOriginalYaw());
         }
-        if (getPitch() == this.motionEvent.getRotationPitch()) {
-            setPitch(this.motionEvent.getOriginalPitch());
+        if (getXRot() == this.motionEvent.getRotationPitch()) {
+            setXRot(this.motionEvent.getOriginalPitch());
         }
     }
 }

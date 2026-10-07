@@ -4,13 +4,9 @@ import me.mioclient.api.NamedValue;
 
 import me.mioclient.util.registry.EnumSettingRegistry;
 
-import me.mioclient.util.registry.EnumSettingRegistry;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EnumSettingConverter.class */
 public class EnumJsonConverter extends com.google.common.base.Converter<Enum, JsonElement> {
     public final Class<? extends Enum> class_;
 
@@ -41,7 +37,6 @@ public class EnumJsonConverter extends com.google.common.base.Converter<Enum, Js
         return (Enum) r3.getDeclaringClass().getEnumConstants()[0];
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     public static String getEnumDisplayName(Enum<?> r3) {
         if (r3 instanceof NamedValue) {
             return ((NamedValue) r3).getName();
@@ -49,7 +44,6 @@ public class EnumJsonConverter extends com.google.common.base.Converter<Enum, Js
         throw new IllegalArgumentException();
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     /* renamed from: getJsonElement914, reason: merged with bridge method [inline-methods] */
     public JsonElement doForward(Enum r5) {
         if (r5 instanceof NamedValue) {
@@ -58,7 +52,6 @@ public class EnumJsonConverter extends com.google.common.base.Converter<Enum, Js
         throw new IllegalArgumentException();
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     /* renamed from: getEnum915, reason: merged with bridge method [inline-methods] */
     public Enum doBackward(JsonElement jsonElement) {
         for (Enum named : (Enum[]) this.class_.getEnumConstants()) {

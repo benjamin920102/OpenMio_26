@@ -1,17 +1,13 @@
 package me.mioclient.module.client;
 
 import me.mioclient.event.events.client.ClientTickEvent;
+import net.minecraft.client.gui.Font;
 
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.mode.client.FontStyle;
-import me.mioclient.render.font.ClientTextRenderer;
-
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.render.font.ClientTextRenderer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.event.events.client.ClientTickEvent;
-import me.mioclient.mode.client.FontStyle;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -22,13 +18,11 @@ import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/Fonts.class */
 public class Fonts extends Module {
     public static Fonts fonts;
     public final AtomicBoolean atomicBoolean;
     public static final Runnable runnable = () -> {
-        if (minecraftClient.player != null || (minecraftClient.currentScreen instanceof AbstractClickGuiScreen)) {
+        if (minecraftClient.player != null || (minecraftClient.gui.screen() instanceof AbstractClickGuiScreen)) {
             ClientTextRenderer.INSTANCE.setAdvanceGlyph(ClientTextRenderer.INSTANCE.createAdvanceGlyph());
         }
     };
@@ -56,7 +50,7 @@ public class Fonts extends Module {
 
     @Listen
     public void onClientTick(ClientTickEvent fontsEvent) {
-        if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 0) == 1 || !this.atomicBoolean.get()) {
+        if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().handle(), 0) == 1 || !this.atomicBoolean.get()) {
             return;
         }
         ClientTextRenderer.INSTANCE.setAdvanceGlyph(ClientTextRenderer.INSTANCE.createAdvanceGlyph());

@@ -5,8 +5,6 @@ import com.google.gson.JsonPrimitive;
 import java.lang.Number;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/NumberSetting.class */
 public final class NumberSetting<T extends Number> extends Setting<T> {
     public String string;
 
@@ -75,7 +73,6 @@ public final class NumberSetting<T extends Number> extends Setting<T> {
         }
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     @Override // me.mioclient.api.JsonConfigurable
     public JsonElement toJson() {
         return new JsonPrimitive((Number) getValue());

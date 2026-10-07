@@ -8,8 +8,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HttpRequests.class */
 public final class HttpRequests implements ClientAccessor {
     public static HttpResponse<String> sendSyncRequest(HttpRequest httpRequest) {
         return sendSync(httpRequest, HttpResponse.BodyHandlers.ofString());

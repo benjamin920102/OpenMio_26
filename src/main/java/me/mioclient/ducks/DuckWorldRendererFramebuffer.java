@@ -1,9 +1,7 @@
 package me.mioclient.ducks;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckWorldRendererFramebuffer.class */
 public interface DuckWorldRendererFramebuffer {
-    net.minecraft.client.gl.Framebuffer getFramebuffer();
+    com.mojang.blaze3d.pipeline.RenderTarget getFramebuffer();
 
-    void setFramebuffer(net.minecraft.client.gl.Framebuffer framebuffer);
+    void setFramebuffer(com.mojang.blaze3d.pipeline.RenderTarget framebuffer);
 }

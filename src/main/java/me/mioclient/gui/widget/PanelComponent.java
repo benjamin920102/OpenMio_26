@@ -11,18 +11,11 @@ import me.mioclient.mode.client.CursorType;
 import me.mioclient.util.anim.InterpolatedFloat;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.GuiComponent;
-import me.mioclient.gui.widget.ModuleButton;
-import me.mioclient.util.anim.InterpolatedFloat;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.mode.client.CursorType;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HudElement.class */
 public abstract class PanelComponent implements ClientAccessor, GuiComponent {
     public final ClickGuiPanel presetEnumSettingHelper;
     public int num;
@@ -39,7 +32,7 @@ public abstract class PanelComponent implements ClientAccessor, GuiComponent {
         return this.presetEnumSettingHelper;
     }
 
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         SoundPlayer searchHelper4_42970;
         if (containsPoint(d, d2)) {
             if (!this.flag && getUI().hover.getValue().booleanValue() && !hasFlag(PanelComponentFlag.SILENT) && (searchHelper4_42970 = ClientServices.killstreakSoundManager.findSoundPlayer(getUI().sound2.getValue())) != null) {

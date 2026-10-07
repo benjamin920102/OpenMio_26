@@ -4,8 +4,6 @@ import me.mioclient.util.client.ChatUtils;
 
 import me.mioclient.api.ClientAccessor;
 
-import me.mioclient.event.EventBus;
-
 import baritone.api.BaritoneAPI;
 import baritone.api.behavior.IPathingBehavior;
 import baritone.api.pathing.goals.Goal;
@@ -19,20 +17,16 @@ import baritone.api.utils.interfaces.IGoalRenderPos;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import me.mioclient.module.Feature;
+import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BaritonePathingController.class */
 public final class BaritonePathingController implements ClientAccessor, PathingController {
-    public final ObjectSet<me.mioclient.module.Feature> objectSet = ObjectSets.synchronize(new ObjectOpenHashSet());
+    public final ObjectSet<me.mioclient.module.Feature> objectSet = ObjectSets.synchronize(new ObjectOpenHashSet<>());
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ObjectSetSearchHelper4$BaritoneProcess.class */
+    
     private class BaritoneProcess implements IBaritoneProcess {
         public BaritoneProcess() {
         }
@@ -66,10 +60,10 @@ public final class BaritonePathingController implements ClientAccessor, PathingC
         BaritoneAPI.getProvider().getPrimaryBaritone().getPathingControlManager().registerProcess(new BaritoneProcess());
         BaritoneAPI.getSettings().useMessageTag.value = false;
         BaritoneAPI.getSettings().logger.value = text -> {
-            Text copy = text.copy();
-            ((MutableText) copy).getSiblings().add(0, Text.literal(" "));
-            ((MutableText) copy).getSiblings().add(0, ChatUtils.getClientPrefix());
-            minecraftClient.inGameHud.getChatHud().addMessage(copy, (MessageSignatureData) null, ChatUtils.messageIndicator);
+            Component copy = text.copy();
+            ((MutableComponent) copy).getSiblings().add(0, Component.literal(" "));
+            ((MutableComponent) copy).getSiblings().add(0, ChatUtils.getClientPrefix());
+            minecraftClient.gui.hud.getChat().addPlayerMessage(copy, (MessageSignature) null, ChatUtils.GuiMessageTag);
         };
     }
 
@@ -100,7 +94,7 @@ public final class BaritonePathingController implements ClientAccessor, PathingC
 
     @Override // me.mioclient.util.baritone.PathingController
     public void pathForward(double d) {
-        BaritoneAPI.getProvider().getPrimaryBaritone().getCustomGoalProcess().setGoalAndPath(GoalXZ.fromDirection(minecraftClient.player.getPos(), minecraftClient.player.getYaw(), Double.longBitsToDouble(4617315517961601024L)));
+        BaritoneAPI.getProvider().getPrimaryBaritone().getCustomGoalProcess().setGoalAndPath(GoalXZ.fromDirection(minecraftClient.player.position(), minecraftClient.player.getYRot(), Double.longBitsToDouble(4617315517961601024L)));
     }
 
     @Override // me.mioclient.util.baritone.PathingController
@@ -131,20 +125,20 @@ public final class BaritonePathingController implements ClientAccessor, PathingC
         if (lastSelection == null) {
             return false;
         }
-        return Box.enclosing(lastSelection.min(), lastSelection.max()).contains(blockPos.toCenterPos());
+        return lastSelection.aabb().contains(Vec3.atCenterOf(blockPos));
     }
 
     @Override // me.mioclient.util.baritone.PathingController
     public BlockPos getCurrentGoal() {
-        IGoalRenderPos goal = BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().getGoal();
-        if (goal instanceof IGoalRenderPos) {
-            return goal.getGoalPos();
+        Goal goal = BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().getGoal();
+        if (goal instanceof IGoalRenderPos renderPos) {
+            return renderPos.getGoalPos();
         }
         if (!(goal instanceof GoalXZ)) {
             return null;
         }
         GoalXZ goalXZ = (GoalXZ) goal;
-        return BlockPos.ofFloored(goalXZ.getX(), minecraftClient.player.getY(), goalXZ.getZ());
+        return BlockPos.containing(goalXZ.getX(), minecraftClient.player.getY(), goalXZ.getZ());
     }
 
     @Override // me.mioclient.util.baritone.PathingController

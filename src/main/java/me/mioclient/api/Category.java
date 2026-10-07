@@ -1,11 +1,7 @@
 package me.mioclient.api;
 
-
-
 import me.mioclient.module.client.HUD;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/api/Category.class */
 public enum Category implements NamedValue {
     COMBAT("Combat"),
     MISC("Misc"),

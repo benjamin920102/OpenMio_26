@@ -3,8 +3,6 @@ package me.mioclient.util.io;
 import com.google.gson.JsonObject;
 import java.util.Map;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/JsonValidator.class */
 public class JsonValidator {
     public static boolean hasAllFields(JsonObject jsonObject, String... strArr) {
         for (String str : strArr) {

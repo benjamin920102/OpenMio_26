@@ -14,68 +14,99 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.combat.CrystalThreatDetector;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.client.InputState;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.setting.HoleSnapMode;
-import me.mioclient.module.combat.offhand.OffhandMode;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.render.RenderEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.player.NoInteract;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.AxeItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.PickaxeItem;
-import net.minecraft.item.ShieldItem;
-import net.minecraft.item.SwordItem;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.module.Lag;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Offhand.class */
 public class Offhand extends Module {
-    public static final AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
-    public static final Offhand offhand = (Offhand) ClientServices.moduleInjector.getModule(Offhand.class);
-    public static final NoInteract noInteract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class);
-    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static AutoCrystal autoCrystal;
+
+    public static AutoCrystal getAutoCrystal() {
+        if (autoCrystal == null && ClientServices.moduleInjector != null) {
+            try {
+                autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoCrystal;
+    }
+
+    private static Offhand offhand;
+
+    public static Offhand getOffhand() {
+        if (offhand == null && ClientServices.moduleInjector != null) {
+            try {
+                offhand = (Offhand) ClientServices.moduleInjector.getModule(Offhand.class);
+            } catch (Exception e) {
+            }
+        }
+        return offhand;
+    }
+
+    private static NoInteract noInteract;
+
+    public static NoInteract getNoInteract() {
+        if (noInteract == null && ClientServices.moduleInjector != null) {
+            try {
+                noInteract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class);
+            } catch (Exception e) {
+            }
+        }
+        return noInteract;
+    }
+
+    private static AntiCheat antiCheat;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<OffhandMode> item = add(new EnumSetting<>("Item", OffhandMode.Totem));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 25, 0, 500).setSuffix("ms"));
     public Setting<Float> health = add(new NumberSetting<>("Health", 16.0f, 2.0f, 36.0f).setSuffix("hp").setHoleSnapConfig("Adaptive", HoleSnapMode.MIN));
@@ -88,7 +119,7 @@ public class Offhand extends Module {
     public Setting<Boolean> crystals = add(new BooleanSetting("Crystals", true, v -> this.gappleBind.isShown()));
     public Setting<Boolean> totems = add(new BooleanSetting("Totems", false).requiresSettings(this.gappleBind));
     public Setting<Boolean> crapple = add(new BooleanSetting("Crapple", false, v -> this.item.getValue() == OffhandMode.Gapple || this.gappleBind.isShown()));
-    public Setting<Set<Item>> custom = add(new EntityListObjectSetting<>("Custom", Registries.ITEM));
+    public Setting<Set<Item>> custom = add(new EntityListObjectSetting<>("Custom", BuiltInRegistries.ITEM));
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public final Stopwatch stopwatch3;
@@ -101,15 +132,14 @@ public class Offhand extends Module {
     public final CrystalThreatDetector mainhandHelper;
     public static boolean flag4;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Offhand$Inner.class */
+    
     class Inner extends CrystalThreatDetector {
         public Inner() {
         }
 
         @Override // me.mioclient.util.combat.CrystalThreatDetector
         public boolean isEnabled() {
-            if (minecraftClient.player.getMainHandStack().isOf(Items.TOTEM_OF_UNDYING)) {
+            if (minecraftClient.player.getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING) {
                 return false;
             }
             return Offhand.this.lethal.getValue().booleanValue() || Offhand.this.health.isAtMinimum();
@@ -174,13 +204,13 @@ public class Offhand extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        EntityStatusS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntityStatusS2CPacket ? (EntityStatusS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof EntityStatusS2CPacket) {
-            EntityStatusS2CPacket entityStatusS2CPacket = packet904;
-            if (!isForceSuicideTotemMode() && isOffhandSwapAllowed() && entityStatusS2CPacket.getEntity(minecraftClient.world) == minecraftClient.player && entityStatusS2CPacket.getStatus() == 35) {
-                if (!minecraftClient.player.getMainHandStack().isOf(Items.TOTEM_OF_UNDYING)) {
-                    if (minecraftClient.player.getOffHandStack().isOf(Items.TOTEM_OF_UNDYING)) {
-                        minecraftClient.player.getOffHandStack().decrement(1);
+        ClientboundEntityEventPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundEntityEventPacket ? (ClientboundEntityEventPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundEntityEventPacket) {
+            ClientboundEntityEventPacket entityStatusS2CPacket = packet904;
+            if (!isForceSuicideTotemMode() && isOffhandSwapAllowed() && entityStatusS2CPacket.getEntity(minecraftClient.level) == minecraftClient.player && entityStatusS2CPacket.getEventId() == 35) {
+                if (minecraftClient.player.getMainHandItem().getItem() != Items.TOTEM_OF_UNDYING) {
+                    if (minecraftClient.player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
+                        minecraftClient.player.getOffhandItem().shrink(1);
                     }
                 }
                 this.stopwatch4.reset();
@@ -188,17 +218,17 @@ public class Offhand extends Module {
                 do906();
             }
         }
-        EntitySpawnS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof EntitySpawnS2CPacket) {
-            EntitySpawnS2CPacket entitySpawnS2CPacket = packet9042;
-            if (this.mainhandHelper.isEnabled() && entitySpawnS2CPacket.getEntityType() == EntityType.END_CRYSTAL) {
-                if (this.mainhandHelper.isLethalExplosionAt(new Vec3d(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ()))) {
+        ClientboundAddEntityPacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundAddEntityPacket ? (ClientboundAddEntityPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundAddEntityPacket) {
+            ClientboundAddEntityPacket entitySpawnS2CPacket = packet9042;
+            if (this.mainhandHelper.isEnabled() && entitySpawnS2CPacket.getType() == EntityTypes.END_CRYSTAL) {
+                if (this.mainhandHelper.isLethalExplosionAt(new Vec3(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ()))) {
                     this.stopwatch3.reset();
                 }
             }
         }
-        if (channelRead0Event.getPacket() instanceof DeathMessageS2CPacket) {
-            if (minecraftClient.player.getOffHandStack().isOf(Items.TOTEM_OF_UNDYING)) {
+        if (channelRead0Event.getPacket() instanceof ClientboundPlayerCombatKillPacket) {
+            if (minecraftClient.player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
                 do2667();
             }
         }
@@ -206,15 +236,17 @@ public class Offhand extends Module {
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (interactBlockEvent.getHand() != Hand.MAIN_HAND || resolveOffhandMode((OffhandMode) null) == null || antiCheat.isF2b2t()) {
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        if (interactBlockEvent.getHand() != InteractionHand.MAIN_HAND || resolveOffhandMode((OffhandMode) null) == null || (antiCheat_lcl != null && antiCheat_lcl.isF2b2t())) {
             return;
         }
-        minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.OFF_HAND);
+        minecraftClient.gameMode.useItem(minecraftClient.player, InteractionHand.OFF_HAND);
         interactBlockEvent.cancel();
     }
 
     public OffhandMode getOffhandMode2661() {
-        if (autoCrystal.isToggled() && autoCrystal.forceSuicide.getValue().booleanValue() && this.item.getValue() != OffhandMode.Totem) {
+        AutoCrystal autoCrystal_lcl = getAutoCrystal();
+        if (autoCrystal_lcl != null && autoCrystal_lcl.isToggled() && autoCrystal_lcl.forceSuicide.getValue().booleanValue() && this.item.getValue() != OffhandMode.Totem) {
             return OffhandMode.Crystal;
         }
         boolean booleanValue = this.crapple.getValue().booleanValue();
@@ -223,20 +255,21 @@ public class Offhand extends Module {
             return OffhandMode.Totem;
         }
         if (EntityUtil.getPlayerHealth() > this.health.getValue().floatValue() && minecraftClient.player.fallDistance < Float.intBitsToFloat(1098907648) && InventoryUtils.countItems(itemStack -> {
-            return itemStack.isOf(this.item.getValue().getOffhandItem(booleanValue));
+            return itemStack.getItem() == this.item.getValue().getOffhandItem(booleanValue);
         }) > 0) {
             offhandMode = this.item.getValue();
         }
         return resolveOffhandMode(offhandMode);
     }
 
-    public boolean is2662(Item item) {
-        if ((item instanceof SwordItem) || (item instanceof AxeItem)) {
+    public boolean is2662(ItemStack itemStack) {
+        if (itemStack.is(holder -> holder.is(ItemTags.SWORDS)) || (itemStack.getItem() instanceof AxeItem)) {
             return true;
         }
-        if ((item instanceof PickaxeItem) && this.pickaxe.getValue().booleanValue()) {
+        if (itemStack.is(holder -> holder.is(ItemTags.PICKAXES)) && this.pickaxe.getValue().booleanValue()) {
             return true;
         }
+        Item item = itemStack.getItem();
         if (item == Items.TOTEM_OF_UNDYING && this.totems.getValue().booleanValue()) {
             return true;
         }
@@ -249,34 +282,35 @@ public class Offhand extends Module {
                 return offhandMode;
             }
         }
-        if (WorldUtils.isInteractableHit(minecraftClient.crosshairTarget) && !minecraftClient.player.isSneaking() && !noInteract.isToggled()) {
+        NoInteract noInteract_lcl = getNoInteract();
+        if (WorldUtils.isInteractableHit(minecraftClient.hitResult) && !minecraftClient.player.isShiftKeyDown() && (noInteract_lcl == null || !noInteract_lcl.isToggled())) {
             return offhandMode;
         }
         float f = EntityUtil.getPlayerHealth();
-        Item item = minecraftClient.player.getMainHandStack().getItem();
+        Item item = minecraftClient.player.getMainHandItem().getItem();
         boolean z = this.safe.getValue().floatValue() < f;
         if (item == Items.TOTEM_OF_UNDYING) {
             z = true;
         }
-        return (this.gappleBind.getValue().booleanValue() && minecraftClient.options.useKey.isPressed() && z && is2662(item) && minecraftClient.currentScreen == null && this.item.getValue() != OffhandMode.Gapple) ? OffhandMode.Gapple : offhandMode;
+        return (this.gappleBind.getValue().booleanValue() && minecraftClient.options.keyUse.isDown() && z && is2662(minecraftClient.player.getMainHandItem()) && minecraftClient.gui.screen() == null && this.item.getValue() != OffhandMode.Gapple) ? OffhandMode.Gapple : offhandMode;
     }
 
     public void beginOffhandSwap() {
         this.list.add(Long.valueOf(System.currentTimeMillis()));
         ClientServices.fireworksHelper.setSyncBatching(true);
         if (ClientServices.holeSnapRenderHelper.isSprinting()) {
-            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING, 0);
+            PacketSender.sendClientCommand(minecraftClient.player, ServerboundPlayerCommandPacket.Action.STOP_SPRINTING, 0);
             this.flag = true;
         }
     }
 
     public void endOffhandSwap() {
         ClientServices.fireworksHelper.setSyncBatching(false);
-        if (!(minecraftClient.currentScreen instanceof HandledScreen)) {
+        if (!(minecraftClient.gui.screen() instanceof AbstractContainerScreen)) {
             ClientServices.fireworksHelper.close();
         }
         if (this.flag) {
-            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.START_SPRINTING, 0);
+            PacketSender.sendClientCommand(minecraftClient.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING, 0);
             this.flag = false;
         }
     }
@@ -284,26 +318,26 @@ public class Offhand extends Module {
     public void do906() {
         OffhandMode offhandMode2661 = getOffhandMode2661();
         int i = offhandMode2661.findOffhandItemSlot(this.crapple.getValue().booleanValue());
-        if (this.num != -1 && (!(minecraftClient.currentScreen instanceof HandledScreen) || (minecraftClient.currentScreen instanceof InventoryScreen))) {
-            if (minecraftClient.player.getInventory().getStack(this.num >= 36 ? this.num - 36 : this.num).isOf(offhandMode2661.getOffhandItem(this.crapple.getValue().booleanValue())) && i != -1) {
+        if (this.num != -1 && (!(minecraftClient.gui.screen() instanceof AbstractContainerScreen) || (minecraftClient.gui.screen() instanceof InventoryScreen))) {
+            if (minecraftClient.player.getInventory().getItem(this.num >= 36 ? this.num - 36 : this.num).getItem() == offhandMode2661.getOffhandItem(this.crapple.getValue().booleanValue()) && i != -1) {
                 i = this.num;
             }
         }
         if (i == -1) {
             return;
         }
-        if ((this.containers.getValue().booleanValue() || !((minecraftClient.currentScreen instanceof ShulkerBoxScreen) || (minecraftClient.currentScreen instanceof GenericContainerScreen))) && i < minecraftClient.player.currentScreenHandler.slots.size()) {
-            ItemStack cursorStack = minecraftClient.player.currentScreenHandler.getCursorStack();
-            ItemStack stack = minecraftClient.player.currentScreenHandler.getSlot(i).getStack();
-            if (!stack.contains(DataComponentTypes.FOOD) || this.flag2) {
+        if ((this.containers.getValue().booleanValue() || !((minecraftClient.gui.screen() instanceof ShulkerBoxScreen) || (minecraftClient.gui.screen() instanceof ContainerScreen))) && i < minecraftClient.player.containerMenu.slots.size()) {
+            ItemStack cursorStack = minecraftClient.player.containerMenu.getCarried();
+            ItemStack stack = minecraftClient.player.containerMenu.getSlot(i).getItem();
+            if (!stack.has(DataComponents.FOOD) || this.flag2) {
                 beginOffhandSwap();
-                int i2 = minecraftClient.player.currentScreenHandler.syncId;
+                int i2 = minecraftClient.player.containerMenu.containerId;
                 if (!cursorStack.isEmpty() && !InventoryUtils.isInventoryFull()) {
-                    minecraftClient.interactionManager.clickSlot(i2, InventoryUtils.findSlot(Items.AIR), 0, SlotActionType.PICKUP, minecraftClient.player);
+                    minecraftClient.gameMode.handleContainerInput(i2, InventoryUtils.findSlot(Items.AIR), 0, ContainerInput.PICKUP, minecraftClient.player);
                 }
-                if (this.f117.getValue().booleanValue() && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+                if (this.f117.getValue().booleanValue() && minecraftClient.player.containerMenu.getCarried().isEmpty()) {
                     this.num = i;
-                    minecraftClient.interactionManager.clickSlot(i2, i, 40, SlotActionType.SWAP, minecraftClient.player);
+                    minecraftClient.gameMode.handleContainerInput(i2, i, 40, ContainerInput.SWAP, minecraftClient.player);
                     this.stopwatch.reset();
                 } else {
                     do438(i);
@@ -311,15 +345,15 @@ public class Offhand extends Module {
                 }
                 flag4 = true;
                 endOffhandSwap();
-                if (InputState.isKeyBindingActive(minecraftClient.options.useKey) && stack.contains(DataComponentTypes.FOOD)) {
-                    minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.OFF_HAND);
+                if (InputState.isKeyBindingActive(minecraftClient.options.keyUse) && stack.has(DataComponents.FOOD)) {
+                    minecraftClient.gameMode.useItem(minecraftClient.player, InteractionHand.OFF_HAND);
                 }
             }
         }
     }
 
     public void do438(int i) {
-        if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue()) && minecraftClient.player.currentScreenHandler.slots.size() > 45) {
+        if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue()) && minecraftClient.player.containerMenu.slots.size() > 45) {
             InventoryUtils.swapStacks(i, 45);
             this.stopwatch.reset();
         }
@@ -342,8 +376,8 @@ public class Offhand extends Module {
         if (this.flag3) {
             return;
         }
-        Text append = Text.literal("Since last pop: %dms. Latency: %dms.".formatted(Long.valueOf(j), Integer.valueOf(i))).append(Text.literal(" Possible death reasons: Damage override/Lag spike.*").styled(style -> {
-            return style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("More info in the game log.")));
+        Component append = Component.literal("Since last pop: %dms. Latency: %dms.".formatted(Long.valueOf(j), Integer.valueOf(i))).append(Component.literal(" Possible death reasons: Damage override/Lag spike.*").withStyle(style -> {
+            return style.withHoverEvent(new HoverEvent.ShowText(Component.literal("More info in the game log.")));
         }));
         if (i > j) {
             ChatUtils.sendPrefixedMessage(append, ChatUtils.createSignature((Math.abs(getName().hashCode()) * (-1)) - 1), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
@@ -353,17 +387,19 @@ public class Offhand extends Module {
     }
 
     public boolean isForceSuicideTotemMode() {
-        return autoCrystal.isToggled() && autoCrystal.forceSuicide.getValue().booleanValue() && this.item.getValue() == OffhandMode.Totem;
+        AutoCrystal autoCrystal_lcl = getAutoCrystal();
+        return autoCrystal_lcl != null && autoCrystal_lcl.isToggled() && autoCrystal_lcl.forceSuicide.getValue().booleanValue() && this.item.getValue() == OffhandMode.Totem;
     }
 
     public boolean isOffhandSwapAllowed() {
         if (this.f117.getValue().booleanValue()) {
             return true;
         }
-        return ((minecraftClient.currentScreen instanceof CreativeInventoryScreen) || minecraftClient.player.playerScreenHandler != minecraftClient.player.currentScreenHandler || (minecraftClient.currentScreen instanceof GenericContainerScreen)) ? false : true;
+        return ((minecraftClient.gui.screen() instanceof CreativeModeInventoryScreen) || minecraftClient.player.inventoryMenu != minecraftClient.player.containerMenu || (minecraftClient.gui.screen() instanceof ContainerScreen)) ? false : true;
     }
 
     public static boolean is929() {
-        return flag4 && offhand.isToggled();
+        Offhand offhand_lcl = getOffhand();
+        return flag4 && offhand_lcl != null && offhand_lcl.isToggled();
     }
 }

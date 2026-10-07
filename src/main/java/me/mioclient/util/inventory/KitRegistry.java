@@ -5,8 +5,6 @@ import me.mioclient.util.registry.NamedRegistryList;
 import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.registry.NamedRegistryList;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -17,14 +15,11 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KitRegistry.class */
 public final class KitRegistry extends NamedRegistryList<InventoryKit> implements ClientAccessor, JsonConfigurable {
     public String string;
 
@@ -119,10 +114,10 @@ public final class KitRegistry extends NamedRegistryList<InventoryKit> implement
         });
         InventoryKit chestStealerEnumSettingHelper2 = new InventoryKit(str);
         int i = 0;
-        Iterator it = minecraftClient.player.getInventory().main.iterator();
+        Iterator it = minecraftClient.player.getInventory().getNonEquipmentItems().iterator();
         while (it.hasNext()) {
             ItemStack itemStack = (ItemStack) it.next();
-            chestStealerEnumSettingHelper2.getSlotRecords().put(Integer.valueOf(i), new InventoryKit.Record(Item.getRawId(itemStack.getItem()), buildPotionDescriptor(itemStack)));
+            chestStealerEnumSettingHelper2.getSlotRecords().put(Integer.valueOf(i), new InventoryKit.Record(net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(itemStack.getItem()), buildPotionDescriptor(itemStack)));
             i++;
         }
         getRegistry().add(chestStealerEnumSettingHelper2);
@@ -130,15 +125,15 @@ public final class KitRegistry extends NamedRegistryList<InventoryKit> implement
     }
 
     public static String buildPotionDescriptor(ItemStack itemStack) {
-        PotionContentsComponent potionContentsComponent = (PotionContentsComponent) itemStack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents potionContentsComponent = (PotionContents) itemStack.get(DataComponents.POTION_CONTENTS);
         if (potionContentsComponent == null) {
             return null;
         }
         ArrayList<String> arrayList = new ArrayList<>();
-        potionContentsComponent.forEachEffect(statusEffectInstance -> {
+        for (net.minecraft.world.effect.MobEffectInstance statusEffectInstance : potionContentsComponent.getAllEffects()) {
             List<String> list = arrayList;
-            list.add(new StringTemplate().arg(statusEffectInstance.getAmplifier() + 1).arg(statusEffectInstance.getTranslationKey()).format("\u0001 \u0001"));
-        });
+            list.add(new StringTemplate().arg(statusEffectInstance.getAmplifier() + 1).arg(statusEffectInstance.getDescriptionId()).format("\u0001 \u0001"));
+        }
         arrayList.sort(Comparator.comparing(str -> {
             return str;
         }));

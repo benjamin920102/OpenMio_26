@@ -7,23 +7,15 @@ import me.mioclient.network.codec.NetworkMessage;
 import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.codec.NetworkMessage;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.math.ColorUtils;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.awt.Color;
 import java.io.DataInputStream;
 import java.util.Objects;
 import me.mioclient.module.client.IRC;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/IrcChatPacket.class */
 public class IrcChatPacket implements NetworkMessage {
     public static IRC iRC = (IRC) ClientServices.moduleInjector.getModule(IRC.class);
     public String string;
@@ -32,28 +24,28 @@ public class IrcChatPacket implements NetworkMessage {
 
     @Override // me.mioclient.network.codec.NetworkMessage
     public void handle(ChannelHandlerContext channelHandlerContext) {
-        if (!iRC.chat.getValue().booleanValue() || MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().world == null) {
+        if (!iRC.chat.getValue().booleanValue() || Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) {
             return;
         }
         if (ClientServices.nameTagsManager.getIgnoredUsers().contains(this.string2.toLowerCase())) {
             return;
         }
         iRC.num++;
-        Text empty = Text.empty();
-        ((MutableText) empty).append("<");
+        Component empty = Component.empty();
+        ((MutableComponent) empty).append("<");
         Color color814 = iRC.gradient.getValue().booleanValue() ? ColorUtils.getGradientColor(ColorUtils.getThemeColor(), ColorUtils.getThemeColor().darker(), Double.longBitsToDouble(4658815484840378368L), 0.0d) : ColorUtils.getThemeColor();
-        ((MutableText) empty).append(Text.literal(this.string).styled(style -> {
+        ((MutableComponent) empty).append(Component.literal(this.string).withStyle(style -> {
             Objects.requireNonNull(color814);
             return ChatUtils.withDynamicColor(style, color814::hashCode);
         }));
-        ((MutableText) empty).append("> ");
-        ((MutableText) empty).append(this.string3);
+        ((MutableComponent) empty).append("> ");
+        ((MutableComponent) empty).append(this.string3);
         ChatUtils.sendMessage(empty, ChatUtils.createSignature(new StringTemplate().arg(iRC.num).arg(this.string).arg(this.string3).format("\u0001\u0001\u0001").hashCode()));
         if (iRC.chatSound.getValue().booleanValue()) {
             if (this.string.contains(ClientServices.welcomerHelper.getUsername())) {
                 return;
             }
-            if (this.string.contains(MinecraftClient.getInstance().getSession().getUsername())) {
+            if (this.string.contains(Minecraft.getInstance().getUser().getName())) {
                 return;
             }
             ClientServices.killstreakSoundManager.findSoundPlayer(iRC.mode.getValue()).play(iRC.volume2.getValue().floatValue());

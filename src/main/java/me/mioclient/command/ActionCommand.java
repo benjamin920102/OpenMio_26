@@ -2,11 +2,7 @@ package me.mioclient.command;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.inventory.SlotPair;
-
-import me.mioclient.util.inventory.SlotPair;
-import me.mioclient.api.NamedValue;
 
 import me.mioclient.event.EventBus;
 
@@ -21,22 +17,19 @@ import java.util.Map;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.command.EnumArgumentType;
-import net.minecraft.command.CommandSource;
-import net.minecraft.item.AnimalArmorItem;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_9.class */
 public class ActionCommand extends CommandFeature {
     public final Map<Mode, List<Record>> map;
     public boolean flag;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/Feature_9$Mode.class */
+    
     private enum Mode implements NamedValue {
         SWAP("swap", item -> {
             return true;
@@ -73,8 +66,7 @@ public class ActionCommand extends CommandFeature {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/Feature_9$Record.class */
+    
     private static final class Record {
         public final ItemSwapHandler itemSwapHandler;
         public final SlotPair data_4;
@@ -83,9 +75,6 @@ public class ActionCommand extends CommandFeature {
             this.itemSwapHandler = itemSwapHandler;
             this.data_4 = data_4;
         }
-
-
-
 
         public ItemSwapHandler getItemDataHandler764() {
             return this.itemSwapHandler;
@@ -106,8 +95,8 @@ public class ActionCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
-        literalArgumentBuilder.then(CommandFeature.argument("swap", new EnumArgumentType(Mode.class)).then(CommandFeature.argument("item", BiPredicateArgumentType.registry(Registries.ITEM, this::isItemValidForSwap)).executes(commandContext -> {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
+        literalArgumentBuilder.then(CommandFeature.argument("swap", new EnumArgumentType(Mode.class)).then(CommandFeature.argument("item", BiPredicateArgumentType.registry(BuiltInRegistries.ITEM, this::isItemValidForSwap)).executes(commandContext -> {
             Item item = (Item) commandContext.getArgument("item", Item.class);
             Mode mode = (Mode) commandContext.getArgument("swap", Mode.class);
             SlotPair data_4253 = mode.getSwapHandler().getSlotPair(item);
@@ -158,9 +147,14 @@ public class ActionCommand extends CommandFeature {
     }
 
     public static boolean is1295(Item item) {
-        if (item instanceof AnimalArmorItem) {
+        // 26.2 port: AnimalArmorItem/ArmorItem removed; armor now via EQUIPPABLE component.
+        if (item == Items.ELYTRA) {
+            return true;
+        }
+        String path = BuiltInRegistries.ITEM.getKey(item).getPath();
+        if (path.contains("horse_armor") || path.contains("wolf_armor") || path.contains("nautilus_armor")) {
             return false;
         }
-        return (item instanceof ArmorItem) || item == Items.ELYTRA;
+        return new ItemStack(item).has(DataComponents.EQUIPPABLE);
     }
 }

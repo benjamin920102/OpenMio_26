@@ -10,21 +10,13 @@ import me.mioclient.mode.client.CursorType;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.shape.Shape2DRenderer;
 
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.ClosableElement;
-import me.mioclient.gui.screen.SoundSelectScreen;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
 
 import me.mioclient.api.Setting;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.mode.client.CursorType;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.setting.SettingPresetSettingButton;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SettingPresetActionButton.class */
 public class SoundSettingRow extends SettingPresetSettingButton<SoundIdentifier> {
     public SoundSettingRow(ClickGuiPanel presetEnumSettingHelper, ClosableElement presetHelper_2, Setting<?> setting) {
         super(presetEnumSettingHelper, presetHelper_2, (Setting<SoundIdentifier>) setting);
@@ -33,12 +25,12 @@ public class SoundSettingRow extends SettingPresetSettingButton<SoundIdentifier>
     @Override // me.mioclient.setting.SettingPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
     public void mouseClicked(double d, double d2, int i) {
         if (!isHidden() && containsPoint(d, d2) && i == 0) {
-            minecraftClient.setScreen(new SoundSelectScreen(this.setting, getClickGuiScreen()));
+            minecraftClient.setScreenAndShow(new SoundSelectScreen(this.setting, getClickGuiScreen()));
         }
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         if (isHidden()) {
             return;
         }

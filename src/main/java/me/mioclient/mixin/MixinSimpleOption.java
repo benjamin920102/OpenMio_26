@@ -1,20 +1,19 @@
 package me.mioclient.mixin;
 
 import me.mioclient.ducks.DuckSimpleOption;
-import net.minecraft.client.option.SimpleOption;
+import net.minecraft.client.OptionInstance;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-/* compiled from: 0.java */
-@Mixin({SimpleOption.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinSimpleOption.class */
+@Mixin({OptionInstance.class})
+
 public class MixinSimpleOption<T> implements DuckSimpleOption<T> {
 
     @Shadow
-    T field_37868;
+    T value;
 
     @Override // me.mioclient.ducks.DuckSimpleOption
     public void forceSetValue(T t) {
-        this.field_37868 = t;
+        this.value = t;
     }
 }

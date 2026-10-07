@@ -12,24 +12,14 @@ import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.math.Rectangle;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.gui.GuiComponent;
-import me.mioclient.gui.screen.HudEditorScreen;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.math.Rectangle;
-import me.mioclient.util.anim.ValueAnimator;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import me.mioclient.module.client.Fonts;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.module.HudModule;
-import me.mioclient.mode.client.ModuleListMode;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DraggableHudElement.class */
 public abstract class DraggableHudElement implements ClientAccessor, GuiComponent {
     public static final Color color = new Color(0, 0, 0, 120);
     public static boolean flag = false;
@@ -49,8 +39,8 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
         this.moduleList = moduleList;
     }
 
-    @Override // me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    @Override
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         float[] floatArray2950 = getMeasuredSize();
         if (!containsPoint(d, d2) || this.flag2) {
             this.num3 = -1L;
@@ -67,14 +57,14 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
         }
         float f = getX();
         float f2 = getY();
-        Shape2DRenderer.drawRect(matrixStack, f, f2, f + Math.max(floatArray2950[0], Float.intBitsToFloat(1082130432)), f2 + Math.max(floatArray2950[1], Float.intBitsToFloat(1082130432)), ColorUtils.toIntWithAlphaPercent(color, ((ClientServices.getHud().getAlpha() * RenderSystem.getShaderColor()[3]) * color.getAlpha()) / Float.intBitsToFloat(1132396544)));
+        Shape2DRenderer.drawRect(matrixStack, f, f2, f + Math.max(floatArray2950[0], Float.intBitsToFloat(1082130432)), f2 + Math.max(floatArray2950[1], Float.intBitsToFloat(1082130432)), ColorUtils.toIntWithAlphaPercent(color, (ClientServices.getHud().getAlpha() * color.getAlpha()) / Float.intBitsToFloat(1132396544)));
         float f3 = this.zoomHelper.getValue();
         if (f3 > 0.0f) {
             Shape2DRenderer.drawOutline(matrixStack, f - Float.intBitsToFloat(1065353216), f2 - Float.intBitsToFloat(1065353216), f + Math.max(floatArray2950[0], Float.intBitsToFloat(1082130432)), f2 + Math.max(floatArray2950[1], Float.intBitsToFloat(1082130432)), ColorUtils.withAlpha(ColorUtils.getThemeColor(), (int) (f3 * Float.intBitsToFloat(1132396544))));
         }
     }
 
-    @Override // me.mioclient.gui.GuiComponent
+    @Override
     public boolean containsPoint(double d, double d2) {
         float[] floatArray2950 = getMeasuredSize();
         return d >= ((double) getX()) && d <= ((double) (getX() + Math.max(floatArray2950[0], Float.intBitsToFloat(1082130432)))) && d2 >= ((double) getY()) && d2 <= ((double) (getY() + Math.max(floatArray2950[1], Float.intBitsToFloat(1082130432))));
@@ -87,7 +77,7 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
     public abstract float[] getSize();
 
     public float getX() {
-        return Math.min(this.val * minecraftClient.getWindow().getScaledWidth(), minecraftClient.getWindow().getScaledWidth() - getMeasuredSize()[0]);
+        return Math.min(this.val * minecraftClient.getWindow().getGuiScaledWidth(), minecraftClient.getWindow().getGuiScaledWidth() - getMeasuredSize()[0]);
     }
 
     public float getRelativeX() {
@@ -96,14 +86,14 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
 
     public void setRelativeX(float f, boolean z) {
         if (z) {
-            this.val = f / minecraftClient.getWindow().getScaledWidth();
+            this.val = f / minecraftClient.getWindow().getGuiScaledWidth();
         } else {
-            this.val = MathHelper.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
+            this.val = Mth.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
         }
     }
 
     public float getY() {
-        return Math.min(this.val2 * minecraftClient.getWindow().getScaledHeight(), minecraftClient.getWindow().getScaledHeight() - getMeasuredSize()[1]);
+        return Math.min(this.val2 * minecraftClient.getWindow().getGuiScaledHeight(), minecraftClient.getWindow().getGuiScaledHeight() - getMeasuredSize()[1]);
     }
 
     public float getRelativeY() {
@@ -112,13 +102,13 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
 
     public void setRelativeY(float f, boolean z) {
         if (z) {
-            this.val2 = f / minecraftClient.getWindow().getScaledHeight();
+            this.val2 = f / minecraftClient.getWindow().getGuiScaledHeight();
         } else {
-            this.val2 = MathHelper.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
+            this.val2 = Mth.clamp(f, 0.0f, Float.intBitsToFloat(1065353216));
         }
     }
 
-    @Override // me.mioclient.gui.GuiComponent
+    @Override
     public int getFontHeight() {
         int i = ClientTextRenderer.INSTANCE.getFontHeight();
         if (Fonts.fonts.isToggled()) {
@@ -182,12 +172,12 @@ public abstract class DraggableHudElement implements ClientAccessor, GuiComponen
     }
 
     public void computeSides() {
-        this.num = getX() + (this.floatArr[0] / Float.intBitsToFloat(1073741824)) > ((float) minecraftClient.getWindow().getScaledWidth()) / Float.intBitsToFloat(1073741824) ? -1 : 1;
-        this.num2 = getY() + (this.floatArr[1] / Float.intBitsToFloat(1073741824)) > ((float) minecraftClient.getWindow().getScaledHeight()) / Float.intBitsToFloat(1073741824) ? -1 : 1;
+        this.num = getX() + (this.floatArr[0] / Float.intBitsToFloat(1073741824)) > ((float) minecraftClient.getWindow().getGuiScaledWidth()) / Float.intBitsToFloat(1073741824) ? -1 : 1;
+        this.num2 = getY() + (this.floatArr[1] / Float.intBitsToFloat(1073741824)) > ((float) minecraftClient.getWindow().getGuiScaledHeight()) / Float.intBitsToFloat(1073741824) ? -1 : 1;
     }
 
     public Rectangle getData_32936() {
-        return Rectangle.fromPositionAndSize(this.val * minecraftClient.getWindow().getScaledWidth(), this.val2 * minecraftClient.getWindow().getScaledHeight(), this.floatArr[0], this.floatArr[1]);
+        return Rectangle.fromPositionAndSize(this.val * minecraftClient.getWindow().getGuiScaledWidth(), this.val2 * minecraftClient.getWindow().getGuiScaledHeight(), this.floatArr[0], this.floatArr[1]);
     }
 
     public HudModule getHudModule() {

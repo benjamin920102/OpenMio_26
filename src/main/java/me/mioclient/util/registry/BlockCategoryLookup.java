@@ -6,23 +6,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import net.minecraft.block.AbstractSignBlock;
-import net.minecraft.block.BannerBlock;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CarpetBlock;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.StainedGlassBlock;
-import net.minecraft.block.StainedGlassPaneBlock;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.level.block.SignBlock;
+import net.minecraft.world.level.block.BannerBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CarpetBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StainedGlassBlock;
+import net.minecraft.world.level.block.StainedGlassPaneBlock;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BlockCategoryRegistry.class */
 public class BlockCategoryLookup implements RegistrySuggestionProvider {
     public static final Map<String, List<String>> map = new HashMap();
 
@@ -38,7 +36,7 @@ public class BlockCategoryLookup implements RegistrySuggestionProvider {
 
     @Override // me.mioclient.util.registry.RegistrySuggestionProvider
     public Identifier getRegistryId() {
-        return RegistryKeys.BLOCK.getValue();
+        return Registries.BLOCK.identifier();
     }
 
     public static void addCategory(String str, Stream<Block> stream) {
@@ -46,43 +44,39 @@ public class BlockCategoryLookup implements RegistrySuggestionProvider {
     }
 
     public static String getBlockName(Block block) {
-        return Registries.BLOCK.getId(block).toShortTranslationKey();
+        return BuiltInRegistries.BLOCK.getKey(block).toShortLanguageKey();
     }
 
     static {
-        addCategory("beds", Registries.BLOCK.stream().filter(block -> {
+        addCategory("beds", BuiltInRegistries.BLOCK.stream().filter(block -> {
             return block instanceof BedBlock;
         }));
-        addCategory("banners", Registries.BLOCK.stream().filter(block2 -> {
+        addCategory("banners", BuiltInRegistries.BLOCK.stream().filter(block2 -> {
             return block2 instanceof BannerBlock;
         }));
-        addCategory("doors", Registries.BLOCK.stream().filter(block3 -> {
+        addCategory("doors", BuiltInRegistries.BLOCK.stream().filter(block3 -> {
             return block3 instanceof DoorBlock;
         }));
-        addCategory("slabs", Registries.BLOCK.stream().filter(block4 -> {
+        addCategory("slabs", BuiltInRegistries.BLOCK.stream().filter(block4 -> {
             return block4 instanceof SlabBlock;
         }));
-        addCategory("shulkers", Registries.BLOCK.stream().filter(block5 -> {
+        addCategory("shulkers", BuiltInRegistries.BLOCK.stream().filter(block5 -> {
             return block5 instanceof ShulkerBoxBlock;
         }));
-        addCategory("carpets", Registries.BLOCK.stream().filter(block6 -> {
+        addCategory("carpets", BuiltInRegistries.BLOCK.stream().filter(block6 -> {
             return block6 instanceof CarpetBlock;
         }));
-        addCategory("glasses", Registries.BLOCK.stream().filter(block7 -> {
+        addCategory("glasses", BuiltInRegistries.BLOCK.stream().filter(block7 -> {
             return (block7 instanceof StainedGlassBlock) || block7 == Blocks.GLASS;
         }));
-        addCategory("glass_panes", Registries.BLOCK.stream().filter(block8 -> {
+        addCategory("glass_panes", BuiltInRegistries.BLOCK.stream().filter(block8 -> {
             return (block8 instanceof StainedGlassPaneBlock) || block8 == Blocks.GLASS_PANE;
         }));
-        addCategory("signs", Registries.BLOCK.stream().filter(block9 -> {
-            return block9 instanceof AbstractSignBlock;
+        addCategory("signs", BuiltInRegistries.BLOCK.stream().filter(block9 -> {
+            return block9 instanceof SignBlock;
         }));
-        addCategory("ores", Registries.BLOCK.streamEntries().filter(reference -> {
-            return reference.matches(registryKey -> {
-                return registryKey.getValue().toTranslationKey().contains("ore");
-            });
-        }).map((v0) -> {
-            return v0.value();
+        addCategory("ores", BuiltInRegistries.BLOCK.stream().filter(oreBlock -> {
+            return BuiltInRegistries.BLOCK.getKey(oreBlock).getPath().contains("ore");
         }));
     }
 }

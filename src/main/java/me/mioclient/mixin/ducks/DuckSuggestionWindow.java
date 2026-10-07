@@ -1,19 +1,16 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
+import net.minecraft.client.gui.components.CommandSuggestions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({ChatInputSuggestor.SuggestionWindow.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckSuggestionWindow.class */
+/* 26.2 port (verified): SuggestionWindow is now SuggestionsList; selection is
+   current; typed text is originalContents. */
+@Mixin({CommandSuggestions.SuggestionsList.class})
 public interface DuckSuggestionWindow {
-    @Accessor("completed")
-    boolean isCompleted();
-
-    @Accessor("selection")
+    @Accessor("current")
     int getSelection();
 
-    @Accessor("typedText")
+    @Accessor("originalContents")
     String getTypedText();
 }

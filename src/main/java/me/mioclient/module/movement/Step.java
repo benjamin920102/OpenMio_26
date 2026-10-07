@@ -5,14 +5,7 @@ import me.mioclient.event.events.player.MoveSpeedEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.player.PlayerUtils;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.player.PlayerUtils;
@@ -21,25 +14,42 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.player.MoveSpeedEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Step.class */
 public class Step extends Module {
-    public static final HoleSnap holeSnap = (HoleSnap) ClientServices.moduleInjector.getModule(HoleSnap.class);
-    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static HoleSnap holeSnap;
+    private static AntiCheat antiCheat;
+
+    public static HoleSnap getHoleSnap() {
+        if (holeSnap == null && ClientServices.moduleInjector != null) {
+            try {
+                holeSnap = (HoleSnap) ClientServices.moduleInjector.getModule(HoleSnap.class);
+            } catch (Exception e) {
+            }
+        }
+        return holeSnap;
+    }
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<StepMode> mode = add(new EnumSetting<>("Mode", StepMode.VANILLA));
     public Setting<Float> height = add(new NumberSetting<>("Height", 2.0f, 1.0f, 4.0f).setSuffix("m"));
     public Setting<Boolean> safeDisable = add(new BooleanSetting("SafeDisable", false));
@@ -48,8 +58,7 @@ public class Step extends Module {
     public boolean flag;
     public int num;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Step$StepMode.class */
+    
     public enum StepMode implements NamedValue {
         VANILLA("Vanilla"),
         NORMAL("Normal");
@@ -102,10 +111,11 @@ public class Step extends Module {
 
     @Listen
     public void onMoveSpeed(MoveSpeedEvent moveEvent_2) {
-        if (holeSnap.shouldPauseStep()) {
+        HoleSnap holeSnap_lcl = getHoleSnap();
+        if (holeSnap_lcl != null && holeSnap_lcl.shouldPauseStep()) {
             return;
         }
-        if (!minecraftClient.player.isOnGround() || minecraftClient.player.fallDistance > 0.0f || !minecraftClient.player.verticalCollision) {
+        if (!minecraftClient.player.onGround() || minecraftClient.player.fallDistance > 0.0f || !minecraftClient.player.verticalCollision) {
             ClientServices.holeSnapHelper.releaseTickRate(this);
             return;
         }
@@ -139,7 +149,7 @@ public class Step extends Module {
             }
             Iterator it = arrayList.iterator();
             while (it.hasNext()) {
-                minecraftClient.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(minecraftClient.player.getX(), minecraftClient.player.getY() + ((Double) it.next()).doubleValue(), minecraftClient.player.getZ(), minecraftClient.player.isOnGround()));
+                minecraftClient.player.connection.send(new ServerboundMovePlayerPacket.Pos(minecraftClient.player.getX(), minecraftClient.player.getY() + ((Double) it.next()).doubleValue(), minecraftClient.player.getZ(), minecraftClient.player.onGround(), minecraftClient.player.horizontalCollision));
             }
         }
     }

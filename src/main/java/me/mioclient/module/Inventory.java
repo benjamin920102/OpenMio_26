@@ -5,20 +5,15 @@ import me.mioclient.util.anim.ValueAnimator;
 import me.mioclient.util.math.ColorUtils;
 
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.anim.ValueAnimator;
 
 import java.awt.Color;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.api.Setting;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.NonNullList;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Inventory.class */
 public class Inventory extends me.mioclient.module.HudModule {
     public Setting<Color> setting;
     public Setting<Color> setting2;
@@ -37,7 +32,7 @@ public class Inventory extends me.mioclient.module.HudModule {
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         this.zoomHelper.toggle(!isEmpty(), 200L);
         float f = this.zoomHelper.getValue();
         if (!this.setting3.getValue().booleanValue()) {
@@ -45,22 +40,20 @@ public class Inventory extends me.mioclient.module.HudModule {
         }
         Color color817 = ColorUtils.withAlphaPercent(this.setting.getValue(), (this.setting.getValue().getAlpha() / Float.intBitsToFloat(1132396544)) * f);
         Color color8172 = ColorUtils.withAlphaPercent(this.setting2.getValue(), (this.setting2.getValue().getAlpha() / Float.intBitsToFloat(1132396544)) * f);
-        RenderUtil.INSTANCE.drawFilledRectColor(drawContext.getMatrices(), 0.0f, 0.0f, Float.intBitsToFloat(1126301696), Float.intBitsToFloat(1113063424), color817);
-        RenderUtil.INSTANCE.drawRectOutline(drawContext.getMatrices(), Float.intBitsToFloat(-1082130432), Float.intBitsToFloat(-1082130432), Float.intBitsToFloat(1126301696), Float.intBitsToFloat(1113063424), color8172);
-        DefaultedList defaultedList = minecraftClient.player.getInventory().main;
-        for (int i = 0; i < defaultedList.size() - 9; i++) {
+        drawContext.fill(0, 0, (int) Float.intBitsToFloat(1126301696), (int) Float.intBitsToFloat(1113063424), color817.hashCode());
+        drawContext.fill((int) Float.intBitsToFloat(-1082130432), (int) Float.intBitsToFloat(-1082130432), (int) Float.intBitsToFloat(1126301696), (int) Float.intBitsToFloat(1113063424), color8172.hashCode());
+        for (int i = 0; i < 27; i++) {
             int i2 = (i % 9) * 18;
             int i3 = (i / 9) * 18;
-            ItemStack itemStack = (ItemStack) defaultedList.get(i + 9);
-            drawContext.drawItem(itemStack, i2, i3);
-            drawContext.drawItemInSlot(minecraftClient.textRenderer, itemStack, i2, i3);
+            ItemStack itemStack = minecraftClient.player.getInventory().getItem(i + 9);
+            drawContext.item(itemStack, i2, i3);
+            drawContext.itemDecorations(minecraftClient.font, itemStack, i2, i3);
         }
     }
 
     public boolean isEmpty() {
-        DefaultedList defaultedList = minecraftClient.player.getInventory().main;
-        for (int i = 0; i < defaultedList.size() - 9; i++) {
-            if (!((ItemStack) defaultedList.get(i + 9)).isEmpty()) {
+        for (int i = 0; i < 27; i++) {
+            if (!minecraftClient.player.getInventory().getItem(i + 9).isEmpty()) {
                 return false;
             }
         }

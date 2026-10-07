@@ -3,33 +3,25 @@ package me.mioclient.module.movement;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.math.Vec3dUtils;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
-import me.mioclient.util.math.Vec3dUtils;
 
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/LongJump.class */
 public class LongJump extends Module {
     public Setting<Float> jumpSpeed = add(new NumberSetting<>("JumpSpeed", 1.0f, 0.0f, 5.0f));
     public Setting<Boolean> inLiquid = add(new BooleanSetting("InLiquid", false));
@@ -40,8 +32,7 @@ public class LongJump extends Module {
     public int num;
     public boolean flag;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/LongJump$Mode.class */
+    
     public enum Mode implements NamedValue {
         PLAIN("Plain"),
         GRIMHOP("GrimHop");
@@ -63,14 +54,8 @@ public class LongJump extends Module {
         this.num = 4;
     }
 
-    /* JADX WARN: Code restructure failed: missing block: B:53:0x0292, code lost:
-    
-        if (me.mioclient.module.movement.LongJump.minecraftClient.world.isSpaceEmpty(me.mioclient.module.movement.LongJump.minecraftClient.player.getBoundingBox().offset(0.0d, me.mioclient.module.movement.LongJump.minecraftClient.player.getVelocity().y, 0.0d)) == false) goto L49;
-     */
     @Listen
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void applyMovement(MoveEvent moveEvent) {
         double d;
         double d2;
@@ -105,14 +90,14 @@ public class LongJump extends Module {
         }
         this.val = Math.max(this.val, MovementUtils.computeMoveSpeed(false, Double.longBitsToDouble(4598847156609680094L) * intBitsToFloat));
         if (MovementUtils.is2181()) {
-            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(RenderUtil.getPartialTick()), minecraftClient.player.input, this.val);
+            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, this.val);
             d = doubleArray2508[0];
             d2 = doubleArray2508[1];
         } else {
             d = 0.0d;
             d2 = 0.0d;
         }
-        Vec3dUtils.setVectorComponents(moveEvent.getMovement(), d, d3, d2);
+        moveEvent.setMovement(new Vec3(d, d3, d2));
         if (MovementUtils.is2181()) {
             this.num++;
         }
@@ -126,8 +111,8 @@ public class LongJump extends Module {
         if (!MovementUtils.is2181()) {
             this.num = 4;
         }
-        double x = minecraftClient.player.getX() - minecraftClient.player.prevX;
-        double z = minecraftClient.player.getZ() - minecraftClient.player.prevZ;
+        double x = minecraftClient.player.getX() - minecraftClient.player.xo;
+        double z = minecraftClient.player.getZ() - minecraftClient.player.zo;
         this.val2 = Math.sqrt((x * x) + (z * z));
     }
 
@@ -136,7 +121,7 @@ public class LongJump extends Module {
     }
 
     public boolean hasHeadCollision() {
-        Box boundingBox = minecraftClient.player.getBoundingBox();
-        return minecraftClient.world.canCollide(minecraftClient.player, new Box(minecraftClient.player.getBlockPos().getX(), boundingBox.minY, minecraftClient.player.getBlockPos().getZ(), minecraftClient.player.getBlockPos().getX() + Double.longBitsToDouble(4607182418800017408L), boundingBox.maxY, minecraftClient.player.getBlockPos().getZ() + Double.longBitsToDouble(4607182418800017408L)).contract(Double.longBitsToDouble(4502148214488346440L)));
+        AABB boundingBox = minecraftClient.player.getBoundingBox();
+        return !minecraftClient.level.noCollision(minecraftClient.player, new AABB(minecraftClient.player.blockPosition().getX(), boundingBox.minY, minecraftClient.player.blockPosition().getZ(), minecraftClient.player.blockPosition().getX() + Double.longBitsToDouble(4607182418800017408L), boundingBox.maxY, minecraftClient.player.blockPosition().getZ() + Double.longBitsToDouble(4607182418800017408L)).deflate(Double.longBitsToDouble(4502148214488346440L)));
     }
 }

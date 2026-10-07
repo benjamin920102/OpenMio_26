@@ -2,20 +2,26 @@ package me.mioclient.event.events.input;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.input.Input;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.world.entity.player.Input;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/TickEvent_2.class */
+/* 26.2 port: Yarn mutable Input -> MojMap ClientInput (keyPresses record). The old
+   slow-down speed parameter is gone from vanilla tick(); kept as -1 (hasSpeed false)
+   so consumers fall back to full speed. */
 public class InputTickEvent extends Event {
-    public final Input input;
+    public final ClientInput input;
     public final float val;
 
-    public InputTickEvent(Input input, float f) {
+    public InputTickEvent(ClientInput input) {
+        this(input, -1.0f);
+    }
+
+    public InputTickEvent(ClientInput input, float f) {
         this.input = input;
         this.val = f;
     }
 
-    public Input getInput() {
+    public ClientInput getInput() {
         return this.input;
     }
 
@@ -28,18 +34,6 @@ public class InputTickEvent extends Event {
     }
 
     public void reset() {
-        Input input = this.input;
-        Input input2 = this.input;
-        Input input3 = this.input;
-        Input input4 = this.input;
-        Input input5 = this.input;
-        this.input.sneaking = false;
-        input5.jumping = false;
-        input4.pressingRight = false;
-        input3.pressingLeft = false;
-        input2.pressingBack = false;
-        input.pressingForward = false;
-        this.input.movementForward = 0.0f;
-        this.input.movementSideways = 0.0f;
+        this.input.keyPresses = Input.EMPTY;
     }
 }

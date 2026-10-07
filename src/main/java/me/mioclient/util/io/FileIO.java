@@ -6,10 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FileIO.class */
 public class FileIO {
     public static Path resolvePath(Path path, String... strArr) {
         if (path.toFile().exists()) {

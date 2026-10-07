@@ -2,15 +2,9 @@ package me.mioclient.module.combat.antiphase;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 
-import me.mioclient.api.NamedValue;
-
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AntiPhaseMode.class */
 public enum AntiPhaseMode implements NamedValue {
     LADDER("Ladder", Items.LADDER),
     VINE("Vine", Items.VINE),

@@ -11,17 +11,14 @@ import java.util.function.Function;
 import me.mioclient.event.Listen;
 import me.mioclient.event.EventBus;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ReflectiveEventBus.class */
 public class ReflectiveEventBus implements EventBus {
     public final Map<Object, List<EventListener>> instanceListeners = new ConcurrentHashMap();
     public final Map<Class<?>, List<EventListener>> staticListeners = new ConcurrentHashMap();
     public final Map<Class<?>, List<EventListener>> activeListeners = new ConcurrentHashMap();
     public final List<Inner> lookupList = new ArrayList();
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/BaritoneHelper$Inner.class */
+    
+    
     public static class Inner {
         public final String prefix;
         public final LambdaEventListener.Inner inner;

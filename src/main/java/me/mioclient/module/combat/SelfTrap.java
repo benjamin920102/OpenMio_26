@@ -2,8 +2,6 @@ package me.mioclient.module.combat;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -14,15 +12,13 @@ import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
 import me.mioclient.module.Delay;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/SelfTrap.class */
 public class SelfTrap extends Range {
     public final Object object;
     public Object object2;
@@ -56,7 +52,7 @@ public class SelfTrap extends Range {
     }
 
     @Override // me.mioclient.module.combat.Range
-    public PlayerEntity getTargetPlayer() {
+    public Player getTargetPlayer() {
         return minecraftClient.player;
     }
 
@@ -85,17 +81,17 @@ public class SelfTrap extends Range {
     }
 
     public Entity getEntity1081() {
-        Stream<Entity> filter = StreamSupport.stream(minecraftClient.world.getEntities().spliterator(), false).filter(entity -> {
-            if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= get1080() && (entity instanceof PlayerEntity)) {
+        Stream<Entity> filter = minecraftClient.level.getEntitiesOfClass(Entity.class, minecraftClient.player.getBoundingBox().inflate(get1080()), e -> true).stream().filter(entity -> {
+            if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= get1080() && (entity instanceof Player)) {
                 if (!ClientServices.socialManager.isFriend(entity.getName().getString()) && entity.isAlive()) {
                     return true;
                 }
             }
             return false;
         });
-        ClientPlayerEntity clientPlayerEntity = minecraftClient.player;
+        LocalPlayer clientPlayerEntity = minecraftClient.player;
         Objects.requireNonNull(clientPlayerEntity);
-        return (Entity) filter.min(Comparator.comparing(clientPlayerEntity::squaredDistanceTo)).orElse(null);
+        return (Entity) filter.min(Comparator.comparing(clientPlayerEntity::distanceToSqr)).orElse(null);
     }
 
     public Object getObject1082() {

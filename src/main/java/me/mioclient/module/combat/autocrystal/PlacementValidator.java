@@ -4,26 +4,22 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.world.WorldUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.util.math.BoxMath;
 
 import me.mioclient.ducks.DuckPlayerEntity;
 
 import java.util.Iterator;
-import net.minecraft.block.AirBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import me.mioclient.util.world.WorldUtils;
+import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlacementValidator.class */
 public class PlacementValidator implements ClientAccessor {
     public boolean flag;
     public boolean flag3;
@@ -40,8 +36,8 @@ public class PlacementValidator implements ClientAccessor {
         if (!this.flag7 && !WorldUtils.isBedrockOrObsidian(blockPos)) {
             return false;
         }
-        BlockPos add = blockPos.add(0, 1, 0);
-        Block block = minecraftClient.world.getBlockState(add).getBlock();
+        BlockPos add = blockPos.offset(0, 1, 0);
+        Block block = minecraftClient.level.getBlockState(add).getBlock();
         boolean z = (block instanceof AirBlock) || add.equals(ClientServices.stashFinderHelper.getUnconfirmedBreakPos());
         if (this.flag4) {
             if (!z && block != Blocks.FIRE) {
@@ -51,45 +47,43 @@ public class PlacementValidator implements ClientAccessor {
             return false;
         }
         if (this.flag) {
-            if (!(minecraftClient.world.getBlockState(blockPos.add(0, 2, 0)).getBlock() instanceof AirBlock)) {
+            if (!(minecraftClient.level.getBlockState(blockPos.offset(0, 2, 0)).getBlock() instanceof AirBlock)) {
                 return false;
             }
         }
-        Box withMaxY = new Box(add).withMaxY(add.getY() + (this.flag5 ? 1 : 2));
+        AABB withMaxY = new AABB(add).setMaxY(add.getY() + (this.flag5 ? 1 : 2));
         int i = 0;
-        Iterator it = minecraftClient.world.getEntities().iterator();
+        Iterator it = minecraftClient.level.entitiesForRendering().iterator();
         while (true) {
             if (!it.hasNext()) {
                 break;
             }
-            // JADX hoisted a DuckPlayerEntity cast above its instanceof guard, so every entity in
             // the world was cast and any non-player (e.g. a zombie) threw ClassCastException,
             // killing the placement search thread. Keep the loop local as Entity and only
-            // duck-cast inside the PlayerEntity branch.
+            // duck-cast inside the Player branch.
             Entity entity = (Entity) it.next();
             if (entity != null && !entity.isRemoved() && entity.isAlive()) {
-                Box boundingBox = entity.getBoundingBox();
-                if (!(entity instanceof PlayerEntity) || entity == minecraftClient.player) {
-                    if ((entity instanceof EndCrystalEntity) && !this.flag3) {
-                        if (minecraftClient.player.getEyePos().squaredDistanceTo(entity.getPos()) <= this.val) {
+                AABB boundingBox = entity.getBoundingBox();
+                if (!(entity instanceof Player) || entity == minecraftClient.player) {
+                    if ((entity instanceof EndCrystal) && !this.flag3) {
+                        if (minecraftClient.player.getEyePosition().distanceToSqr(entity.position()) <= this.val) {
                             continue;
                         }
                     }
-                    // JADX dropped the loop control here: the sibling EndCrystalEntity branch above
                     // uses `continue`, and an empty body makes dropped items fall through to the
                     // intersects() check below, where they count as obstructions and block placement.
                     if ((entity instanceof ItemEntity) && this.flag8) {
                         continue;
                     }
                 } else {
-                    PlayerEntity playerEntity = (PlayerEntity) entity;
+                    Player playerEntity = (Player) entity;
                     DuckPlayerEntity duckPlayer = entity instanceof DuckPlayerEntity ? (DuckPlayerEntity) entity : null;
                     boundingBox = BoxMath.getServerBox((LivingEntity) entity);
                     if (this.flag6 && duckPlayer != null && !duckPlayer.mio$isNextToWall()) {
-                        boundingBox = boundingBox.expand(Double.longBitsToDouble(4547007122018943789L), 0.0d, Double.longBitsToDouble(4547007122018943789L));
+                        boundingBox = boundingBox.inflate(Double.longBitsToDouble(4547007122018943789L), 0.0d, Double.longBitsToDouble(4547007122018943789L));
                     }
                     for (int i2 = 1; i2 <= this.num; i2++) {
-                        if (ClientServices.mainhandHelper.getPredictedBox(playerEntity, i2).withMaxY(boundingBox.maxY).withMinY(boundingBox.minY).intersects(withMaxY)) {
+                        if (ClientServices.mainhandHelper.getPredictedBox(playerEntity, i2).setMaxY(boundingBox.maxY).setMinY(boundingBox.minY).intersects(withMaxY)) {
                             i++;
                         }
                     }

@@ -1,15 +1,14 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.client.session.Session;
+import net.minecraft.client.User;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({Session.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckSession.class */
+/* 26.2 port: Yarn User is MojMap client.User; username field is name. */
+@Mixin({User.class})
 public interface DuckSession {
-    @Accessor("username")
+    @Accessor("name")
     @Mutable
     void setUsername(String str);
 }

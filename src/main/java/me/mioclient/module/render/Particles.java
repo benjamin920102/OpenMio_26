@@ -2,8 +2,6 @@ package me.mioclient.module.render;
 
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.util.math.ColorUtils;
-
 import java.awt.Color;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,20 +11,20 @@ import me.mioclient.api.Setting;
 import me.mioclient.event.events.render.AddParticleEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.client.particle.AscendingParticle;
+import net.minecraft.client.particle.BaseAshSmokeParticle;
 import net.minecraft.client.particle.AshParticle;
-import net.minecraft.client.particle.DamageParticle;
-import net.minecraft.client.particle.FireworksSparkParticle;
+import net.minecraft.client.particle.CritParticle;
+import net.minecraft.client.particle.FireworkParticles;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.PortalParticle;
+import net.minecraft.client.particle.SimpleAnimatedParticle;
+import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.TotemParticle;
 import net.minecraft.client.particle.WhiteAshParticle;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Particles.class */
 public class Particles extends Module {
     public final Random random;
     public Setting<Boolean> totems = add(new BooleanSetting("Totems", false).setVisible());
@@ -69,61 +67,65 @@ public class Particles extends Module {
                 return;
             }
             if (this.random.nextInt(4) == 0) {
-                applyColor((Particle) totemParticle, this.totemsColor1.getValue().hashCode());
+                applyColor(totemParticle, this.totemsColor1.getValue().hashCode());
             } else {
-                applyColor((Particle) totemParticle, this.totemsColor2.getValue().hashCode());
+                applyColor(totemParticle, this.totemsColor2.getValue().hashCode());
             }
             totemParticle.scale(this.totemsScale.getValue().floatValue());
-            totemParticle.move(this.totemsVelocity.getValue().floatValue());
+            totemParticle.setPower(this.totemsVelocity.getValue().floatValue());
         }
         if (this.rockets.getValue().booleanValue()) {
-            FireworksSparkParticle.FireworkParticle particle9822 = (addParticleEvent.getParticle()) instanceof FireworksSparkParticle.FireworkParticle ? (FireworksSparkParticle.FireworkParticle) (addParticleEvent.getParticle()) : null;
-            if (particle9822 instanceof FireworksSparkParticle.FireworkParticle) {
-                FireworksSparkParticle.FireworkParticle fireworkParticle = particle9822;
-                applyColor((Particle) fireworkParticle, this.rocketColor.getValue().hashCode());
-                fireworkParticle.scale(this.rocketScale.getValue().floatValue());
+            // 26.2: FireworksSparkParticle removed; sparks are now private FireworkParticles.SparkParticle.
+            // SimpleAnimatedParticle (minus Totem) covers firework trail sparks with real color+scale behavior.
+            Particle p = addParticleEvent.getParticle();
+            if (p instanceof SimpleAnimatedParticle && !(p instanceof TotemParticle)) {
+                SimpleAnimatedParticle spark = (SimpleAnimatedParticle) p;
+                applyColor(spark, this.rocketColor.getValue().hashCode());
+                spark.scale(this.rocketScale.getValue().floatValue());
             }
         }
         if (this.rockets.getValue().booleanValue()) {
-            FireworksSparkParticle.Explosion particle9823 = (addParticleEvent.getParticle()) instanceof FireworksSparkParticle.Explosion ? (FireworksSparkParticle.Explosion) (addParticleEvent.getParticle()) : null;
-            if (particle9823 instanceof FireworksSparkParticle.Explosion) {
-                FireworksSparkParticle.Explosion explosion = particle9823;
-                applyColor((Particle) explosion, this.rocketColor.getValue().hashCode());
-                explosion.scale(this.rocketScale.getValue().floatValue());
+            // 26.2: FireworksSparkParticle.Explosion removed; Starter is the public burst controller.
+            Particle p2 = addParticleEvent.getParticle();
+            if (p2 instanceof FireworkParticles.Starter) {
+                FireworkParticles.Starter starter = (FireworkParticles.Starter) p2;
+                starter.scale(this.rocketScale.getValue().floatValue());
             }
         }
         if (this.damage.getValue().booleanValue()) {
-            DamageParticle particle9824 = (addParticleEvent.getParticle()) instanceof DamageParticle ? (DamageParticle) (addParticleEvent.getParticle()) : null;
-            if (particle9824 instanceof DamageParticle) {
-                DamageParticle damageParticle = particle9824;
-                applyColor((Particle) damageParticle, this.damageColor.getValue().hashCode());
+            // 26.2: DamageParticle removed; CritParticle (DamageIndicatorProvider) is the damage indicator.
+            Particle p3 = addParticleEvent.getParticle();
+            if (p3 instanceof CritParticle) {
+                CritParticle damageParticle = (CritParticle) p3;
+                applyColor(damageParticle, this.damageColor.getValue().hashCode());
                 damageParticle.scale(this.damageScale.getValue().floatValue());
-                damageParticle.move(this.damageVelocity.getValue().floatValue());
+                damageParticle.setPower(this.damageVelocity.getValue().floatValue());
             }
         }
         if (this.portal.getValue().booleanValue()) {
             PortalParticle particle9825 = (addParticleEvent.getParticle()) instanceof PortalParticle ? (PortalParticle) (addParticleEvent.getParticle()) : null;
             if (particle9825 instanceof PortalParticle) {
                 PortalParticle portalParticle = particle9825;
-                applyColor((Particle) portalParticle, this.portalColor.getValue().hashCode());
+                applyColor(portalParticle, this.portalColor.getValue().hashCode());
                 portalParticle.scale(this.portalScale.getValue().floatValue());
             }
         }
         if (this.dust.getValue().booleanValue()) {
             Particle particle9826 = addParticleEvent.getParticle();
-            if (particle9826 instanceof AscendingParticle) {
-                Particle particle = (AscendingParticle) particle9826;
+            // 26.2: AscendingParticle removed; BaseAshSmokeParticle is the surviving base of Ash/WhiteAsh.
+            if (particle9826 instanceof BaseAshSmokeParticle) {
+                Particle particle = particle9826;
                 if (particle instanceof WhiteAshParticle) {
-                    applyColor(particle, this.to.getValue().brighter().hashCode());
+                    applyColor((SingleQuadParticle) particle, this.to.getValue().brighter().hashCode());
                 }
                 if (particle instanceof AshParticle) {
-                    applyColor(particle, ColorUtils.lerpColor(this.from.getValue(), this.to.getValue(), ThreadLocalRandom.current().nextFloat()).hashCode());
+                    applyColor((SingleQuadParticle) particle, ColorUtils.lerpColor(this.from.getValue(), this.to.getValue(), ThreadLocalRandom.current().nextFloat()).hashCode());
                 }
             }
         }
     }
 
-    public void applyColor(Particle particle, int i) {
+    public void applyColor(SingleQuadParticle particle, int i) {
         float intBitsToFloat = (i >> 24) / Float.intBitsToFloat(1132396544);
         particle.setColor(((i & 16711680) >> 16) / Float.intBitsToFloat(1132396544), ((i & 65280) >> 8) / Float.intBitsToFloat(1132396544), (i & 255) / Float.intBitsToFloat(1132396544));
         ((DuckParticle) particle).mio$setInitialAlpha(intBitsToFloat);

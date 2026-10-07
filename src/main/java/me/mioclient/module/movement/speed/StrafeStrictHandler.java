@@ -6,22 +6,27 @@ import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.manager.TickRateManager;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.module.movement.LongJump;
 import me.mioclient.module.movement.Speed;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StrafeStrictHandler.class */
 public final class StrafeStrictHandler extends SpeedModeHandler {
-    public static LongJump longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static LongJump longJump;
+
+    public static LongJump getLongJump() {
+        if (longJump == null && ClientServices.moduleInjector != null) {
+            try {
+                longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
+            } catch (Exception e) {
+            }
+        }
+        return longJump;
+    }
 
     public StrafeStrictHandler(Speed speed) {
         super(speed);
@@ -51,19 +56,21 @@ public final class StrafeStrictHandler extends SpeedModeHandler {
 
     @Override // me.mioclient.module.movement.speed.SpeedModeHandler
     public void onSpeedJump() {
-        if (!shouldPause() && MovementUtils.is2181() && minecraftClient.player.groundCollision) {
-            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
+        if (!shouldPause() && MovementUtils.is2181() && minecraftClient.player.onGround()) {
+            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
             float degrees = (float) (Math.toDegrees(Math.atan2(doubleArray2508[1], doubleArray2508[0])) - MathConstants.num2);
-            Vec3d velocity = minecraftClient.player.getVelocity();
+            Vec3 velocity = minecraftClient.player.getDeltaMovement();
             float radians = (float) Math.toRadians(degrees);
             float intBitsToFloat = Float.intBitsToFloat(1045220557);
-            minecraftClient.player.setVelocity(velocity.x, Double.longBitsToDouble(4600877379321698714L) + MovementUtils.getJumpBoostBonus(), velocity.z);
-            minecraftClient.player.addVelocityInternal(new Vec3d((-MathHelper.sin(radians)) * intBitsToFloat, 0.0d, MathHelper.cos(radians) * intBitsToFloat));
+            minecraftClient.player.setDeltaMovement(velocity.x, Double.longBitsToDouble(4600877379321698714L) + MovementUtils.getJumpBoostBonus(), velocity.z);
+            // 26.2: LocalPlayer.addVelocityInternal removed -> Entity.addDeltaMovement
+            minecraftClient.player.addDeltaMovement(new Vec3((-Mth.sin(radians)) * intBitsToFloat, 0.0d, Mth.cos(radians) * intBitsToFloat));
             minecraftClient.player.setSprinting(true);
         }
     }
 
     public boolean shouldPause() {
-        return this.speed.hasHeadCollision() || this.speed.isInLiquidBlocked() || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.isSpectator() || longJump.isToggled();
+        LongJump longJump_lcl = getLongJump();
+        return this.speed.hasHeadCollision() || this.speed.isInLiquidBlocked() || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.isSpectator() || (longJump_lcl != null && longJump_lcl.isToggled());
     }
 }

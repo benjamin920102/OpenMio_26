@@ -3,15 +3,11 @@ package me.mioclient.module.combat;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.util.math.MathUtils;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.math.MathUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,21 +16,28 @@ import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.exploit.MultiTask;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import me.mioclient.mode.setting.HoleSnapMode;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoClicker.class */
 public class AutoClicker extends Module {
-    public static final MultiTask multitask = (MultiTask) ClientServices.moduleInjector.getModule(MultiTask.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static MultiTask multitask;
+
+    public static MultiTask getMultitask() {
+        if (multitask == null && ClientServices.moduleInjector != null) {
+            try {
+                multitask = (MultiTask) ClientServices.moduleInjector.getModule(MultiTask.class);
+            } catch (Exception e) {
+            }
+        }
+        return multitask;
+    }
     public Setting<AutoClickerMode> mode = add(new EnumSetting<>("Mode", AutoClickerMode.LEFT));
     public Setting<Integer> cps = add(new NumberSetting<>("CPS", 8, 1, 20));
     public Setting<Float> delay = add(new NumberSetting<>("Delay", 1.0f, 1.0f, 3.0f).setSuffix("x").setHoleSnapConfig("Off", HoleSnapMode.MIN));
@@ -43,8 +46,7 @@ public class AutoClicker extends Module {
     public float val;
     public final List<Long> list;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoClicker$AutoClickerMode.class */
+    
     public enum AutoClickerMode implements NamedValue {
         LEFT("Left"),
         RIGHT("Right");
@@ -63,8 +65,8 @@ public class AutoClicker extends Module {
             }
         }
 
-        public KeyBinding getKeyBinding2026() {
-            return this == LEFT ? ClientAccessor.minecraftClient.options.attackKey : ClientAccessor.minecraftClient.options.useKey;
+        public KeyMapping getKeyBinding2026() {
+            return this == LEFT ? ClientAccessor.minecraftClient.options.keyAttack : ClientAccessor.minecraftClient.options.keyUse;
         }
 
         @Override // me.mioclient.api.NamedValue
@@ -86,7 +88,7 @@ public class AutoClicker extends Module {
     }
 
     @Listen
-    public void onRenderWorldPre(MatrixStackEvent.Inner inner) {
+    public void onRenderWorldPre(MatrixStackEvent.Inner_3 inner) {
         this.list.removeIf(l -> {
             return System.currentTimeMillis() - l.longValue() >= 1000;
         });
@@ -103,12 +105,13 @@ public class AutoClicker extends Module {
     }
 
     public boolean is1073(Entity entity) {
-        return isToggled() && this.friendProtect.getValue().booleanValue() && (entity instanceof PlayerEntity) && ClientServices.socialManager.isFriendEntity((PlayerEntity) entity);
+        return isToggled() && this.friendProtect.getValue().booleanValue() && (entity instanceof Player) && ClientServices.socialManager.isFriendEntity((Player) entity);
     }
 
     public void performClick() {
-        if (!multitask.isToggled() || (!minecraftClient.player.isUsingItem() && minecraftClient.currentScreen == null)) {
-            KeyBinding.onKeyPressed(this.mode.getValue().getKeyBinding2026().boundKey);
+        MultiTask multitask_lcl = getMultitask();
+        if (multitask_lcl == null || !multitask_lcl.isToggled() || (!minecraftClient.player.isUsingItem() && minecraftClient.gui.screen() == null)) {
+            KeyMapping.click(this.mode.getValue().getKeyBinding2026().getDefaultKey());
         } else {
             this.mode.getValue().executeClickAction();
         }

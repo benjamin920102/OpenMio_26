@@ -4,14 +4,12 @@ import me.mioclient.api.Category;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.DeathScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.gui.screens.DeathScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/Heaven.class */
 public class Heaven extends Module {
     public Heaven() {
         super("Heaven", "Brings you to heaven after you die.", Category.MISC, new String[0]);
@@ -19,13 +17,13 @@ public class Heaven extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        if (minecraftClient.currentScreen instanceof DeathScreen) {
+        if (minecraftClient.gui.screen() instanceof DeathScreen) {
             if (minecraftClient.player.verticalCollision) {
-                minecraftClient.player.setBoundingBox(new Box(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
+                minecraftClient.player.setBoundingBox(new AABB(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
             }
-            ClientPlayerEntity clientPlayerEntity = minecraftClient.player;
-            Vec3d velocity = minecraftClient.player.getVelocity();
-            clientPlayerEntity.setVelocity(velocity.withAxis(Direction.Axis.Y, Double.longBitsToDouble(4613937818241073152L)));
+            LocalPlayer clientPlayerEntity = minecraftClient.player;
+            Vec3 velocity = minecraftClient.player.getDeltaMovement();
+            clientPlayerEntity.setDeltaMovement(velocity.with(Direction.Axis.Y, Double.longBitsToDouble(4613937818241073152L)));
         }
     }
 }

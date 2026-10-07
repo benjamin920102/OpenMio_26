@@ -3,15 +3,8 @@ package me.mioclient.module;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.hud.ResizableHudElement;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.player.PlayerUtils;
-
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.player.PlayerUtils;
 
@@ -29,22 +22,18 @@ import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.module.render.NameTags;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.ArmorMaterials;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.ChatFormatting;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/TextRadar.class */
 public class TextRadar extends me.mioclient.module.HudModule {
     public Setting<TextRadarMode> setting;
     public Setting<Boolean> setting2;
@@ -58,10 +47,9 @@ public class TextRadar extends me.mioclient.module.HudModule {
     public Setting<Boolean> setting10;
     public Setting<Boolean> setting11;
     public Setting<Boolean> setting12;
-    public final List<PlayerEntity> list;
+    public final List<Player> list;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/TextRadar$TextRadarMode.class */
+    
     public enum TextRadarMode implements NamedValue {
         DISTANCE("Distance"),
         ANGLE("Angle");
@@ -105,28 +93,28 @@ public class TextRadar extends me.mioclient.module.HudModule {
     public void onTick(TickEvent tickEvent) {
         synchronized (this.list) {
             this.list.clear();
-            Stream limit = minecraftClient.world.getPlayers().stream().filter((v1) -> {
+            Stream limit = minecraftClient.level.players().stream().filter((v1) -> {
                 return shouldShowPlayer(v1);
             }).sorted(Comparator.comparing((v1) -> {
                 return getSortValue(v1);
             })).limit(this.setting8.getValue().booleanValue() ? this.setting9.getValue().intValue() : Long.MAX_VALUE);
-            List<PlayerEntity> list = this.list;
+            List<Player> list = this.list;
             Objects.requireNonNull(list);
             limit.forEachOrdered((v1) -> {
-                list.add((net.minecraft.entity.player.PlayerEntity) v1);
+                list.add((net.minecraft.world.entity.player.Player) v1);
             });
         }
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         float f = this.moduleListSearchHelper4.getAlignedY(ClientTextRenderer.INSTANCE.getFontHeight()) - this.moduleListSearchHelper4.getY();
-        for (PlayerEntity playerEntity : this.list) {
+        for (Player playerEntity : this.list) {
             Color color3018 = getHudColor(f);
             if (ClientServices.socialManager.isFriendEntity(playerEntity) && this.setting5.getValue().booleanValue()) {
-                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().getName(), color3018);
+                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().name(), color3018);
             } else if (ClientServices.socialManager.isEnemyEntity(playerEntity) && this.setting6.getValue().booleanValue()) {
-                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().getName(), color3018);
+                color3018 = ClientServices.socialManager.getSocialColor(playerEntity.getGameProfile().name(), color3018);
             }
             String string2646 = formatPlayerEntry(playerEntity);
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, string2646, this.moduleListSearchHelper4.getAlignedX(ClientTextRenderer.INSTANCE.getStringWidth(string2646)) - this.moduleListSearchHelper4.getX(), f, color3018);
@@ -138,7 +126,7 @@ public class TextRadar extends me.mioclient.module.HudModule {
     public float[] getSize() {
         float f = 0.0f;
         float f2 = 0.0f;
-        Iterator<PlayerEntity> it = this.list.iterator();
+        Iterator<Player> it = this.list.iterator();
         while (it.hasNext()) {
             float f3 = ClientTextRenderer.INSTANCE.getStringWidth(formatPlayerEntry(it.next()));
             f += ClientTextRenderer.INSTANCE.getFontHeight() + 1;
@@ -149,33 +137,32 @@ public class TextRadar extends me.mioclient.module.HudModule {
         return new float[]{f2, f};
     }
 
-    public String formatPlayerEntry(PlayerEntity playerEntity) {
+    public String formatPlayerEntry(Player playerEntity) {
         int i;
         StringBuilder sb = new StringBuilder();
         float f = EntityUtil.getEntityHealth((Entity) playerEntity);
         if (this.setting2.getValue().booleanValue()) {
             sb.append(getHealthColor(f)).append(Math.round(f)).append(" ");
         }
-        sb.append(Formatting.RESET);
-        sb.append(ClientServices.notificationsHelper.getPlayerDisplayName(playerEntity.getGameProfile().getName()));
+        sb.append(ChatFormatting.RESET);
+        sb.append(ClientServices.notificationsHelper.getPlayerDisplayName(playerEntity.getGameProfile().name()));
         if (this.setting4.getValue().booleanValue() && (i = ClientServices.logoutSpotsHelper.getPopCount(playerEntity)) > 0) {
             sb.append(NameTags.getTotemPopColor(i)).append(" -").append(i);
         }
         if (this.setting3.getValue().booleanValue()) {
-            sb.append(Formatting.WHITE).append(" ").append(Math.round(minecraftClient.player.distanceTo((Entity) playerEntity))).append("m");
+            sb.append(ChatFormatting.WHITE).append(" ").append(Math.round(minecraftClient.player.distanceTo((Entity) playerEntity))).append("m");
         }
         if (this.setting7.getValue().booleanValue()) {
             String str = "G";
-            Iterator it = playerEntity.getArmorItems().iterator();
+            Iterator it = java.util.List.of(playerEntity.getItemBySlot(EquipmentSlot.HEAD), playerEntity.getItemBySlot(EquipmentSlot.CHEST), playerEntity.getItemBySlot(EquipmentSlot.LEGS), playerEntity.getItemBySlot(EquipmentSlot.FEET)).iterator();
             while (true) {
                 if (!it.hasNext()) {
                     break;
                 }
                 ItemStack itemStack = (ItemStack) it.next();
-                ArmorItem item = (itemStack.getItem()) instanceof ArmorItem ? (ArmorItem) (itemStack.getItem()) : null;
-                if (item instanceof ArmorItem) {
-                    RegistryEntry material = item.getMaterial();
-                    if ((material != ArmorMaterials.DIAMOND && material != ArmorMaterials.NETHERITE) || !itemStack.hasEnchantments()) {
+                Item item = itemStack.getItem();
+                if (isDiamondOrNetheriteArmor(item)) {
+                    if (!itemStack.isEnchanted()) {
                         str = "";
                     }
                 } else {
@@ -187,7 +174,7 @@ public class TextRadar extends me.mioclient.module.HudModule {
                 }
             }
             if (!str.isEmpty()) {
-                sb.append(Formatting.WHITE);
+                sb.append(ChatFormatting.WHITE);
                 sb.append(" [");
                 sb.append(str);
                 sb.append("]");
@@ -196,15 +183,20 @@ public class TextRadar extends me.mioclient.module.HudModule {
         return sb.toString();
     }
 
-    public Formatting getHealthColor(double d) {
-        return d >= Double.longBitsToDouble(4626322717216342016L) ? Formatting.GREEN : d >= Double.longBitsToDouble(4625196817309499392L) ? Formatting.DARK_GREEN : d >= Double.longBitsToDouble(4621819117588971520L) ? Formatting.GOLD : d >= Double.longBitsToDouble(4616189618054758400L) ? Formatting.RED : Formatting.DARK_RED;
+    public ChatFormatting getHealthColor(double d) {
+        return d >= Double.longBitsToDouble(4626322717216342016L) ? ChatFormatting.GREEN : d >= Double.longBitsToDouble(4625196817309499392L) ? ChatFormatting.DARK_GREEN : d >= Double.longBitsToDouble(4621819117588971520L) ? ChatFormatting.GOLD : d >= Double.longBitsToDouble(4616189618054758400L) ? ChatFormatting.RED : ChatFormatting.DARK_RED;
     }
 
     public double getSortValue(Entity entity) {
-        return this.setting.getValue() == TextRadarMode.DISTANCE ? entity.squaredDistanceTo(minecraftClient.player) : MathHelper.angleBetween(minecraftClient.gameRenderer.getCamera().getYaw(), RotationManager.getRotationsTo(entity)[0]);
+        return this.setting.getValue() == TextRadarMode.DISTANCE ? entity.distanceToSqr(minecraftClient.player) : Mth.degreesDifferenceAbs(minecraftClient.gameRenderer.mainCamera().yRot(), RotationManager.getRotationsTo(entity)[0]);
     }
 
-    public boolean shouldShowPlayer(PlayerEntity playerEntity) {
+    private static boolean isDiamondOrNetheriteArmor(Item item) {
+        return item == Items.DIAMOND_HELMET || item == Items.DIAMOND_CHESTPLATE || item == Items.DIAMOND_LEGGINGS || item == Items.DIAMOND_BOOTS
+                || item == Items.NETHERITE_HELMET || item == Items.NETHERITE_CHESTPLATE || item == Items.NETHERITE_LEGGINGS || item == Items.NETHERITE_BOOTS;
+    }
+
+    public boolean shouldShowPlayer(Player playerEntity) {
         if (!isInHudEditor() && minecraftClient.player == playerEntity) {
             return false;
         }

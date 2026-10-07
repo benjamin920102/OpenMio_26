@@ -8,7 +8,6 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import me.mioclient.event.EventBus;
 
@@ -16,26 +15,20 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ConnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.exploit.FastLatency;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerListHeaderS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
-import me.mioclient.render.RenderConstants;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
+import net.minecraft.network.protocol.game.ClientboundTabListPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import me.mioclient.render.RenderConstants;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ServerStateTracker.class */
 public final class ServerStateTracker implements ClientAccessor {
     public static final FastLatency fastLatency = (FastLatency) ClientServices.moduleInjector.getModule(FastLatency.class);
     public static final Pattern pattern = Pattern.compile("\\d+ ping");
@@ -49,7 +42,7 @@ public final class ServerStateTracker implements ClientAccessor {
     public int num3;
     public boolean flag;
     public boolean flag2;
-    public ServerInfo serverInfo;
+    public ServerData serverInfo;
     public int num4;
     public boolean flag3;
 
@@ -60,15 +53,15 @@ public final class ServerStateTracker implements ClientAccessor {
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         this.num = System.currentTimeMillis();
-        PlayerPositionLookS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof PlayerPositionLookS2CPacket ? (PlayerPositionLookS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof PlayerPositionLookS2CPacket) {
-            this.num3 = packet904.getTeleportId();
+        ClientboundPlayerPositionPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundPlayerPositionPacket ? (ClientboundPlayerPositionPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundPlayerPositionPacket) {
+            this.num3 = packet904.id();
             if (this.stopwatch2.hasElapsedMs(50L)) {
                 this.stopwatch.reset();
             }
-            this.flag = minecraftClient.player.isSprinting();
+            this.flag = minecraftClient.player != null && minecraftClient.player.isSprinting();
         }
-        if (channelRead0Event.getPacket() instanceof WorldTimeUpdateS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundSetTimePacket) {
             if (this.num2 != 0) {
                 if (this.arrayDeque.size() > 20) {
                     this.arrayDeque.poll();
@@ -87,17 +80,17 @@ public final class ServerStateTracker implements ClientAccessor {
             }
             this.num2 = System.currentTimeMillis();
         }
-        BundleS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof BundleS2CPacket ? (BundleS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof BundleS2CPacket) {
-            Iterator it2 = packet9042.getPackets().iterator();
+        ClientboundBundlePacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundBundlePacket ? (ClientboundBundlePacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundBundlePacket) {
+            Iterator it2 = packet9042.subPackets().iterator();
             while (it2.hasNext()) {
                 eventBus.fireEvent(new PacketReceiveEvent((Packet) it2.next()));
             }
         }
-        PlayerListHeaderS2CPacket packet9043 = (channelRead0Event.getPacket()) instanceof PlayerListHeaderS2CPacket ? (PlayerListHeaderS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9043 instanceof PlayerListHeaderS2CPacket) {
-            PlayerListHeaderS2CPacket playerListHeaderS2CPacket = packet9043;
-            if (minecraftClient.player.networkHandler.getServerInfo() == null) {
+        ClientboundTabListPacket packet9043 = (channelRead0Event.getPacket()) instanceof ClientboundTabListPacket ? (ClientboundTabListPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9043 instanceof ClientboundTabListPacket) {
+            ClientboundTabListPacket playerListHeaderS2CPacket = packet9043;
+            if (minecraftClient.player.connection.getServerData() == null) {
                 return;
             }
             Matcher matcher = pattern.matcher(playerListHeaderS2CPacket.footer().getString());
@@ -113,29 +106,23 @@ public final class ServerStateTracker implements ClientAccessor {
 
     @Listen(get219= RenderConstants.num)
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        ClientCommandC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ClientCommandC2SPacket ? (ClientCommandC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof ClientCommandC2SPacket) {
-            ClientCommandC2SPacket clientCommandC2SPacket = packet904;
-            if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.START_SPRINTING) {
+        ServerboundPlayerCommandPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundPlayerCommandPacket ? (ServerboundPlayerCommandPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundPlayerCommandPacket) {
+            ServerboundPlayerCommandPacket clientCommandC2SPacket = packet904;
+            if (clientCommandC2SPacket.getAction() == ServerboundPlayerCommandPacket.Action.START_SPRINTING) {
                 if (this.flag) {
                     sendImmediatelyEvent.cancel();
                 }
                 this.flag = true;
             }
-            if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.STOP_SPRINTING) {
+            if (clientCommandC2SPacket.getAction() == ServerboundPlayerCommandPacket.Action.STOP_SPRINTING) {
                 if (!this.flag) {
                     sendImmediatelyEvent.cancel();
                 }
                 this.flag = false;
             }
-            if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY) {
-                this.flag2 = true;
-            }
-            if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY) {
-                this.flag2 = false;
-            }
         }
-        if (sendImmediatelyEvent.getPacket() instanceof TeleportConfirmC2SPacket) {
+        if (sendImmediatelyEvent.getPacket() instanceof ServerboundAcceptTeleportationPacket) {
             this.stopwatch2.reset();
         }
     }
@@ -153,7 +140,7 @@ public final class ServerStateTracker implements ClientAccessor {
         if (fastLatency.isToggled()) {
             return fastLatency.getPing();
         }
-        PlayerListEntry playerListEntry = minecraftClient.player.networkHandler.getPlayerListEntry(minecraftClient.player.getGameProfile().getId());
+        PlayerInfo playerListEntry = minecraftClient.player.connection.getPlayerInfo(minecraftClient.player.getGameProfile().id());
         int latency = playerListEntry == null ? 0 : playerListEntry.getLatency();
         return latency == 0 ? this.num4 : latency;
     }
@@ -186,11 +173,11 @@ public final class ServerStateTracker implements ClientAccessor {
         return this.val2 / Float.intBitsToFloat(1101004800);
     }
 
-    public ServerInfo getServerInfo() {
+    public ServerData getServerInfo() {
         return this.serverInfo;
     }
 
-    public void setServerInfo(ServerInfo serverInfo) {
+    public void setServerInfo(ServerData serverInfo) {
         this.serverInfo = serverInfo;
     }
 

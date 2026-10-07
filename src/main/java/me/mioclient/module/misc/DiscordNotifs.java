@@ -10,8 +10,6 @@ import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.command.ClientCommandRegistry;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.client.ChatUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,26 +18,20 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.event.events.client.ClientTickEvent;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.network.AddMessageEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import me.mioclient.module.client.Discord;
 import me.mioclient.module.Position;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/DiscordNotifs.class */
 public class DiscordNotifs extends Module {
     public Setting<Float> timeout = add(new NumberSetting<>("Timeout", 1.0f, 1.0f, 10.0f).setSuffix("s"));
     public Setting<Boolean> timestamp = add(new BooleanSetting("Timestamp", false));
@@ -53,7 +45,7 @@ public class DiscordNotifs extends Module {
     public final List<String> list2;
     public final Stopwatch stopwatch;
     public String string;
-    public ServerInfo serverInfo;
+    public ServerData serverInfo;
 
     public DiscordNotifs() {
         super("DiscordNotifs", "Sends chat messages to your Discord webhook.", Category.MISC, new String[0]);
@@ -67,13 +59,13 @@ public class DiscordNotifs extends Module {
     public void onEnable() {
         this.stopwatch.reset();
         if (ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty()) {
-            ChatUtils.sendPrefixedMessage(Text.literal("You don't have a webhook URL set. Set one by typing \"").append(new StringTemplate().arg(ClientCommandRegistry.getPrefix()).format("\u0001webhook set <url>")).append("\"."), ChatUtils.createSignature(-10395), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
+            ChatUtils.sendPrefixedMessage(Component.literal("You don't have a webhook URL set. Set one by typing \"").append(new StringTemplate().arg(ClientCommandRegistry.getPrefix()).format("\u0001webhook set <url>")).append("\"."), ChatUtils.createSignature(-10395), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
         }
     }
 
     @Listen
     public void onClientTick(ClientTickEvent fontsEvent) {
-        if (minecraftClient.world != null) {
+        if (minecraftClient.level != null) {
             this.serverInfo = ClientServices.holeSnapRenderHelper.getServerInfo();
         }
         if (ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty() || !this.stopwatch.hasElapsed(this.timeout.getValue().floatValue(), TimeUnit.SECONDS) || this.list.isEmpty()) {
@@ -109,7 +101,7 @@ public class DiscordNotifs extends Module {
         if (addMessageEvent.isCancelled() || ClientServices.discordNotifsHelper.getWebhookUrl() == null || ClientServices.discordNotifsHelper.getWebhookUrl().isEmpty() || addMessageEvent.getPhase() != KeyPearlMode.Pre || addMessageEvent.getString() == null) {
             return;
         }
-        if (this.ignoreMio.getValue().booleanValue() && addMessageEvent.getIndicator() == ChatUtils.messageIndicator) {
+        if (this.ignoreMio.getValue().booleanValue() && addMessageEvent.getIndicator() == ChatUtils.GuiMessageTag) {
             return;
         }
         String string2283 = addMessageEvent.getString();
@@ -137,7 +129,7 @@ public class DiscordNotifs extends Module {
         if (!this.disconnect.getValue().booleanValue() || this.serverInfo == null) {
             return;
         }
-        queueMessageLines("You have been disconnected from %s!".formatted(this.serverInfo.address).split("\n"));
+        queueMessageLines("You have been disconnected from %s!".formatted(this.serverInfo.ip).split("\n"));
         this.serverInfo = null;
     }
 
@@ -145,7 +137,7 @@ public class DiscordNotifs extends Module {
         StringBuilder sb = new StringBuilder();
         for (String str : strArr) {
             if (!str.isEmpty()) {
-                sb.append(Formatting.strip(str));
+                sb.append(ChatFormatting.stripFormatting(str));
                 sb.append("\n");
             }
         }

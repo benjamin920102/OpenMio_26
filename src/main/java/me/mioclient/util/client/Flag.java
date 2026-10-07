@@ -6,8 +6,6 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Flag.class */
 public enum Flag {
     RU("ru", Color.white, Color.blue, Color.red),
     UA("ua", Color.blue, new Color(239, 208, 12)),

@@ -5,12 +5,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/NetworkMessage.class */
 public interface NetworkMessage {
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ByteToMessageDecoderHelper$DataOutputStream.class */
+    
     public static class DataOutputStream extends java.io.DataOutputStream {
         public final ByteArrayOutputStream byteArrayOutputStream;
 

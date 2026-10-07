@@ -5,33 +5,36 @@ import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.module.movement.warp.WarpHelperMode;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.movement.warp.WarpChargeHandler;
 
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.module.movement.warp.WarpHelperMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Warp.class */
 public class Warp extends Module {
-    public static FakeLag fakeLag2 = (FakeLag) ClientServices.moduleInjector.getModule(FakeLag.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving fakeLag2 null (NPE). */
+    private static FakeLag fakeLag2;
+
+    public static FakeLag getFakeLag2() {
+        if (fakeLag2 == null && ClientServices.moduleInjector != null) {
+            try {
+                fakeLag2 = (FakeLag) ClientServices.moduleInjector.getModule(FakeLag.class);
+            } catch (Exception e) {
+            }
+        }
+        return fakeLag2;
+    }
     public Setting<WarpMode> mode = add(new EnumSetting<>("Mode", WarpMode.PLAIN));
     public Setting<Integer> boost = add(new NumberSetting<>("Boost", 2, 1, 50));
     public Setting<Integer> charge = add(new NumberSetting<>("Charge", 20, 1, 100));
@@ -45,8 +48,7 @@ public class Warp extends Module {
     public boolean flag;
     public volatile int num;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Warp$WarpMode.class */
+    
     public enum WarpMode implements NamedValue {
         PLAIN("Plain"),
         ALTERNATIVE("Alternative");
@@ -88,7 +90,7 @@ public class Warp extends Module {
         }
         while (!this.warpHelper.queue.isEmpty()) {
             try {
-                minecraftClient.player.networkHandler.sendPacket(this.warpHelper.queue.poll());
+                minecraftClient.player.connection.send(this.warpHelper.queue.poll());
             } catch (Exception e) {
             }
         }
@@ -116,8 +118,9 @@ public class Warp extends Module {
         }
         if (this.num > 0) {
             if (this.fakeLag.getValue().booleanValue()) {
-                boolean isToggled = fakeLag2.isToggled();
-                setFakeLagEnabled(minecraftClient.player.isOnGround() || !this.disableGround.getValue().booleanValue());
+                FakeLag fakeLag2_lcl = getFakeLag2();
+                boolean isToggled = fakeLag2_lcl != null && fakeLag2_lcl.isToggled();
+                setFakeLagEnabled(minecraftClient.player.onGround() || !this.disableGround.getValue().booleanValue());
                 if (this.boost.getValue().intValue() > 1 && this.limitPackets.getValue().booleanValue()) {
                     ClientServices.holeSnapRenderHelper.getTeleportStopwatch().reset();
                 }
@@ -134,7 +137,7 @@ public class Warp extends Module {
         if (this.mode.getValue() == WarpMode.ALTERNATIVE && motionEvent.getPhase() == KeyPearlMode.Pre) {
             if (!this.warpHelper.queue.isEmpty() && isPlayerMoving()) {
                 ClientServices.inner.requestTickRate(this, this.boost.getValue().intValue());
-                minecraftClient.player.networkHandler.sendPacket(this.warpHelper.queue.poll());
+                minecraftClient.player.connection.send(this.warpHelper.queue.poll());
                 return;
             }
             if (!this.warpHelper.queue.isEmpty() && !this.flag) {
@@ -150,7 +153,7 @@ public class Warp extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             this.flag = true;
         }
     }
@@ -159,11 +162,14 @@ public class Warp extends Module {
         if (!this.fakeLag.getValue().booleanValue() || minecraftClient.player == null) {
             return;
         }
-        fakeLag2.setToggled(z);
+        FakeLag fakeLag2_lcl = getFakeLag2();
+        if (fakeLag2_lcl != null) {
+            fakeLag2_lcl.setToggled(z);
+        }
     }
 
     public boolean isPlayerMoving() {
-        return minecraftClient.player.input.pressingRight || minecraftClient.player.input.pressingLeft || minecraftClient.player.input.pressingBack || minecraftClient.player.input.pressingForward || minecraftClient.player.getX() - minecraftClient.player.prevX != 0.0d || minecraftClient.player.getY() - minecraftClient.player.prevY != 0.0d || minecraftClient.player.getZ() - minecraftClient.player.prevZ != 0.0d;
+        return minecraftClient.player.input.keyPresses.right() || minecraftClient.player.input.keyPresses.left() || minecraftClient.player.input.keyPresses.backward() || minecraftClient.player.input.keyPresses.forward() || minecraftClient.player.getX() - minecraftClient.player.xo != 0.0d || minecraftClient.player.getY() - minecraftClient.player.yo != 0.0d || minecraftClient.player.getZ() - minecraftClient.player.zo != 0.0d;
     }
 
     public int get2093() {
@@ -171,6 +177,6 @@ public class Warp extends Module {
     }
 
     public boolean is2181() {
-        return minecraftClient.player.getPos().squaredDistanceTo(minecraftClient.player.prevX, minecraftClient.player.prevY, minecraftClient.player.prevZ) > 0.0d;
+        return minecraftClient.player.position().distanceToSqr(minecraftClient.player.xo, minecraftClient.player.yo, minecraftClient.player.zo) > 0.0d;
     }
 }

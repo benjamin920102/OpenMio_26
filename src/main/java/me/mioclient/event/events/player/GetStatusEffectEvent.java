@@ -2,19 +2,18 @@ package me.mioclient.event.events.player;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.world.effect.MobEffect;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/GetStatusEffectEvent.class */
+/* 26.2 port: Yarn MobEffect/Holder -> MojMap MobEffect/Holder. */
 public class GetStatusEffectEvent extends Event {
-    public final RegistryEntry<StatusEffect> registryEntry;
+    public final Holder<MobEffect> registryEntry;
 
-    public GetStatusEffectEvent(RegistryEntry<StatusEffect> registryEntry) {
+    public GetStatusEffectEvent(Holder<MobEffect> registryEntry) {
         this.registryEntry = registryEntry;
     }
 
-    public RegistryEntry<StatusEffect> getEffect() {
+    public Holder<MobEffect> getEffect() {
         return this.registryEntry;
     }
 }

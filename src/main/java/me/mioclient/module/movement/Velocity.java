@@ -7,32 +7,22 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.math.MathUtils;
 import me.mioclient.util.registry.ModeValueMap;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
-import me.mioclient.util.registry.ModeValueMap;
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.movement.velocity.GrimVelocityHandler;
 import me.mioclient.module.movement.velocity.PlainVelocityHandler;
 import me.mioclient.module.movement.velocity.VelocityModeHandler;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.math.MathUtils;
 
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.render.RenderConstants;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ExplosionVelocityEvent;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.PushOutOfBlocksEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
@@ -41,11 +31,30 @@ import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Velocity.class */
 public class Velocity extends Module {
-    public static final Sprint sprint = (Sprint) ClientServices.moduleInjector.getModule(Sprint.class);
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static Sprint sprint;
+    private static AntiCheat antiCheat;
+
+    public static Sprint getSprint() {
+        if (sprint == null && ClientServices.moduleInjector != null) {
+            try {
+                sprint = (Sprint) ClientServices.moduleInjector.getModule(Sprint.class);
+            } catch (Exception e) {
+            }
+        }
+        return sprint;
+    }
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<VelocityMode> mode = add(new EnumSetting<>("Mode", VelocityMode.PLAIN));
     public Setting<Integer> horizontal = add(new NumberSetting<>("Horizontal", 0, 0, 100, v -> this.mode.getValue() == Velocity.VelocityMode.PLAIN).setSuffix("%"));
     public Setting<Integer> vertical = add(new NumberSetting<>("Vertical", 0, 0, 100, v -> this.mode.getValue() == Velocity.VelocityMode.PLAIN).setSuffix("%"));
@@ -55,8 +64,7 @@ public class Velocity extends Module {
     public Setting<Boolean> liquids = add(new BooleanSetting("Liquids", true));
     public final ModeValueMap<VelocityMode, VelocityModeHandler> elytraFlyHelper_4;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Velocity$VelocityMode.class */
+    
     public enum VelocityMode implements NamedValue {
         PLAIN("Plain"),
         GRIM("Grim"),
@@ -95,7 +103,10 @@ public class Velocity extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        sprint.flag2 = false;
+        Sprint sprint_lcl = getSprint();
+        if (sprint_lcl != null) {
+            sprint_lcl.flag2 = false;
+        }
         this.elytraFlyHelper_4.getCurrent().onDisable();
     }
 
@@ -112,7 +123,10 @@ public class Velocity extends Module {
     @Listen(get219= RenderConstants.num5)
     public void onTickPost(TickPostEvent tickPostEvent) {
         if (this.mode.getValue() != VelocityMode.WALLS) {
-            sprint.flag2 = false;
+            Sprint sprint_lcl = getSprint();
+            if (sprint_lcl != null) {
+                sprint_lcl.flag2 = false;
+            }
         }
         this.elytraFlyHelper_4.getCurrent().onUpdate();
     }

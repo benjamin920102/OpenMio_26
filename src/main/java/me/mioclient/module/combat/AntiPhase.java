@@ -11,45 +11,47 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.combat.antiphase.AntiPhasePlacement;
 import me.mioclient.module.combat.antiphase.AntiPhaseTargetResolver;
 import me.mioclient.module.combat.antiphase.LadderTargetResolver;
 import me.mioclient.module.combat.antiphase.PermissiveLadderTargetResolver;
 import me.mioclient.module.combat.antiphase.SolidBlockTargetResolver;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.awt.Color;
-import me.mioclient.module.combat.antiphase.FacePlateTargetResolver;
-import me.mioclient.module.combat.antiphase.AntiPhaseMode;
-import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.movement.NoSlow;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.ItemFrameEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.level.entity.EntityTypeTest;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AntiPhase.class */
 public class AntiPhase extends Module {
-    public static final NoSlow noSlow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static NoSlow noSlow;
+
+    public static NoSlow getNoSlow() {
+        if (noSlow == null && ClientServices.moduleInjector != null) {
+            try {
+                noSlow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+            } catch (Exception e) {
+            }
+        }
+        return noSlow;
+    }
     public Setting<AntiPhaseMode> material = add(new EnumSetting<>("Material", AntiPhaseMode.LADDER));
     public Setting<Float> range = add(new NumberSetting<>("Range", 4.5f, 0.1f, 6.0f));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 50, 0, 250).setSuffix("ms"));
@@ -76,11 +78,12 @@ public class AntiPhase extends Module {
     @Listen
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
         AntiPhasePlacement antiPhaseData844;
-        if (!this.stopwatch.hasElapsedAndResetMs(this.delay.getValue().intValue()) || noSlow.shouldApply()) {
+        NoSlow noSlow_lcl = getNoSlow();
+        if (!this.stopwatch.hasElapsedAndResetMs(this.delay.getValue().intValue()) || (noSlow_lcl != null && noSlow_lcl.shouldApply())) {
             return;
         }
         int i = 0;
-        for (PlayerEntity playerEntity : minecraftClient.world.getPlayers()) {
+        for (Player playerEntity : minecraftClient.level.players()) {
             if (isValidAntiPhaseTarget(playerEntity) && (antiPhaseData844 = getAntiPhaseHelper_3268().resolveTarget(this, playerEntity)) != null) {
                 if (placeAntiPhaseBlock(antiPhaseData844)) {
                     if (this.rotate.getValue().booleanValue()) {
@@ -100,35 +103,30 @@ public class AntiPhase extends Module {
 
     public boolean placeAntiPhaseBlock(AntiPhasePlacement antiPhaseData) {
         int i = InventoryUtils.findInHotbar(this.material.getValue().getDesiredItem());
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         if (i == -1) {
             return false;
         }
         InventoryUtils.do438(i);
         BlockHitResult blockHitResult = new BlockHitResult(antiPhaseData.getFaceCenter(), antiPhaseData.getDirection(), antiPhaseData.getBlockPos(), false);
         ClientServices.antiPhaseHelper.withSneakPress(() -> {
-            PacketSender.sendInteractBlock(Hand.MAIN_HAND, blockHitResult);
+            PacketSender.sendInteractBlock(InteractionHand.MAIN_HAND, blockHitResult);
         });
-        PacketSender.sendHandSwing(Hand.MAIN_HAND);
+        PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
         InventoryUtils.do438(i2);
         return true;
     }
 
-    public boolean isValidAntiPhaseTarget(PlayerEntity playerEntity) {
+    public boolean isValidAntiPhaseTarget(Player playerEntity) {
         if (!playerEntity.isAlive() || minecraftClient.player == playerEntity || playerEntity.isSwimming() || ClientServices.socialManager.isFriendEntity(playerEntity) || PlayerUtils.getFeetPositions((LivingEntity) playerEntity).size() != 1 || hasItemAtPosition(PlayerUtils.getRoundedBlockPos((LivingEntity) playerEntity)) || !PlayerUtils.hasArmor((LivingEntity) playerEntity)) {
             return false;
         }
-        return (!this.noCrawl.getValue().booleanValue() || playerEntity.getBoundingBox().getLengthY() > Double.longBitsToDouble(4607182418800017408L)) && playerEntity.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue();
+        return (!this.noCrawl.getValue().booleanValue() || playerEntity.getBoundingBox().getYsize() > Double.longBitsToDouble(4607182418800017408L)) && playerEntity.distanceTo(minecraftClient.player) <= this.range.getValue().floatValue();
     }
 
     public boolean hasItemAtPosition(BlockPos blockPos) {
-        Box box = new Box(blockPos);
-        for (Entity entity : minecraftClient.world.getEntities()) {
-            if ((entity instanceof ItemFrameEntity) && entity.getBoundingBox().intersects(box)) {
-                return true;
-            }
-        }
-        return false;
+        AABB box = new AABB(blockPos);
+        return !minecraftClient.level.getEntities(EntityTypeTest.forClass(ItemFrame.class), box, entity -> entity.getBoundingBox().intersects(box)).isEmpty();
     }
 
     public AntiPhaseTargetResolver getAntiPhaseHelper_3268() {

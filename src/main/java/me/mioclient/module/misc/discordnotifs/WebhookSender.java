@@ -6,9 +6,6 @@ import me.mioclient.api.JsonConfigurable;
 import me.mioclient.util.io.HttpRequests;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.io.HttpRequests;
 
 import me.mioclient.event.EventBus;
 
@@ -18,8 +15,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/WebhookSender.class */
 public class WebhookSender implements ClientAccessor, JsonConfigurable {
     public String string = "";
 

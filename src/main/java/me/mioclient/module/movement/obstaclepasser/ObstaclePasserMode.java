@@ -3,35 +3,33 @@ package me.mioclient.module.movement.obstaclepasser;
 import me.mioclient.api.ClientAccessor;
 
 import java.util.function.Function;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 import me.mioclient.manager.RotationManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ObstaclePasserMode.class */
 public enum ObstaclePasserMode implements ClientAccessor {
     XP(num -> {
-        return BlockPos.ofFloored(minecraftClient.player.getX() + num.intValue(), 0.0d, 0.0d);
+        return BlockPos.containing(minecraftClient.player.getX() + num.intValue(), 0.0d, 0.0d);
     }),
     XN(num2 -> {
-        return BlockPos.ofFloored(minecraftClient.player.getX() - num2.intValue(), 0.0d, 0.0d);
+        return BlockPos.containing(minecraftClient.player.getX() - num2.intValue(), 0.0d, 0.0d);
     }),
     ZP(num3 -> {
-        return BlockPos.ofFloored(0.0d, 0.0d, minecraftClient.player.getZ() + num3.intValue());
+        return BlockPos.containing(0.0d, 0.0d, minecraftClient.player.getZ() + num3.intValue());
     }),
     ZN(num4 -> {
-        return BlockPos.ofFloored(0.0d, 0.0d, minecraftClient.player.getZ() - num4.intValue());
+        return BlockPos.containing(0.0d, 0.0d, minecraftClient.player.getZ() - num4.intValue());
     }),
     XP_ZP(num5 -> {
-        return BlockPos.ofFloored(get476() + num5.intValue(), 0.0d, get477() + num5.intValue());
+        return BlockPos.containing(get476() + num5.intValue(), 0.0d, get477() + num5.intValue());
     }),
     XN_ZP(num6 -> {
-        return BlockPos.ofFloored(get476() - num6.intValue(), 0.0d, get477() + num6.intValue());
+        return BlockPos.containing(get476() - num6.intValue(), 0.0d, get477() + num6.intValue());
     }),
     XP_ZN(num7 -> {
-        return BlockPos.ofFloored(get476() + num7.intValue(), 0.0d, get477() - num7.intValue());
+        return BlockPos.containing(get476() + num7.intValue(), 0.0d, get477() - num7.intValue());
     }),
     XN_ZN(num8 -> {
-        return BlockPos.ofFloored(get476() - num8.intValue(), 0.0d, get477() - num8.intValue());
+        return BlockPos.containing(get476() - num8.intValue(), 0.0d, get477() - num8.intValue());
     });
 
     public final Function<Integer, BlockPos> function;

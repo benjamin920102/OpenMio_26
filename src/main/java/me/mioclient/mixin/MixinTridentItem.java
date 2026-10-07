@@ -2,11 +2,9 @@ package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import me.mioclient.module.exploit.Trident;
-import net.minecraft.item.TridentItem;
+import net.minecraft.world.item.TridentItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
@@ -14,9 +12,8 @@ import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-/* compiled from: 0.java */
 @Mixin({TridentItem.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinTridentItem.class */
+
 public class MixinTridentItem {
     private static Trident trident;
 
@@ -32,7 +29,9 @@ public class MixinTridentItem {
 
     }
 
-    @ModifyExpressionValue(method = {"onStoppedUsing"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;isTouchingWaterOrRain()Z")})
+    /* 26.2 port: Item.onStoppedUsing -> TridentItem.releaseUsing (bytecode-verified:
+       still calls Player.isInWaterOrRain, Player.push(DDD) and uses const 10). */
+    @ModifyExpressionValue(method = {"releaseUsing"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;isInWaterOrRain()Z")})
     private boolean onStoppedUsingHook(boolean z) {
         Trident trident_lcl = getTrident();
 
@@ -41,7 +40,7 @@ public class MixinTridentItem {
         return z || trident_lcl.isAlwaysBoosting();
     }
 
-    @ModifyExpressionValue(method = {"use"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;isTouchingWaterOrRain()Z")})
+    @ModifyExpressionValue(method = {"use"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;isInWaterOrRain()Z")})
     private boolean useHook(boolean z) {
         Trident trident_lcl = getTrident();
 
@@ -50,7 +49,7 @@ public class MixinTridentItem {
         return z || trident_lcl.isAlwaysBoosting();
     }
 
-    @ModifyArgs(method = {"onStoppedUsing"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;addVelocity(DDD)V"))
+    @ModifyArgs(method = {"releaseUsing"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;push(DDD)V"))
     private void onStoppedUsingHook(Args args) {
         Trident trident_lcl = getTrident();
 
@@ -61,7 +60,7 @@ public class MixinTridentItem {
         args.set(2, Double.valueOf(((Double) args.get(2)).doubleValue() * trident_lcl.getBoostMultiplier()));
     }
 
-    @ModifyConstant(method = {"onStoppedUsing"}, constant = {@Constant(intValue = 10)})
+    @ModifyConstant(method = {"releaseUsing"}, constant = {@Constant(intValue = 10)})
     private int onStoppedUsing(int i) {
         Trident trident_lcl = getTrident();
 

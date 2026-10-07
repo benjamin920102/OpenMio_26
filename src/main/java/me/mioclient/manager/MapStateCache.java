@@ -10,9 +10,6 @@ import me.mioclient.util.io.FileIO;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.io.FileIO;
 
 import me.mioclient.event.EventBus;
 
@@ -30,44 +27,39 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ConnectEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.MapIdComponent;
-import net.minecraft.item.FilledMapItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.map.MapState;
-import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket;
-import net.minecraft.registry.RegistryKey;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import net.minecraft.world.item.MapItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket;
+import net.minecraft.resources.ResourceKey;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MapStateCache.class */
 public final class MapStateCache implements ClientAccessor {
     public final Stopwatch stopwatch = new Stopwatch();
-    public final Map<String, MapState> map = Collections.synchronizedMap(new HashMap());
+    public final Map<String, MapItemSavedData> map = Collections.synchronizedMap(new HashMap());
     public String string = null;
 
     public MapStateCache() {
         eventBus.register(this);
     }
 
-    public MapState lookupMapState(ItemStack itemStack, int i) {
-        return resolveMapState(itemStack, new MapIdComponent(i));
+    public MapItemSavedData lookupMapState(ItemStack itemStack, int i) {
+        return resolveMapState(itemStack, new MapId(i));
     }
 
-    public MapState resolveMapState(ItemStack itemStack, MapIdComponent mapIdComponent) {
-        MapState mapState = FilledMapItem.getMapState(mapIdComponent, minecraftClient.world);
-        if (mapIdComponent.id() != -1 && mapState != null) {
+    public MapItemSavedData resolveMapState(ItemStack itemStack, MapId mapId) {
+        MapItemSavedData mapState = MapItem.getSavedData(mapId, minecraftClient.level);
+        if (mapId.id() != -1 && mapState != null) {
             return mapState;
         }
-        String string = itemStack.getName().getString();
-        if (itemStack.contains(DataComponentTypes.CUSTOM_NAME)) {
+        String string = itemStack.getDisplayName().getString();
+        if (itemStack.has(DataComponents.CUSTOM_NAME)) {
             return this.map.getOrDefault(string, null);
         }
         return null;
@@ -75,9 +67,9 @@ public final class MapStateCache implements ClientAccessor {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof MapUpdateS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundMapItemDataPacket) {
             ClientServices.tooltipsHelper.schedule(() -> {
-                Iterator it = minecraftClient.player.getInventory().main.iterator();
+                Iterator it = minecraftClient.player.getInventory().getNonEquipmentItems().iterator();
                 while (it.hasNext()) {
                     updateMapState((ItemStack) it.next());
                 }
@@ -109,11 +101,11 @@ public final class MapStateCache implements ClientAccessor {
     }
 
     public void updateMapState(ItemStack itemStack) {
-        if (itemStack.getItem() == Items.FILLED_MAP && itemStack.contains(DataComponentTypes.CUSTOM_NAME)) {
-            String string = itemStack.getName().getString();
-            MapIdComponent mapIdComponent = (MapIdComponent) itemStack.getOrDefault(DataComponentTypes.MAP_ID, new MapIdComponent(-1));
+        if (itemStack.getItem() == Items.FILLED_MAP && itemStack.has(DataComponents.CUSTOM_NAME)) {
+            String string = itemStack.getDisplayName().getString();
+            MapId mapIdComponent = (MapId) itemStack.getOrDefault(DataComponents.MAP_ID, new MapId(-1));
             this.map.compute(string, (str, mapState) -> {
-                return FilledMapItem.getMapState(mapIdComponent, minecraftClient.world);
+                return MapItem.getSavedData(mapIdComponent, minecraftClient.level);
             });
         }
     }
@@ -130,8 +122,8 @@ public final class MapStateCache implements ClientAccessor {
             while (it.hasNext()) {
                 Map.Entry entry = (Map.Entry) it.next();
                 dataOutputStream.writeUTF((String) entry.getKey());
-                dataOutputStream.writeByte(((MapState) entry.getValue()).scale);
-                for (byte b : ((MapState) entry.getValue()).colors) {
+                dataOutputStream.writeByte(((MapItemSavedData) entry.getValue()).scale);
+                for (byte b : ((MapItemSavedData) entry.getValue()).colors) {
                     dataOutputStream.writeByte(b);
                 }
             }
@@ -150,7 +142,7 @@ public final class MapStateCache implements ClientAccessor {
                 int readInt = dataInputStream.readInt();
                 for (int i = 0; i < readInt; i++) {
                     String readUTF = dataInputStream.readUTF();
-                    MapState of = MapState.of(dataInputStream.readByte(), true, (RegistryKey) null);
+                    MapItemSavedData of = MapItemSavedData.createForClient(dataInputStream.readByte(), true, (ResourceKey) null);
                     for (int i2 = 0; i2 < 16384; i2++) {
                         of.colors[i2] = dataInputStream.readByte();
                     }

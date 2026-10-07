@@ -6,27 +6,18 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.CrystalRotationMode;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.mode.combat.CrystalRotationMode;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.player.AttackHookPostEvent;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ExplosionVelocityEvent;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
@@ -34,35 +25,112 @@ import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.SprintUpdateEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.player.RotationLock;
 import me.mioclient.module.player.Scaffold;
-import net.minecraft.block.Blocks;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import me.mioclient.mixin.ducks.DuckEntity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Sprint.class */
 public class Sprint extends Module {
-    public static final Scaffold scaffold = (Scaffold) ClientServices.moduleInjector.getModule(Scaffold.class);
-    public static final ElytraFly efly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class);
-    public static final LongJump longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
-    public static final FastFall fastFall = (FastFall) ClientServices.moduleInjector.getModule(FastFall.class);
-    public static final Speed speed = (Speed) ClientServices.moduleInjector.getModule(Speed.class);
-    public static final FastWeb fastWeb = (FastWeb) ClientServices.moduleInjector.getModule(FastWeb.class);
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static RotationLock rotationLock = (RotationLock) ClientServices.moduleInjector.getModule(RotationLock.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static Scaffold scaffold;
+    private static ElytraFly efly;
+    private static LongJump longJump;
+    private static FastFall fastFall;
+    private static Speed speed;
+    private static FastWeb fastWeb;
+    private static AntiCheat antiCheat;
+    private static RotationLock rotationLock;
+
+    public static Scaffold getScaffold() {
+        if (scaffold == null && ClientServices.moduleInjector != null) {
+            try {
+                scaffold = (Scaffold) ClientServices.moduleInjector.getModule(Scaffold.class);
+            } catch (Exception e) {
+            }
+        }
+        return scaffold;
+    }
+
+    public static ElytraFly getEfly() {
+        if (efly == null && ClientServices.moduleInjector != null) {
+            try {
+                efly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class);
+            } catch (Exception e) {
+            }
+        }
+        return efly;
+    }
+
+    public static LongJump getLongJump() {
+        if (longJump == null && ClientServices.moduleInjector != null) {
+            try {
+                longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
+            } catch (Exception e) {
+            }
+        }
+        return longJump;
+    }
+
+    public static FastFall getFastFall() {
+        if (fastFall == null && ClientServices.moduleInjector != null) {
+            try {
+                fastFall = (FastFall) ClientServices.moduleInjector.getModule(FastFall.class);
+            } catch (Exception e) {
+            }
+        }
+        return fastFall;
+    }
+
+    public static Speed getSpeed() {
+        if (speed == null && ClientServices.moduleInjector != null) {
+            try {
+                speed = (Speed) ClientServices.moduleInjector.getModule(Speed.class);
+            } catch (Exception e) {
+            }
+        }
+        return speed;
+    }
+
+    public static FastWeb getFastWeb() {
+        if (fastWeb == null && ClientServices.moduleInjector != null) {
+            try {
+                fastWeb = (FastWeb) ClientServices.moduleInjector.getModule(FastWeb.class);
+            } catch (Exception e) {
+            }
+        }
+        return fastWeb;
+    }
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static RotationLock getRotationLock() {
+        if (rotationLock == null && ClientServices.moduleInjector != null) {
+            try {
+                rotationLock = (RotationLock) ClientServices.moduleInjector.getModule(RotationLock.class);
+            } catch (Exception e) {
+            }
+        }
+        return rotationLock;
+    }
     public Setting<SprintPredicateMode> mode = add(new EnumSetting<>("Mode", SprintPredicateMode.RAGE));
     public Setting<Boolean> forceSprint = add(new BooleanSetting("ForceSprint", true, v -> this.mode.getValue() == Sprint.SprintPredicateMode.INSTANT));
     public Setting<Boolean> vanillaSlowdown = add(new BooleanSetting("VanillaSlowdown", false, v -> this.mode.getValue() == Sprint.SprintPredicateMode.INSTANT));
@@ -76,8 +144,7 @@ public class Sprint extends Module {
     public boolean flag;
     public boolean flag2;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Sprint$SprintPredicateMode.class */
+    
     public enum SprintPredicateMode implements NamedValue {
         LEGIT("Legit"),
         RAGE("Rage"),
@@ -108,15 +175,16 @@ public class Sprint extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             this.val = 0.0f;
         }
     }
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (!ClientServices.obstaclePasserHelper.isPathing() && antiCheat.movementSync.getValue().booleanValue() && antiCheat.rotations.getValue() == CrystalRotationMode.SILENT && this.directionSpoof.getValue().booleanValue() && ClientServices.RotationManager.getActiveRequest() == null && MovementUtils.is2181() && MovementUtils.getMovementYaw() != minecraftClient.player.getYaw() && !this.flag2) {
-            PacketSender.sendPacket(new PlayerMoveC2SPacket.Full(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYaw(), minecraftClient.player.getPitch(), minecraftClient.player.isOnGround()));
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        if (!ClientServices.obstaclePasserHelper.isPathing() && antiCheat_lcl != null && antiCheat_lcl.movementSync.getValue().booleanValue() && antiCheat_lcl.rotations.getValue() == CrystalRotationMode.SILENT && this.directionSpoof.getValue().booleanValue() && ClientServices.RotationManager.getActiveRequest() == null && MovementUtils.is2181() && MovementUtils.getMovementYaw() != minecraftClient.player.getYRot() && !this.flag2) {
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.PosRot(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYRot(), minecraftClient.player.getXRot(), minecraftClient.player.onGround(), minecraftClient.player.horizontalCollision));
         }
     }
 
@@ -125,8 +193,8 @@ public class Sprint extends Module {
         if (ClientServices.obstaclePasserHelper.isPathing()) {
             return;
         }
-        Vec3d vec3d = new Vec3d(explosionVelocityEvent.getX(), explosionVelocityEvent.getY(), explosionVelocityEvent.getZ());
-        if (MovementUtils.is2181() && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(750L) && this.boost.getValue().booleanValue() && Math.sqrt(minecraftClient.player.squaredDistanceTo(vec3d)) <= Double.longBitsToDouble(4618441417868443648L)) {
+        Vec3 vec3d = new Vec3(explosionVelocityEvent.getX(), explosionVelocityEvent.getY(), explosionVelocityEvent.getZ());
+        if (MovementUtils.is2181() && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(750L) && this.boost.getValue().booleanValue() && Math.sqrt(minecraftClient.player.distanceToSqr(vec3d)) <= Double.longBitsToDouble(4618441417868443648L)) {
             this.stopwatch.reset();
             this.val = ((float) Math.hypot(explosionVelocityEvent.getPlayerVelocityX(), explosionVelocityEvent.getPlayerVelocityZ())) * this.boostSpeed.getValue().floatValue();
         }
@@ -134,7 +202,8 @@ public class Sprint extends Module {
 
     @Listen(get219= RenderConstants.num2)
     public void onMotion(MotionEvent motionEvent) {
-        if (ClientServices.obstaclePasserHelper.isPathing() || isNotInGame() || shouldStopSprint() || rotationLock.isToggled() || !this.directionSpoof.getValue().booleanValue() || !MovementUtils.is2181() || minecraftClient.player.isFallFlying()) {
+        RotationLock rotationLock_lcl = getRotationLock();
+        if (ClientServices.obstaclePasserHelper.isPathing() || isNotInGame() || shouldStopSprint() || (rotationLock_lcl != null && rotationLock_lcl.isToggled()) || !this.directionSpoof.getValue().booleanValue() || !MovementUtils.is2181() || minecraftClient.player.isFallFlying()) {
             return;
         }
         motionEvent.setYaw(MovementUtils.getMovementYaw());
@@ -152,7 +221,10 @@ public class Sprint extends Module {
 
     @Listen(get219= 1000)
     public void onMove(MoveEvent moveEvent) {
-        if (ClientServices.obstaclePasserHelper.isPathing() || isNotInGame() || shouldStopSprint() || this.mode.getValue() != SprintPredicateMode.INSTANT || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.getAbilities().flying || minecraftClient.player.isTouchingWater() || minecraftClient.player.isInLava() || minecraftClient.player.isSneaking() || minecraftClient.player.isInSwimmingPose() || fastFall.flag || longJump.isToggled() || speed.isToggled()) {
+        FastFall fastFall_lcl = getFastFall();
+        LongJump longJump_lcl = getLongJump();
+        Speed speed_lcl = getSpeed();
+        if (ClientServices.obstaclePasserHelper.isPathing() || isNotInGame() || shouldStopSprint() || this.mode.getValue() != SprintPredicateMode.INSTANT || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.getAbilities().flying || minecraftClient.player.isInWater() || minecraftClient.player.isInLava() || minecraftClient.player.isShiftKeyDown() || minecraftClient.player.isSwimming() || (fastFall_lcl != null && fastFall_lcl.flag) || (longJump_lcl != null && longJump_lcl.isToggled()) || (speed_lcl != null && speed_lcl.isToggled())) {
             return;
         }
         double d = MovementUtils.getBaseMoveSpeed(this.vanillaSlowdown.getValue().booleanValue());
@@ -160,11 +232,10 @@ public class Sprint extends Module {
             d = Math.max(d, Math.hypot(moveEvent.getX(), moveEvent.getZ()));
         }
         if (this.vanillaSlowdown.getValue().booleanValue()) {
-            net.minecraft.block.Block r0 = minecraftClient.world.getBlockState(((me.mioclient.mixin.ducks.DuckEntity)(Object) minecraftClient.player).mio$getVelocityAffectingPos()).getBlock();
+            net.minecraft.world.level.block.Block r0 = minecraftClient.level.getBlockState(minecraftClient.player.blockPosition()).getBlock();
             if (r0 == Blocks.SLIME_BLOCK) {
                 d *= Double.longBitsToDouble(4604480259023595110L);
             }
-            d *= r0.getVelocityMultiplier();
         }
         if (this.boost.getValue().booleanValue() && !this.stopwatch.hasElapsedMs(500L)) {
             d += this.val;
@@ -175,8 +246,9 @@ public class Sprint extends Module {
     @Listen
     public void onRotation(RotationEvent event_3) {
         if (!ClientServices.obstaclePasserHelper.isPathing() && this.directionSpoof.getValue().booleanValue() && MovementUtils.is2181() && !minecraftClient.player.isFallFlying()) {
-            if ((event_3.isCurrent() || minecraftClient.player.isInSwimmingPose()) && !shouldStopSprint()) {
-                if ((!minecraftClient.player.isCrawling() || event_3.isCurrent()) && !rotationLock.isToggled()) {
+            if ((event_3.isCurrent() || minecraftClient.player.isSwimming()) && !shouldStopSprint()) {
+                RotationLock rotationLock_lcl = getRotationLock();
+                if ((!minecraftClient.player.isVisuallyCrawling() || event_3.isCurrent()) && (rotationLock_lcl == null || !rotationLock_lcl.isToggled())) {
                     event_3.setYaw(MovementUtils.getMovementYaw());
                     event_3.cancel();
                 }
@@ -190,14 +262,14 @@ public class Sprint extends Module {
             if (attackHookPostEvent.getPhase() == KeyPearlMode.Pre) {
                 this.flag = minecraftClient.player.isSprinting();
                 if (this.flag) {
-                    PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING, 0);
+                    PacketSender.sendClientCommand(minecraftClient.player, ServerboundPlayerCommandPacket.Action.STOP_SPRINTING, 0);
                     return;
                 }
                 return;
             }
             if (this.flag) {
                 minecraftClient.player.setSprinting(true);
-                PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.START_SPRINTING, 0);
+                PacketSender.sendClientCommand(minecraftClient.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING, 0);
             }
         }
     }
@@ -209,24 +281,27 @@ public class Sprint extends Module {
         if (this.directionSpoof.getValue().booleanValue() && (ClientServices.RotationManager.getActiveRequest() != null || minecraftClient.player.isFallFlying())) {
             return false;
         }
-        boolean z = this.mode.getValue() == SprintPredicateMode.LEGIT || minecraftClient.player.isSubmergedInWater();
+        boolean z = this.mode.getValue() == SprintPredicateMode.LEGIT || minecraftClient.player.isInWater();
         if (PlayerUtils.isHungry()) {
             return false;
         }
-        if ((z && (minecraftClient.player.input.movementForward <= 0.0f || minecraftClient.player.horizontalCollision)) || isAboveWater()) {
+        if ((z && (((minecraftClient.player.input.keyPresses.forward() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.backward() ? 1.0f : 0.0f)) <= 0.0f || minecraftClient.player.horizontalCollision)) || isAboveWater()) {
             return false;
         }
-        if (fastWeb.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player) && (ClientServices.antiPhaseHelper.getGroundTicks() < 2 || minecraftClient.player.input.jumping)) {
+        FastWeb fastWeb_lcl = getFastWeb();
+        if (fastWeb_lcl != null && fastWeb_lcl.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player) && (ClientServices.antiPhaseHelper.getGroundTicks() < 2 || minecraftClient.player.input.keyPresses.jump())) {
             return false;
         }
-        return (minecraftClient.player.input.movementForward == 0.0f && minecraftClient.player.input.movementSideways == 0.0f) ? false : true;
+        return (((minecraftClient.player.input.keyPresses.forward() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.backward() ? 1.0f : 0.0f)) == 0.0f && ((minecraftClient.player.input.keyPresses.left() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.right() ? 1.0f : 0.0f)) == 0.0f) ? false : true;
     }
 
     public boolean shouldStopSprint() {
         if (ClientServices.obstaclePasserHelper.isBaritoneLoaded() && ClientServices.obstaclePasserHelper.isPathing()) {
             return true;
         }
-        return (scaffold.isToggled() && scaffold.stopSprinting.getValue().booleanValue()) || (PlayerUtils.isInLiquid(minecraftClient.player) && this.stopInLiquids.getValue().booleanValue()) || (efly.isToggled() && efly.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && efly.hasElytra());
+        Scaffold scaffold_lcl = getScaffold();
+        ElytraFly efly_lcl = getEfly();
+        return (scaffold_lcl != null && scaffold_lcl.isToggled() && scaffold_lcl.stopSprinting.getValue().booleanValue()) || (PlayerUtils.isInLiquid(minecraftClient.player) && this.stopInLiquids.getValue().booleanValue()) || (efly_lcl != null && efly_lcl.isToggled() && efly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && efly_lcl.hasElytra());
     }
 
     public void setSprinting(boolean z) {
@@ -237,11 +312,23 @@ public class Sprint extends Module {
     }
 
     public boolean isAboveWater() {
-        if (minecraftClient.player.isOnGround()) {
+        if (minecraftClient.player.onGround()) {
             return false;
         }
-        return BlockPos.stream(minecraftClient.player.getBoundingBox().stretch(0.0d, Double.longBitsToDouble(-4631501856787818086L), 0.0d)).anyMatch(blockPos -> {
-            return minecraftClient.world.isWater(blockPos);
-        });
+        try {
+            net.minecraft.world.phys.AABB box = minecraftClient.player.getBoundingBox().expandTowards(0.0d, -0.5d, 0.0d);
+            for (net.minecraft.core.BlockPos pos : net.minecraft.core.BlockPos.betweenClosedStream(box).toList()) {
+                if (minecraftClient.level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.WATER)) {
+                    return true;
+                }
+                if (!minecraftClient.level.getFluidState(pos).isEmpty()
+                        && minecraftClient.level.getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

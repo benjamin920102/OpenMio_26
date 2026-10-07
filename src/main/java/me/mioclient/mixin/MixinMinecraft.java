@@ -1,6 +1,7 @@
 package me.mioclient.mixin;
 
 import me.mioclient.event.events.client.ClientTickEvent;
+import net.minecraft.client.player.LocalPlayer;
 
 import me.mioclient.api.ClientServices;
 
@@ -8,18 +9,14 @@ import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.gui.screen.ConfirmGameClose;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import com.llamalad7.mixinextras.sugar.Local;
-import me.mioclient.event.events.client.ClientTickEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.events.render.RenderEvent;
 import me.mioclient.event.events.screen.SetScreenHookPostEvent;
 import me.mioclient.event.events.screen.SetScreenHookPreEvent;
-import me.mioclient.gui.screen.ConfirmGameClose;
 import me.mioclient.module.client.UI;
 import me.mioclient.module.combat.Arrows;
 import me.mioclient.module.combat.AutoClicker;
@@ -29,11 +26,11 @@ import me.mioclient.module.exploit.MultiTask;
 import me.mioclient.module.misc.AntiQuit;
 import me.mioclient.module.misc.UnfocusedFPS;
 import me.mioclient.module.player.AutoEat;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import com.mojang.blaze3d.platform.Window;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,31 +42,30 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
-@Mixin({MinecraftClient.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinMinecraft.class */
-public class MixinMinecraft {
+@Mixin({Minecraft.class})
 
-    @Unique
-    private Screen mio$lastScreen;
+public abstract class MixinMinecraft {
 
     @Shadow
-    private boolean field_1695;
+    private boolean running;
 
     @Shadow
-    public int field_1771;
+    public abstract boolean isWindowActive();
 
     @Shadow
-    @Final
-    public GameOptions field_1690;
-
-    @Shadow
-    @Nullable
-    public Screen field_1755;
+    public int missTime;
 
     @Shadow
     @Final
-    private Window field_1704;
+    public Options options;
+
+    @Shadow
+    @Final
+    public net.minecraft.client.gui.Gui gui;
+
+    @Shadow
+    @Final
+    private Window window;
     private static UI clickgui;
 
     private static UI getClickgui() {
@@ -189,7 +185,7 @@ public class MixinMinecraft {
     }
     private static boolean saved = false;
 
-    @Inject(method = {"doAttack()Z"}, at = {@At("HEAD")})
+    @Inject(method = {"startAttack()Z"}, at = {@At("HEAD")}, require = 0)
     public void doAttackHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         NoHitDelay nohitdelay_lcl = getNohitdelay();
         AutoClicker autoclicker_lcl = getAutoclicker();
@@ -199,11 +195,11 @@ public class MixinMinecraft {
         if (autoclicker_lcl == null) return;
 
         if (nohitdelay_lcl.isToggled() || autoclicker_lcl.isToggled()) {
-            this.field_1771 = 0;
+            this.missTime = 0;
         }
     }
 
-    @Inject(method = {"stop"}, at = {@At("HEAD")})
+    @Inject(method = {"stop"}, at = {@At("HEAD")}, require = 0)
     public void scheduleStop(CallbackInfo callbackInfo) {
         UI clickgui_lcl = getClickgui();
 
@@ -217,12 +213,12 @@ public class MixinMinecraft {
         ClientServices.presetHelper.do41();
     }
 
-    @Inject(method = {"disconnect(Lnet/minecraft/client/gui/screen/Screen;)V"}, at = {@At("HEAD")})
-    public void disconnect(Screen screen, CallbackInfo callbackInfo) {
+    @Inject(method = {"disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V"}, at = {@At("HEAD")}, require = 0)
+    public void disconnect(Screen screen, boolean bl, CallbackInfo callbackInfo) {
         ClientAccessor.eventBus.fireEvent(new DisconnectEvent());
     }
 
-    @ModifyExpressionValue(method = {"handleBlockBreaking"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z")})
+    @ModifyExpressionValue(method = {"handleBlockBreaking"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z")}, require = 0)
     public boolean handleBlockBreakingHook(boolean z) {
         MultiTask multitask_lcl = getMultitask();
 
@@ -231,40 +227,21 @@ public class MixinMinecraft {
         return !multitask_lcl.isToggled() && z;
     }
 
-    @Redirect(method = {"doItemUse"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerInteractionManager;isBreakingBlock()Z"), require = 0)
-    public boolean doItemUseHook(ClientPlayerInteractionManager clientPlayerInteractionManager) {
+    @Redirect(method = {"startUseItem"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;isDestroying()Z"), require = 0)
+    public boolean doItemUseHook(MultiPlayerGameMode clientPlayerInteractionManager) {
         MultiTask multitask_lcl = getMultitask();
 
         if (multitask_lcl == null) return false;
 
-        return !multitask_lcl.isToggled() && clientPlayerInteractionManager.isBreakingBlock();
+        return !multitask_lcl.isToggled() && clientPlayerInteractionManager.isDestroying();
     }
 
-    @Inject(method = {"setScreen"}, at = {@At("HEAD")}, cancellable = true)
-    private void setScreenHookPre(Screen screen, CallbackInfo callbackInfo) {
-        this.mio$lastScreen = this.field_1755;
-        SetScreenHookPreEvent setScreenHookPreEvent = new SetScreenHookPreEvent(this.mio$lastScreen, screen);
-        ClientAccessor.eventBus.fireEvent(setScreenHookPreEvent);
-        if (setScreenHookPreEvent.isCancelled()) {
-            callbackInfo.cancel();
-        }
-    }
-
-    @Inject(method = {"setScreen"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/Screen;init(Lnet/minecraft/client/MinecraftClient;II)V", shift = At.Shift.AFTER)}, cancellable = true)
-    private void setScreenHookPost(Screen screen, CallbackInfo callbackInfo) {
-        SetScreenHookPostEvent setScreenHookPostEvent = new SetScreenHookPostEvent(this.mio$lastScreen, screen);
-        ClientAccessor.eventBus.fireEvent(setScreenHookPostEvent);
-        if (setScreenHookPostEvent.isCancelled()) {
-            callbackInfo.cancel();
-        }
-    }
-
-    @Inject(method = {"tick"}, at = {@At("HEAD")})
+    @Inject(method = {"tick"}, at = {@At("HEAD")}, require = 0)
     private void tickHook(CallbackInfo callbackInfo) {
         ClientAccessor.eventBus.fireEvent(ClientTickEvent.fontsEvent);
     }
 
-    @ModifyExpressionValue(method = {"handleInputEvents"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z")})
+    @ModifyExpressionValue(method = {"handleInputEvents"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z")}, require = 0)
     private boolean handleInputEventsHook(boolean z) {
         AutoEat autoeat_lcl = getAutoeat();
 
@@ -276,15 +253,15 @@ public class MixinMinecraft {
         return z;
     }
 
-    @Inject(method = {"getFramerateLimit"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"getFramerateLimit"}, at = {@At("HEAD")}, cancellable = true, require = 0)
     public void getFramerateLimit(CallbackInfoReturnable<Integer> callbackInfoReturnable) {
         UnfocusedFPS unfocusedfps_lcl = getUnfocusedfps();
 
         if (unfocusedfps_lcl == null) return;
 
-        if (!unfocusedfps_lcl.isToggled() || this.field_1695) {
-            if ((this.field_1755 instanceof AbstractClickGuiScreen) && this.field_1695) {
-                callbackInfoReturnable.setReturnValue(Integer.valueOf(this.field_1704.getFramerateLimit()));
+        if (!unfocusedfps_lcl.isToggled() || this.running) {
+            if ((this.gui.screen() instanceof AbstractClickGuiScreen) && this.running) {
+                callbackInfoReturnable.setReturnValue(Integer.valueOf(this.options.framerateLimit().get()));
                 return;
             }
             return;
@@ -296,8 +273,8 @@ public class MixinMinecraft {
         }
     }
 
-    @WrapWithCondition(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;scheduleStop()V")})
-    private boolean renderHook(MinecraftClient minecraftClient) {
+    @WrapWithCondition(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;scheduleStop()V")}, require = 0)
+    private boolean renderHook(Minecraft minecraftClient) {
         AntiQuit antiquit_lcl = getAntiquit();
 
         if (antiquit_lcl == null) return true;
@@ -305,19 +282,19 @@ public class MixinMinecraft {
         if (!antiquit_lcl.isToggled() || !antiquit_lcl.gameClose.getValue().booleanValue()) {
             return true;
         }
-        if (minecraftClient.currentScreen instanceof ConfirmGameClose) {
+        if (minecraftClient.gui.screen() instanceof ConfirmGameClose) {
             return false;
         }
-        minecraftClient.setScreen(new ConfirmGameClose());
+        minecraftClient.gui.setScreen(new ConfirmGameClose());
         return false;
     }
 
-    @Inject(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;runTasks()V", shift = At.Shift.AFTER)})
+    @Inject(method = {"render"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runTasks()V", shift = At.Shift.AFTER)}, require = 0)
     private void render(boolean z, CallbackInfo callbackInfo, @Local int i) {
         ClientAccessor.eventBus.fireEvent(new RenderEvent(i >= 1));
     }
 
-    @ModifyExpressionValue(method = {"handleInputEvents"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z")})
+    @ModifyExpressionValue(method = {"handleInputEvents"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z")}, require = 0)
     private boolean handleInputEvents(boolean z) {
         Arrows arrows_lcl = getArrows();
 
@@ -329,7 +306,7 @@ public class MixinMinecraft {
         return z;
     }
 
-    @Inject(method = {"doItemUse"}, at = {@At("HEAD")})
+    @Inject(method = {"startUseItem"}, at = {@At("HEAD")}, require = 0)
     private void doItemUse(CallbackInfo callbackInfo) {
         AutoCrystal autocrystal_lcl = getAutocrystal();
 
@@ -338,7 +315,7 @@ public class MixinMinecraft {
         autocrystal_lcl.cancel();
     }
 
-    @ModifyExpressionValue(method = {"doItemUse"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isRiding()Z")})
+    @ModifyExpressionValue(method = {"startUseItem"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z")}, require = 0)
     private boolean doItemUseHook(boolean z) {
         MultiTask multitask_lcl = getMultitask();
 
@@ -350,7 +327,7 @@ public class MixinMinecraft {
         return z;
     }
 
-    @ModifyExpressionValue(method = {"doAttack"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isRiding()Z")})
+    @ModifyExpressionValue(method = {"startAttack"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z")}, require = 0)
     private boolean doAttack(boolean z) {
         MultiTask multitask_lcl = getMultitask();
 

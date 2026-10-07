@@ -9,20 +9,11 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.gui.minigame.TetrominoPiece;
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.math.MathConstants;
-
 import java.awt.Color;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.setting.StopwatchPresetSettingButton;
-import me.mioclient.gui.minigame.TetrominoShape;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/GameStopwatchPresetActionButton.class */
 public class TetrisGame extends StopwatchPresetSettingButton {
     public boolean flag;
     public boolean flag2;
@@ -65,7 +56,7 @@ public class TetrisGame extends StopwatchPresetSettingButton {
     }
 
     @Override // me.mioclient.setting.StopwatchPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         for (int i = 0; i < this.num2; i++) {
             for (int i2 = 0; i2 < this.num; i2++) {

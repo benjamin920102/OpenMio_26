@@ -2,67 +2,51 @@ package me.mioclient.render.tooltip;
 
 import me.mioclient.api.ClientAccessor;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.runtime.ObjectMethods;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.type.MapIdComponent;
-import net.minecraft.item.map.MapState;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.resources.Identifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HeightTooltipComponent.class */
-public final class HeightTooltipComponent implements ClientAccessor, TooltipComponent {
+public final class HeightTooltipComponent implements ClientAccessor, ClientTooltipComponent {
     public final int num;
-    public final MapState mapState;
-    public static final Identifier identifier = Identifier.of("textures/map/map_background.png");
+    public final MapItemSavedData mapState;
+    public static final Identifier identifier = Identifier.fromNamespaceAndPath("minecraft", "textures/map/map_background.png");
 
-    public HeightTooltipComponent(int i, MapState mapState) {
+    public HeightTooltipComponent(int i, MapItemSavedData mapState) {
         this.num = i;
         this.mapState = mapState;
     }
 
-    public int getHeight() {
+    @Override
+    public int getHeight(Font font) {
         return 110;
     }
 
-    public int getWidth(TextRenderer textRenderer) {
+    @Override
+    public int getWidth(Font font) {
         return 108;
     }
 
-    public void drawItems(TextRenderer textRenderer, int i, int i2, DrawContext drawContext) {
-        MatrixStack matrices = drawContext.getMatrices();
-        matrices.push();
-        matrices.translate(i, i2, 0.0f);
-        matrices.scale(Float.intBitsToFloat(1069547520), Float.intBitsToFloat(1069547520), 0.0f);
-        matrices.scale(Float.intBitsToFloat(1066401792), Float.intBitsToFloat(1066401792), 0.0f);
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        drawContext.drawTexture(identifier, 0, 0, 0, 0.0f, 0.0f, 64, 64, 64, 64);
-        matrices.pop();
-        VertexConsumerProvider.Immediate entityVertexConsumers = minecraftClient.getBufferBuilders().getEntityVertexConsumers();
-        matrices.push();
-        matrices.translate(i, i2, 0.0f);
-        matrices.scale(Float.intBitsToFloat(1061158912), Float.intBitsToFloat(1061158912), 0.0f);
-        matrices.translate(Float.intBitsToFloat(1090519040), Float.intBitsToFloat(1090519040), 0.0f);
-        minecraftClient.gameRenderer.getMapRenderer().draw(matrices, (VertexConsumerProvider) entityVertexConsumers, new MapIdComponent(this.num), this.mapState, false, 15728880);
-        entityVertexConsumers.draw();
-        matrices.pop();
+    @Override
+    public void extractText(GuiGraphicsExtractor graphics, Font font, int x, int y) {
     }
 
-
-
+    @Override
+    public void extractImage(Font font, int x, int y, int w, int h, GuiGraphicsExtractor graphics) {
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x, y);
+        graphics.pose().scale(0.75f, 0.75f);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, identifier, 0, 0, 0.0f, 0.0f, 64, 64, 64, 64);
+        graphics.pose().popMatrix();
+    }
 
     public int getEntityId() {
         return this.num;
     }
 
-    public MapState getMapState() {
+    public MapItemSavedData getMapState() {
         return this.mapState;
     }
 }

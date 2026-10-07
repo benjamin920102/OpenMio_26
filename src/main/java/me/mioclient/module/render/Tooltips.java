@@ -11,57 +11,47 @@ import me.mioclient.module.render.tooltips.ContainerPreview;
 import me.mioclient.render.tooltip.HeightTooltipComponent;
 import me.mioclient.render.tooltip.ShulkerContentsTooltip;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.module.render.tooltips.ContainerPreview;
-import me.mioclient.render.tooltip.ShulkerContentsTooltip;
-
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.render.tooltip.HeightTooltipComponent;
-import me.mioclient.module.render.tooltips.ByteCountingOutput;
-import me.mioclient.module.render.tooltips.ShulkerPreviewScreen;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.screen.RenderWithTooltipEvent;
 import me.mioclient.module.Module;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.block.entity.BeehiveBlockEntity;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.component.type.MapIdComponent;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.map.MapState;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtHelper;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
-import net.minecraft.screen.ShulkerBoxScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.Bees;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.BlockPos;
 import org.lwjgl.glfw.GLFW;
 import me.mioclient.mixin.ducks.DuckHandledScreen;
 import me.mioclient.module.Position;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Tooltips.class */
 public class Tooltips extends Module {
     public Setting<Boolean> colored = add(new BooleanSetting("Colored", true));
     public Setting<Boolean> majorityItem = add(new BooleanSetting("MajorityItem", false));
@@ -74,20 +64,20 @@ public class Tooltips extends Module {
     public final List<ContainerPreview> list;
 
     public Tooltips() {
-        super("Tooltips", new StringTemplate().arg(String.valueOf(Formatting.YELLOW)).arg(String.valueOf(Formatting.YELLOW)).format("Draws advanced tool tips on items.\n\u0001Middle Click a shulker to open the preview screen.\n\u0001Hold Left Alt when hovering over a shulker to inspect it's items."), Category.RENDER, new String[0]);
+        super("Tooltips", new StringTemplate().arg(String.valueOf(ChatFormatting.YELLOW)).arg(String.valueOf(ChatFormatting.YELLOW)).format("Draws advanced tool tips on items.\n\u0001Middle Click a shulker to open the preview screen.\n\u0001Hold Left Alt when hovering over a shulker to inspect it's items."), Category.RENDER, new String[0]);
         this.list = Collections.synchronizedList(new ArrayList());
         setDrawn(false);
     }
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        InventoryS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof InventoryS2CPacket ? (InventoryS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof InventoryS2CPacket) {
-            InventoryS2CPacket inventoryS2CPacket = packet904;
+        ClientboundContainerSetContentPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundContainerSetContentPacket ? (ClientboundContainerSetContentPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundContainerSetContentPacket) {
+            ClientboundContainerSetContentPacket inventoryS2CPacket = packet904;
             if (this.majorityItem.getValue().booleanValue()) {
-                minecraftClient.executeSync(() -> {
+                minecraftClient.execute(() -> {
                     this.list.clear();
-                    Iterator it = inventoryS2CPacket.getContents().iterator();
+                    Iterator it = inventoryS2CPacket.items().iterator();
                     while (it.hasNext()) {
                         ContainerPreview tooltipsData2241 = ContainerPreview.fromShulkerBox((ItemStack) it.next());
                         if (tooltipsData2241 != null) {
@@ -97,15 +87,15 @@ public class Tooltips extends Module {
                 });
             }
         }
-        if ((channelRead0Event.getPacket() instanceof ScreenHandlerSlotUpdateS2CPacket) && this.majorityItem.getValue().booleanValue()) {
+        if ((channelRead0Event.getPacket() instanceof ClientboundContainerSetSlotPacket) && this.majorityItem.getValue().booleanValue()) {
             ClientServices.tooltipsHelper.schedule(() -> {
-                if (minecraftClient.player.currentScreenHandler == null) {
+                if (minecraftClient.player.containerMenu == null) {
                     return;
                 }
                 this.list.clear();
-                Iterator it = minecraftClient.player.currentScreenHandler.slots.iterator();
+                Iterator it = minecraftClient.player.containerMenu.slots.iterator();
                 while (it.hasNext()) {
-                    ContainerPreview tooltipsData2241 = ContainerPreview.fromShulkerBox(((Slot) it.next()).getStack());
+                    ContainerPreview tooltipsData2241 = ContainerPreview.fromShulkerBox(((Slot) it.next()).getItem());
                     if (tooltipsData2241 != null) {
                         this.list.add(tooltipsData2241);
                     }
@@ -118,25 +108,25 @@ public class Tooltips extends Module {
     public void onRenderWithTooltip(RenderWithTooltipEvent renderWithTooltipEvent) {
         Slot mio$getFocusedSlot;
         BlockPos blockPos;
-        if ((renderWithTooltipEvent.getScreen() instanceof HandledScreen) && (mio$getFocusedSlot = ((me.mioclient.mixin.ducks.DuckHandledScreen) renderWithTooltipEvent.getScreen()).mio$getFocusedSlot()) != null) {
-            ItemStack stack = mio$getFocusedSlot.getStack();
-            List<ItemStack> ofSize = DefaultedList.ofSize(27, ItemStack.EMPTY);
+        if ((renderWithTooltipEvent.getScreen() instanceof AbstractContainerScreen) && (mio$getFocusedSlot = ((me.mioclient.mixin.ducks.DuckHandledScreen) renderWithTooltipEvent.getScreen()).mio$getFocusedSlot()) != null) {
+            ItemStack stack = mio$getFocusedSlot.getItem();
+            List<ItemStack> ofSize = NonNullList.withSize(27, ItemStack.EMPTY);
             BlockItem item = (stack.getItem()) instanceof BlockItem ? (BlockItem) (stack.getItem()) : null;
             if (item instanceof BlockItem) {
                 ShulkerBoxBlock block = (item.getBlock()) instanceof ShulkerBoxBlock ? (ShulkerBoxBlock) (item.getBlock()) : null;
                 if (block instanceof ShulkerBoxBlock) {
                     ShulkerBoxBlock shulkerBoxBlock = block;
                     if (shulkerBoxBlock.getColor() != null) {
-                        Color color = new Color(shulkerBoxBlock.getColor().getMapColor().color, false);
+                        Color color = new Color(shulkerBoxBlock.getColor().getMapColor().col, false);
                         float[] fArr = new float[3];
                         color.getColorComponents(fArr);
                         setShulkerTintColor(new Color(fArr[0], fArr[1], fArr[2], Float.intBitsToFloat(1056964608)));
                     }
                 }
             }
-            ContainerComponent containerComponent = (ContainerComponent) stack.get(DataComponentTypes.CONTAINER);
+            ItemContainerContents containerComponent = stack.get(DataComponents.CONTAINER);
             if (containerComponent != null) {
-                List list = containerComponent.stream().toList();
+                List list = containerComponent.allItemsCopyStream().toList();
                 for (int i = 0; i < list.size() && i < 27; i++) {
                     ItemStack itemStack = (ItemStack) list.get(i);
                     if (itemStack.getCount() == 0) {
@@ -149,49 +139,54 @@ public class Tooltips extends Module {
             if (!ofSize.stream().allMatch((v0) -> {
                 return v0.isEmpty();
             }) && this.shulkerContent.getValue().booleanValue()) {
-                if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 2) == 1 && !(renderWithTooltipEvent.getScreen() instanceof ShulkerPreviewScreen)) {
-                    minecraftClient.setScreen(new ShulkerPreviewScreen(new ShulkerBoxScreenHandler(1337, minecraftClient.player.getInventory(), new SimpleInventory((ItemStack[]) ofSize.toArray(new ItemStack[27]))), minecraftClient.player.getInventory(), stack.getName(), renderWithTooltipEvent.getScreen()));
+                if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().handle(), 2) == 1 && !(renderWithTooltipEvent.getScreen() instanceof ShulkerPreviewScreen)) {
+                    minecraftClient.setScreenAndShow(new ShulkerPreviewScreen(new ShulkerBoxMenu(1337, minecraftClient.player.getInventory(), new SimpleContainer((ItemStack[]) ofSize.toArray(new ItemStack[27]))), minecraftClient.player.getInventory(), stack.getHoverName(), renderWithTooltipEvent.getScreen()));
                 }
                 if (this.keepText.getValue().booleanValue()) {
                     renderWithTooltipEvent.getComponents().add(new ShulkerContentsTooltip(ofSize));
                 } else {
                     renderWithTooltipEvent.getComponents().clear();
-                    renderWithTooltipEvent.getComponents().addAll(List.of(TooltipComponent.of(stack.getName().asOrderedText()), new ShulkerContentsTooltip(ofSize)));
+                    renderWithTooltipEvent.getComponents().addAll(List.of(ClientTooltipComponent.create(stack.getHoverName().getVisualOrderText()), new ShulkerContentsTooltip(ofSize)));
                 }
             }
             if (stack.getItem() == Items.FILLED_MAP) {
-                MapIdComponent mapIdComponent = (MapIdComponent) stack.get(DataComponentTypes.MAP_ID);
+                MapId mapIdComponent = stack.get(DataComponents.MAP_ID);
                 int id = mapIdComponent == null ? -1 : mapIdComponent.id();
-                MapState mapState2653 = ClientServices.tooltipsSearchHelper4.lookupMapState(stack, id);
+                MapItemSavedData mapState2653 = ClientServices.tooltipsSearchHelper4.lookupMapState(stack, id);
                 if (mapState2653 != null) {
                     if (this.keepText.getValue().booleanValue()) {
                         renderWithTooltipEvent.getComponents().add(new HeightTooltipComponent(id, mapState2653));
                     } else {
                         renderWithTooltipEvent.getComponents().clear();
-                        renderWithTooltipEvent.getComponents().addAll(List.of(TooltipComponent.of(stack.getName().asOrderedText()), new HeightTooltipComponent(id, mapState2653)));
+                        renderWithTooltipEvent.getComponents().addAll(List.of(ClientTooltipComponent.create(stack.getHoverName().getVisualOrderText()), new HeightTooltipComponent(id, mapState2653)));
                     }
                     if (this.mapOverlay.getValue().booleanValue()) {
-                        renderWithTooltipEvent.getComponents().add(TooltipComponent.of(Text.literal("Hold Left-Alt to hide item amount.").styled(style -> {
-                            return style.withFormatting(Formatting.YELLOW);
-                        }).asOrderedText()));
+                        renderWithTooltipEvent.getComponents().add(ClientTooltipComponent.create(Component.literal("Hold Left-Alt to hide item amount.").withStyle(style -> {
+                            return style.withColor(ChatFormatting.YELLOW);
+                        }).getVisualOrderText()));
                     }
                 }
             }
-            List list2 = (List) stack.get(DataComponentTypes.BEES);
-            if (list2 != null && this.beeNest.getValue().booleanValue()) {
-                Iterator it = list2.iterator();
-                while (it.hasNext()) {
-                    NbtCompound copyNbt = ((BeehiveBlockEntity.BeeData) it.next()).entityData().copyNbt();
-                    if (copyNbt != null && copyNbt.contains("FlowerPos") && (blockPos = (BlockPos) NbtHelper.toBlockPos(copyNbt, "FlowerPos").orElse(null)) != null) {
-                        renderWithTooltipEvent.getComponents().add(TooltipComponent.of(Text.literal(new StringTemplate().arg(blockPos.toShortString()).format("Position \u0001")).asOrderedText()));
+            Bees beesComponent = stack.get(DataComponents.BEES);
+            if (beesComponent != null && this.beeNest.getValue().booleanValue()) {
+                for (net.minecraft.world.level.block.entity.BeehiveBlockEntity.Occupant occupant : beesComponent.bees()) {
+                    CompoundTag copyNbt = occupant.entityData().getUnsafe();
+                    if (copyNbt != null && copyNbt.contains("FlowerPos")) {
+                        try {
+                            int[] arr = copyNbt.getIntArray("FlowerPos").orElse(new int[0]);
+                            if (arr.length >= 3) {
+                                BlockPos flowerPos = new BlockPos(arr[0], arr[1], arr[2]);
+                                renderWithTooltipEvent.getComponents().add(ClientTooltipComponent.create(Component.literal(new StringTemplate().arg(flowerPos.toShortString()).format("Position \u0001")).getVisualOrderText()));
+                            }
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
             if (this.size.getValue().booleanValue()) {
                 try {
-                    ByteCountingOutput tooltipsDataOutput = new ByteCountingOutput();
-                    stack.encode(minecraftClient.player.getRegistryManager()).write(tooltipsDataOutput);
-                    renderWithTooltipEvent.getComponents().add(TooltipComponent.of(Text.literal(getString585(tooltipsDataOutput.getByteCount())).asOrderedText()));
+                    int byteCount = stack.toString().length();
+                    renderWithTooltipEvent.getComponents().add(ClientTooltipComponent.create(Component.literal(getString585(byteCount)).getVisualOrderText()));
                 } catch (Throwable th) {
                 }
             }
@@ -199,17 +194,21 @@ public class Tooltips extends Module {
     }
 
     public void do584(ItemStack itemStack, List<ItemStack> list) {
-        NbtComponent nbtComponent = (NbtComponent) itemStack.get(DataComponentTypes.CUSTOM_DATA);
-        if (nbtComponent == null || !nbtComponent.contains("BlockEntityTag")) {
+        CustomData nbtComponent = itemStack.get(DataComponents.CUSTOM_DATA);
+        if (nbtComponent == null || !nbtComponent.copyTag().contains("BlockEntityTag")) {
             return;
         }
-        NbtCompound compound = nbtComponent.getNbt().getCompound("BlockEntityTag");
+        CompoundTag compound = nbtComponent.copyTag().getCompoundOrEmpty("BlockEntityTag");
         if (compound.contains("Items")) {
-            NbtList list2 = compound.getList("Items", 10);
+            ListTag list2 = compound.getListOrEmpty("Items");
             for (int i = 0; i < list2.size(); i++) {
-                NbtCompound compound2 = list2.getCompound(i);
-                ItemStack itemStack2 = (ItemStack) ItemStack.fromNbt(minecraftClient.player.getRegistryManager(), (NbtElement) compound2).orElse(null);
-                byte b = compound2.contains("Count", 1) ? compound2.getByte("Count") : (byte) -1;
+                CompoundTag compound2 = list2.getCompoundOrEmpty(i);
+                ItemStack itemStack2 = null;
+                try {
+                    itemStack2 = ItemStack.CODEC.parse(minecraftClient.player.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), compound2).result().orElse(null);
+                } catch (Exception ignored) {
+                }
+                byte b = compound2.getByteOr("Count", (byte) -1);
                 if (itemStack2 != null && b == 0) {
                     itemStack2.setCount(69);
                     list.set(i, itemStack2);

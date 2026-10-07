@@ -11,12 +11,7 @@ import me.mioclient.util.client.InputState;
 import me.mioclient.util.registry.EnumSettingRegistry;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.registry.NamedRegistryList;
-import me.mioclient.util.registry.EnumSettingRegistry;
 import me.mioclient.loader.ModInitializerBridge;
-import me.mioclient.util.client.InputState;
 
 import me.mioclient.event.EventBus;
 
@@ -36,14 +31,8 @@ import me.mioclient.module.Delay;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.Baritone;
 import me.mioclient.module.movement.ObstaclePasser;
-import me.mioclient.util.registry.CollectionRegistry;
-import me.mioclient.mode.misc.KeybindMode;
-import me.mioclient.module.HudModule;
-import me.mioclient.render.RenderConstants;
 import me.mioclient.render.RenderConstants;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModuleManager.class */
 public final class ModuleManager extends NamedRegistryList<Module> implements ClientAccessor, JsonConfigurable {
     public final Object2ObjectOpenHashMap<Class<? extends Module>, Module> object2ObjectOpenHashMap = new Object2ObjectOpenHashMap<>();
 
@@ -81,7 +70,7 @@ public final class ModuleManager extends NamedRegistryList<Module> implements Cl
         for (Module module : (List<Module>) this.registry) {
             Keybind keybind = module.getKeybind();
             boolean z = keybind.getMode() == Keybind.KeybindMode.HOLD;
-            if (!keybind.isUnbound() && keybind.getMode() != Keybind.KeybindMode.TOGGLE && (minecraftClient.currentScreen == null || module.isToggled() == z)) {
+            if (!keybind.isUnbound() && keybind.getMode() != Keybind.KeybindMode.TOGGLE && (minecraftClient.gui.screen() == null || module.isToggled() == z)) {
                 module.setToggled(z == InputState.isKeybindPressed(keybind));
             }
         }

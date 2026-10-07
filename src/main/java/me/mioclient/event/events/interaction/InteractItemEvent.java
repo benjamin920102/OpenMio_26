@@ -2,18 +2,17 @@ package me.mioclient.event.events.interaction;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/InteractItemEvent.class */
+/* 26.2 port: Yarn InteractionHand -> MojMap InteractionHand. */
 public class InteractItemEvent extends Event {
-    public final Hand hand;
+    public final InteractionHand hand;
 
-    public InteractItemEvent(Hand hand) {
+    public InteractItemEvent(InteractionHand hand) {
         this.hand = hand;
     }
 
-    public Hand getHand() {
+    public InteractionHand getHand() {
         return this.hand;
     }
 }

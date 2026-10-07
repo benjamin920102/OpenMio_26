@@ -6,10 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import me.mioclient.api.Keybind;
 import me.mioclient.module.Feature;
-import me.mioclient.mode.misc.KeybindMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KeybindFeature.class */
 public abstract class KeybindFeature extends me.mioclient.module.Feature {
     public final List<String> list;
     public final KeybindMode mode_4;

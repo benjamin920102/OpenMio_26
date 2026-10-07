@@ -17,9 +17,9 @@
     "mio.mixins.json"
   ],
   "depends": {
-    "minecraft": "~1.21.1",
+    "minecraft": "~26.2",
     "fabric-api": "*",
-    "fabricloader": ">=0.16"
+    "fabricloader": ">=0.19"
   },
   "accessWidener": "mio.accesswidener"
 }

@@ -3,15 +3,10 @@ package me.mioclient.network.packet;
 import me.mioclient.network.codec.NetworkMessage;
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.network.codec.NetworkMessage;
-import me.mioclient.util.client.ChatUtils;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/OnlinePlayersPacket.class */
 public class OnlinePlayersPacket implements NetworkMessage {
     public String[] stringArr;
 
@@ -25,7 +20,7 @@ public class OnlinePlayersPacket implements NetworkMessage {
     @Override // me.mioclient.network.codec.NetworkMessage
     public void handle(ChannelHandlerContext channelHandlerContext) {
         String formatted = "%d online players: %s".formatted(Integer.valueOf(this.stringArr.length), String.join(", ", this.stringArr));
-        ChatUtils.sendMessage(Text.literal(formatted), ChatUtils.createSignature(formatted.hashCode()));
+        ChatUtils.sendMessage(Component.literal(formatted), ChatUtils.createSignature(formatted.hashCode()));
     }
 
     @Override // me.mioclient.network.codec.NetworkMessage

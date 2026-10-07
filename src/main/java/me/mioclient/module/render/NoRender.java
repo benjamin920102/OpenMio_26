@@ -9,50 +9,39 @@ import me.mioclient.event.events.entity.EntityRenderEvent;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.mode.world.StashFinderMode;
-import me.mioclient.render.shader.ShaderPassRegistry;
-
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.shader.ShaderPassRegistry;
+import me.mioclient.render.shader.ShaderRegistry;
 
 import java.util.Set;
-import me.mioclient.event.events.entity.EntityModelRenderEvent;
-import me.mioclient.event.events.entity.EntityRenderEvent;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.player.ScaffoldMode_2;
-import me.mioclient.util.world.WorldUtils;
-import me.mioclient.mode.world.StashFinderMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.render.AddParticleEvent;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.GetStatusEffectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.render.RenderLabelEvent;
 import me.mioclient.module.Module;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.particle.ExplosionLargeParticle;
-import net.minecraft.client.particle.ExplosionSmokeParticle;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.client.particle.HugeExplosionParticle;
+import net.minecraft.client.particle.HugeExplosionSeedParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.SpellParticle;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.BlockPos;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/NoRender.class */
 public class NoRender extends Module {
     public Setting<Boolean> self = add(new BooleanSetting("Self", false).setDependent());
     public Setting<Boolean> hurtCam = add(new BooleanSetting("HurtCam", true).requiresSettings(this.self));
@@ -81,7 +70,7 @@ public class NoRender extends Module {
     public Setting<Float> range = add(new NumberSetting<>("Range", 3.0f, 0.1f, 10.0f).requiresSettings(this.fog, this.world));
     public Setting<Boolean> sky = add(new BooleanSetting("Sky", false).requiresSettings(this.fog, this.world));
     public Setting<Boolean> particles = add(new BooleanSetting("Particles", false).setVisible().requiresSettings(this.world));
-    public Setting<Set<ParticleType<?>>> particleTypes = add(new EntityListObjectSetting<>("ParticleTypes", Registries.PARTICLE_TYPE).requiresSettings(this.particles, this.world));
+    public Setting<Set<ParticleType<?>>> particleTypes = add(new EntityListObjectSetting<>("ParticleTypes", BuiltInRegistries.PARTICLE_TYPE).requiresSettings(this.particles, this.world));
     public Setting<ScaffoldMode_2> selection2 = add(new EnumSetting<>("Selection", ScaffoldMode_2.BLACKLIST).requiresSettings(this.particles, this.world));
     public Setting<Boolean> noBlockBreaking = add(new BooleanSetting("NoBlockBreaking", false).requiresSettings(this.particles, this.world));
     public Setting<Boolean> entities = add(new BooleanSetting("Entities", false).setDependent());
@@ -100,14 +89,13 @@ public class NoRender extends Module {
     public Setting<Boolean> wardens = add(new BooleanSetting("Wardens", false).setVisible().requiresSettings(this.entities));
     public Setting<Integer> wardenDistance = add(new NumberSetting<>("WardenDistance", 32, 1, 128).setSuffix("m").requiresSettings(this.entities, this.wardens));
     public Setting<Boolean> entities2 = add(new BooleanSetting("Entities", false).setVisible().requiresSettings(this.entities));
-    public Setting<Set<EntityType<?>>> entityTypes = add(new EntityListObjectSetting<>("EntityTypes", Registries.ENTITY_TYPE).requiresSettings(this.entities2, this.entities));
+    public Setting<Set<EntityType<?>>> entityTypes = add(new EntityListObjectSetting<>("EntityTypes", BuiltInRegistries.ENTITY_TYPE).requiresSettings(this.entities2, this.entities));
     public Setting<NoRenderMode> removal = add(new EnumSetting<>("Removal", NoRenderMode.PARTIAL).requiresSettings(this.entities, this.entities2));
     public Setting<ScaffoldMode_2> selection = add(new EnumSetting<>("Selection", ScaffoldMode_2.BLACKLIST).requiresSettings(this.entities, this.entities2));
     public float val;
     public BlockPos blockPos;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/NoRender$NoRenderMode.class */
+    
     public enum NoRenderMode implements NamedValue {
         PARTIAL("Partial"),
         FULL("Full");
@@ -139,8 +127,8 @@ public class NoRender extends Module {
             this.val = Float.intBitsToFloat(1065353216);
             return;
         }
-        double distanceTo = minecraftClient.player.getPos().distanceTo(entityEvent.getEntity().getPos());
-        float width = entityEvent.getEntity().getWidth();
+        double distanceTo = minecraftClient.player.position().distanceTo(entityEvent.getEntity().position());
+        float width = entityEvent.getEntity().getBbWidth();
         if (distanceTo > width || entityEvent.getEntity() == minecraftClient.player) {
             this.val = Float.intBitsToFloat(1065353216);
             return;
@@ -168,7 +156,7 @@ public class NoRender extends Module {
     @Listen
     public void onAddParticle(AddParticleEvent addParticleEvent) {
         Particle particle982 = addParticleEvent.getParticle();
-        if (((particle982 instanceof ExplosionLargeParticle) || (particle982 instanceof ExplosionSmokeParticle)) && this.explosions.getValue().booleanValue()) {
+        if (((particle982 instanceof HugeExplosionParticle) || (particle982 instanceof HugeExplosionSeedParticle)) && this.explosions.getValue().booleanValue()) {
             addParticleEvent.cancel();
         }
         if (this.potions.getValue().booleanValue() && (particle982 instanceof SpellParticle)) {
@@ -178,10 +166,10 @@ public class NoRender extends Module {
 
     @Listen
     public void onGetStatusEffect(GetStatusEffectEvent getStatusEffectEvent) {
-        if (this.blindness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == StatusEffects.BLINDNESS) {
+        if (this.blindness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == MobEffects.BLINDNESS) {
             getStatusEffectEvent.cancel();
         }
-        if (this.darkness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == StatusEffects.DARKNESS) {
+        if (this.darkness.getValue().booleanValue() && getStatusEffectEvent.getEffect() == MobEffects.DARKNESS) {
             getStatusEffectEvent.cancel();
         }
     }
@@ -189,39 +177,39 @@ public class NoRender extends Module {
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (this.fire.getValue().booleanValue() && WorldUtils.getDimension() == StashFinderMode.THE_END) {
-            BlockUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-            if (packet904 instanceof BlockUpdateS2CPacket) {
-                BlockUpdateS2CPacket blockUpdateS2CPacket = packet904;
+            ClientboundBlockUpdatePacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundBlockUpdatePacket ? (ClientboundBlockUpdatePacket) (channelRead0Event.getPacket()) : null;
+            if (packet904 instanceof ClientboundBlockUpdatePacket) {
+                ClientboundBlockUpdatePacket blockUpdateS2CPacket = packet904;
                 if (this.blockPos != null) {
                     if (!blockUpdateS2CPacket.getPos().equals(this.blockPos)) {
                         return;
                     }
-                    if (!blockUpdateS2CPacket.getState().isOf(Blocks.FIRE)) {
+                    if (blockUpdateS2CPacket.getBlockState().getBlock() != Blocks.FIRE) {
                         return;
                     }
                     this.blockPos = null;
                     channelRead0Event.cancel();
                 }
             }
-            EntitySpawnS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
-            if (packet9042 instanceof EntitySpawnS2CPacket) {
-                EntitySpawnS2CPacket entitySpawnS2CPacket = packet9042;
-                if (entitySpawnS2CPacket.getEntityType() == EntityType.END_CRYSTAL) {
-                    this.blockPos = BlockPos.ofFloored(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
+            ClientboundAddEntityPacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundAddEntityPacket ? (ClientboundAddEntityPacket) (channelRead0Event.getPacket()) : null;
+            if (packet9042 instanceof ClientboundAddEntityPacket) {
+                ClientboundAddEntityPacket entitySpawnS2CPacket = packet9042;
+                if (entitySpawnS2CPacket.getType() == EntityTypes.END_CRYSTAL) {
+                    this.blockPos = BlockPos.containing(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
                 }
             }
         }
     }
 
     public boolean is179() {
-        return isToggled() && this.hands.getValue().booleanValue() && !ShaderPassRegistry.flag2 && !ShaderPassRegistry.flag && this.opacity2.getValue().floatValue() == 0.0f;
+        return isToggled() && this.hands.getValue().booleanValue() && !ShaderRegistry.flag2 && !ShaderRegistry.flag && this.opacity2.getValue().floatValue() == 0.0f;
     }
 
     public boolean shouldHideTabIcons() {
         return isToggled() && this.tabIcons.getValue().booleanValue();
     }
 
-    public boolean isParticleBlocked(ParticleEffect particleEffect) {
+    public boolean isParticleBlocked(ParticleOptions particleEffect) {
         if (isToggled() && this.particles.getValue().booleanValue()) {
             return !this.selection2.getValue().isAllowed(particleEffect.getType(), this.particleTypes.getValue());
         }
@@ -244,7 +232,7 @@ public class NoRender extends Module {
     }
 
     public float getHandOpacity() {
-        if (!isToggled() || !this.hands.getValue().booleanValue() || ShaderPassRegistry.flag || ShaderPassRegistry.flag2) {
+        if (!isToggled() || !this.hands.getValue().booleanValue() || ShaderRegistry.flag || ShaderRegistry.flag2) {
             return Float.intBitsToFloat(1065353216);
         }
         float floatValue = this.opacity2.getValue().floatValue();

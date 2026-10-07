@@ -4,8 +4,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AesKeyStore.class */
 public class AesKeyStore {
     public static SecretKey secretKey;
     public static IvParameterSpec ivParameterSpec;

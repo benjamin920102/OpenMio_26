@@ -2,8 +2,6 @@ package me.mioclient.event;
 
 import java.util.function.Consumer;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ConsumerEventListener.class */
 public class ConsumerEventListener<T> implements EventListener {
     public final Class<?> eventType;
     public final int priority;

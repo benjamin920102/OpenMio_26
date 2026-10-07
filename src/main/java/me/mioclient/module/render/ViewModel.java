@@ -5,12 +5,10 @@ import me.mioclient.module.render.viewmodel.ViewModelEditorScreen;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/ViewModel.class */
 public class ViewModel extends Module {
     public static final String string = "Â°";
     public Setting<Boolean> adjust = add(new BooleanSetting("Adjust", false));
@@ -58,20 +56,20 @@ public class ViewModel extends Module {
         this.swingProgressAmount.setConfigName("SwingProgressAmountOffHand");
         this.adjust.setChangeCallback(() -> {
             if (this.adjust.getValue().booleanValue()) {
-                minecraftClient.setScreen(new ViewModelEditorScreen(this));
+                minecraftClient.gui.setScreen(new ViewModelEditorScreen(this));
                 this.adjust.setValue(false);
             }
         });
     }
 
-    public float get3142(Hand hand, float f) {
+    public float get3142(InteractionHand hand, float f) {
         if (!isToggled() || !this.swingProgress.getValue().booleanValue()) {
             return f;
         }
-        if (hand == Hand.MAIN_HAND && this.mainHand.getValue().booleanValue()) {
+        if (hand == InteractionHand.MAIN_HAND && this.mainHand.getValue().booleanValue()) {
             return Math.max(this.static_.getValue().booleanValue() ? 0.0f : f, this.swingProgressAmount2.getValue().floatValue());
         }
-        if (hand == Hand.OFF_HAND && this.offHand2.getValue().booleanValue()) {
+        if (hand == InteractionHand.OFF_HAND && this.offHand2.getValue().booleanValue()) {
             return Math.max(this.static_.getValue().booleanValue() ? 0.0f : f, this.swingProgressAmount.getValue().floatValue());
         }
         return f;

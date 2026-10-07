@@ -9,8 +9,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CollectionArgumentType.class */
 public class CollectionArgumentType<T> implements com.mojang.brigadier.arguments.ArgumentType<Collection<T>> {
     public final com.mojang.brigadier.arguments.ArgumentType<T> argumentType;
 

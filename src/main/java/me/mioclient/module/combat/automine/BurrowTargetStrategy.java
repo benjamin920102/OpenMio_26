@@ -1,21 +1,16 @@
 package me.mioclient.module.combat.automine;
+import net.minecraft.world.phys.Vec3;
 
-import me.mioclient.util.math.BoxMath;
-
-import me.mioclient.module.combat.automine.MineStrategyBase;
-import me.mioclient.module.combat.automine.MineTargetState;
 import me.mioclient.util.math.BoxMath;
 
 import java.util.Comparator;
 import java.util.List;
 import me.mioclient.module.combat.AutoMine;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoMineSearchHelper42_6.class */
 public final class BurrowTargetStrategy extends MineStrategyBase {
     public BurrowTargetStrategy(AutoMine autoMine) {
         super(autoMine);
@@ -24,19 +19,18 @@ public final class BurrowTargetStrategy extends MineStrategyBase {
     @Override // me.mioclient.module.combat.automine.MineTargetStrategy
     public void findTargets(MineTargetState autoMineHelper) {
         boolean isExtraBreakEnabled = this.autoMine.isExtraBreakEnabled();
-        PlayerEntity playerEntity886 = this.autoMine.autoMineSearchHelper4.getTargetPlayer();
+        Player playerEntity886 = this.autoMine.autoMineSearchHelper4.getTargetPlayer();
         if (playerEntity886 == null) {
             return;
         }
-        List list = BlockPos.stream(playerEntity886.getBoundingBox().expand(-BoxMath.val, 0.0d, -BoxMath.val).withMaxY(playerEntity886.getY())).map((v0) -> {
-            return v0.toImmutable();
-        }).filter(blockPos -> {
+        List<BlockPos> list = BlockPos.betweenClosedStream(playerEntity886.getBoundingBox().deflate(BoxMath.val, 0.0d, BoxMath.val).setMaxY(playerEntity886.getY())).map(v0 -> v0.immutable()).filter(blockPos -> {
             return this.isValidMineTarget(blockPos);
         }).filter(blockPos2 -> {
-            Block block = minecraftClient.world.getBlockState(blockPos2).getBlock();
-            return (block.getBlastResistance() < Float.intBitsToFloat(1142292480) || block == Blocks.COBWEB || block == Blocks.ANVIL) ? false : true;
+            Block block = minecraftClient.level.getBlockState(blockPos2).getBlock();
+            return (block.getExplosionResistance() < Float.intBitsToFloat(1142292480) || block == Blocks.COBWEB || block == Blocks.ANVIL) ? false : true;
         }).sorted(Comparator.comparing(blockPos3 -> {
-            return isSpeedMineTarget(blockPos3) ? Double.valueOf(Double.longBitsToDouble(-4616189618054758400L)) : Double.valueOf(playerEntity886.squaredDistanceTo(blockPos3.toCenterPos()));
+            BlockPos pos3 = (BlockPos) blockPos3;
+            return isSpeedMineTarget(pos3) ? Double.valueOf(Double.longBitsToDouble(-4616189618054758400L)) : Double.valueOf(playerEntity886.distanceToSqr(Vec3.atCenterOf(pos3)));
         })).toList();
         if (list.isEmpty()) {
             return;

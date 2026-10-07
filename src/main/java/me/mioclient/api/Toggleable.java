@@ -1,7 +1,5 @@
 package me.mioclient.api;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Toggleable.class */
 public interface Toggleable {
     boolean isToggled();
 

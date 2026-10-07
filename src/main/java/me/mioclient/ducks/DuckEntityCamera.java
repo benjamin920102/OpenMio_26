@@ -1,9 +1,7 @@
 package me.mioclient.ducks;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckEntityCamera.class */
 public interface DuckEntityCamera {
     float getCameraYaw();
 
@@ -13,5 +11,5 @@ public interface DuckEntityCamera {
 
     void setCameraPitch(float f);
 
-    Vec3d mio$getPrevVelocity();
+    Vec3 mio$getPrevVelocity();
 }

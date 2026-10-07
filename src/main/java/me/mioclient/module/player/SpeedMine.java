@@ -27,17 +27,10 @@ import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.player.speedmine.InstantBreakTracker;
 import me.mioclient.module.player.speedmine.SpeedMineTarget;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BoxRenderer;
-import me.mioclient.render.shape.FadingBoxRenderer;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.math.MathConstants;
 
 import java.awt.Color;
 import java.util.ArrayDeque;
@@ -45,66 +38,48 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.mode.player.AutoCraftMode;
 import me.mioclient.ducks.DuckClientPlayerInteractionManager;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.event.events.render.MatrixStackEvent;
-import me.mioclient.mode.player.ScaffoldMode_2;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
-import me.mioclient.event.events.interaction.SlotChangeEvent;
-import me.mioclient.mode.player.SpeedMineMode;
-import me.mioclient.mode.player.SpeedMineMode_2;
-import me.mioclient.module.player.speedmine.SpeedMineMode_3;
-import me.mioclient.module.player.speedmine.SpeedMineMode_4;
-import me.mioclient.module.player.speedmine.SpeedMineMode_5;
-import me.mioclient.module.player.speedmine.SlotRestoreTask;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.interaction.AttackBlockEvent;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.combat.AutoExp;
 import me.mioclient.module.combat.AutoMine;
 import me.mioclient.module.movement.NoSlow;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/SpeedMine.class */
 public class SpeedMine extends Module {
     public static boolean flag;
     public Setting<ScaffoldMode_2> mode = add(new EnumSetting<>("Mode", ScaffoldMode_2.ANY));
@@ -135,7 +110,7 @@ public class SpeedMine extends Module {
     public Setting<SpeedMineMode_5> colorMode = add(new EnumSetting<>("ColorMode", SpeedMineMode_5.PROGRESS, v -> this.render.isShown()));
     public Setting<Color> fill = add(new ColorSetting("Fill", new Color(280861183, true), v -> this.render.isShown() && this.colorMode.getValue() == SpeedMineMode_5.CUSTOM).setThemeSync(true));
     public Setting<Color> outline = add(new ColorSetting("Outline", new Color(-1044538881, true), v -> this.render.isShown() && this.colorMode.getValue() == SpeedMineMode_5.CUSTOM).setThemeSync(true));
-    public Setting<Set<Block>> blocks = add(new EntityListObjectSetting<>("Blocks", Registries.BLOCK));
+    public Setting<Set<Block>> blocks = add(new EntityListObjectSetting<>("Blocks", BuiltInRegistries.BLOCK));
     public final ArrayDeque<Boolean> arrayDeque;
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
@@ -155,13 +130,84 @@ public class SpeedMine extends Module {
     public BlockPos blockPos;
     public BlockPos blockPos2;
     public volatile boolean flag2;
-    public static final AutoExp autoExp = (AutoExp) ClientServices.moduleInjector.getModule(AutoExp.class);
-    public static AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
-    public static final AutoMine autoMine = (AutoMine) ClientServices.moduleInjector.getModule(AutoMine.class);
-    public static final NoGlitchBlocks noGlitchBlocks = (NoGlitchBlocks) ClientServices.moduleInjector.getModule(NoGlitchBlocks.class);
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static final NoSlow noSlow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
-    public static ItemSaver itemSaver = (ItemSaver) ClientServices.moduleInjector.getModule(ItemSaver.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null. */
+    private static AutoExp autoExp;
+    private static AutoCrystal autoCrystal;
+    private static AutoMine autoMine;
+    private static NoGlitchBlocks noGlitchBlocks;
+    private static AntiCheat antiCheat;
+    private static NoSlow noSlow;
+    private static ItemSaver itemSaver;
+
+    public static AutoExp getAutoExp() {
+        if (autoExp == null && ClientServices.moduleInjector != null) {
+            try {
+                autoExp = (AutoExp) ClientServices.moduleInjector.getModule(AutoExp.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoExp;
+    }
+
+    public static AutoCrystal getAutoCrystal() {
+        if (autoCrystal == null && ClientServices.moduleInjector != null) {
+            try {
+                autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoCrystal;
+    }
+
+    public static AutoMine getAutoMine() {
+        if (autoMine == null && ClientServices.moduleInjector != null) {
+            try {
+                autoMine = (AutoMine) ClientServices.moduleInjector.getModule(AutoMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoMine;
+    }
+
+    public static NoGlitchBlocks getNoGlitchBlocks() {
+        if (noGlitchBlocks == null && ClientServices.moduleInjector != null) {
+            try {
+                noGlitchBlocks = (NoGlitchBlocks) ClientServices.moduleInjector.getModule(NoGlitchBlocks.class);
+            } catch (Exception e) {
+            }
+        }
+        return noGlitchBlocks;
+    }
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static NoSlow getNoSlow() {
+        if (noSlow == null && ClientServices.moduleInjector != null) {
+            try {
+                noSlow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+            } catch (Exception e) {
+            }
+        }
+        return noSlow;
+    }
+
+    public static ItemSaver getItemSaver() {
+        if (itemSaver == null && ClientServices.moduleInjector != null) {
+            try {
+                itemSaver = (ItemSaver) ClientServices.moduleInjector.getModule(ItemSaver.class);
+            } catch (Exception e) {
+            }
+        }
+        return itemSaver;
+    }
     public static final AtomicBoolean atomicBoolean = new AtomicBoolean();
 
     public SpeedMine() {
@@ -191,7 +237,7 @@ public class SpeedMine extends Module {
     @Override // me.mioclient.module.Module
     public String getInfo() {
         if (WorldUtils.isBreakable(this.blockPos)) {
-            return "%.2f".formatted(Float.valueOf(MathHelper.clamp(getMiningProgress() / this.damage.getValue().floatValue(), 0.0f, Float.intBitsToFloat(1065353216))));
+            return "%.2f".formatted(Float.valueOf(Mth.clamp(getMiningProgress() / this.damage.getValue().floatValue(), 0.0f, Float.intBitsToFloat(1065353216))));
         }
         return null;
     }
@@ -218,7 +264,7 @@ public class SpeedMine extends Module {
             if (this.extraBreak.getValue().booleanValue() && this.speedMineSearchHelper4 != null && attackBlockEvent.getBlockPos().equals(this.speedMineSearchHelper4.getBlockPos())) {
                 return;
             }
-            if (minecraftClient.player.getEyePos().squaredDistanceTo(attackBlockEvent.getBlockPos().toCenterPos()) > this.range.getValue().floatValue() * this.range.getValue().floatValue()) {
+            if (minecraftClient.player.getEyePosition().distanceToSqr(Vec3.atCenterOf(attackBlockEvent.getBlockPos())) > this.range.getValue().floatValue() * this.range.getValue().floatValue()) {
                 return;
             }
             this.stopwatch.reset();
@@ -240,23 +286,29 @@ public class SpeedMine extends Module {
                     this.flag2 = false;
                     reset();
                     return;
-                } else if (autoExp.isToggled() && autoExp.mode.getValue() == AutoExp.SpeedMineMode.SILENT && !autoExp.flag) {
-                    reset();
-                    return;
+                } else {
+                    AutoExp autoExp_lcl = getAutoExp();
+                    if (autoExp_lcl != null && autoExp_lcl.isToggled() && autoExp_lcl.mode.getValue() == AutoExp.SpeedMineMode.SILENT && !autoExp_lcl.flag) {
+                        reset();
+                        return;
+                    }
                 }
             }
             if (!flag) {
-                autoMine.setTargetFlagged(true);
+                AutoMine autoMine_lcl = getAutoMine();
+                if (autoMine_lcl != null) {
+                    autoMine_lcl.setTargetFlagged(true);
+                }
             }
             BlockPos blockPos386 = attackBlockEvent.getBlockPos();
             this.blockPos2 = blockPos386;
             this.blockPos = blockPos386;
             Direction direction1055 = getInteractDirection(this.blockPos);
             if (this.swing.getValue().booleanValue()) {
-                minecraftClient.player.swingHand(Hand.MAIN_HAND);
+                minecraftClient.player.swing(InteractionHand.MAIN_HAND);
             }
             int i = get1050(this.blockPos);
-            int i2 = minecraftClient.player.getInventory().selectedSlot;
+            int i2 = minecraftClient.player.getInventory().getSelectedSlot();
             boolean z2 = i != -1;
             if (this.autoSwap.getValue() == SpeedMineMode_3.NORMAL) {
                 i = InventoryUtils.getBestToolSlot(this.blockPos, true);
@@ -272,15 +324,15 @@ public class SpeedMine extends Module {
                 }
             }
             if (this.extraBreak.getValue().booleanValue()) {
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
                 if (this.speedMineSearchHelper4 == null) {
                     this.speedMineSearchHelper4 = new SpeedMineTarget(this.blockPos);
                 }
             } else {
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
                 if (z2) {
-                    PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
+                    PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
                 }
             }
             if (z2 && i != -1) {
@@ -294,7 +346,7 @@ public class SpeedMine extends Module {
                 ClientServices.stashFinderHelper.breakBlockWithSnapshot(this.blockPos);
                 this.stopwatch.setTime(-1L);
             }
-            minecraftClient.player.swingHand(Hand.MAIN_HAND);
+            minecraftClient.player.swing(InteractionHand.MAIN_HAND);
             this.stopwatch3.reset();
         }
     }
@@ -318,7 +370,7 @@ public class SpeedMine extends Module {
                     return;
                 }
                 if (this.swing.getValue().booleanValue()) {
-                    PacketSender.sendHandSwing(Hand.MAIN_HAND);
+                    PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
                 }
                 if (WorldUtils.isBreakable(blockPos)) {
                     flag = true;
@@ -328,7 +380,7 @@ public class SpeedMine extends Module {
                     return;
                 }
                 if (this.rebreak2.getValue() == SpeedMineMode_2.FAST) {
-                    PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, blockPos, getInteractDirection(blockPos));
+                    PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, blockPos, getInteractDirection(blockPos));
                     this.arrayDeque.clear();
                 }
             }, 1);
@@ -342,43 +394,40 @@ public class SpeedMine extends Module {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if (!RotationManager.is724() || this.damage.getValue().floatValue() >= Float.intBitsToFloat(1065353216) || antiCheat.isF2b2t()) {
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        if (!RotationManager.is724() || this.damage.getValue().floatValue() >= Float.intBitsToFloat(1065353216) || (antiCheat_lcl != null && antiCheat_lcl.isF2b2t())) {
             return;
         }
-        PlayerActionC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerActionC2SPacket ? (PlayerActionC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerActionC2SPacket) {
-            PlayerActionC2SPacket playerActionC2SPacket = packet904;
-            if (playerActionC2SPacket.getAction() == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) {
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, playerActionC2SPacket.getPos().add(0, 500, 0), playerActionC2SPacket.getDirection());
+        ServerboundPlayerActionPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundPlayerActionPacket ? (ServerboundPlayerActionPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundPlayerActionPacket) {
+            ServerboundPlayerActionPacket playerActionC2SPacket = packet904;
+            if (playerActionC2SPacket.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, playerActionC2SPacket.getPos().offset(0, 500, 0), playerActionC2SPacket.getDirection());
             }
         }
     }
 
-    /* JADX WARN: Code restructure failed: missing block: B:131:0x0874, code lost:
     
-        if (me.mioclient.api.ClientServices.stashFinderHelper.isBlockConfirmed(r8.blockPos) != false) goto L143;
-     */
-    /* JADX WARN: Removed duplicated region for block: B:68:0x0396 A[RETURN] */
-    /* JADX WARN: Removed duplicated region for block: B:69:0x0397  */
+    
     @Listen(get219= RenderConstants.num2)
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void onEvent2(RotationTickEvent holeSnapEvent) {
         boolean z;
         if (atomicBoolean.get()) {
             return;
         }
-        if (this.autoSwap.getValue() == SpeedMineMode_3.NONE && !ItemSaver.isToolSafe(minecraftClient.player.getMainHandStack()) && itemSaver.isToggled()) {
+        ItemSaver itemSaver_lcl = getItemSaver();
+        if (this.autoSwap.getValue() == SpeedMineMode_3.NONE && !ItemSaver.isToolSafe(minecraftClient.player.getMainHandItem()) && itemSaver_lcl != null && itemSaver_lcl.isToggled()) {
             return;
         }
         if (EntityUtil.getPlayerHealth() <= Float.intBitsToFloat(1082130432)) {
-            if (minecraftClient.player.getMainHandStack().isOf(Items.TOTEM_OF_UNDYING)) {
+            if (minecraftClient.player.getMainHandItem().is(Items.TOTEM_OF_UNDYING)) {
                 z = false;
                 boolean z2 = z;
-                if (this.speedMineSearchHelper4 == null && !this.speedMineSearchHelper4.getBlockPos().equals(this.blockPos) && this.speedMineSearchHelper4.get2142() >= Float.intBitsToFloat(1065353216) && !noSlow.shouldApply() && z2) {
+                NoSlow noSlow_lcl = getNoSlow();
+                if (this.speedMineSearchHelper4 == null && !this.speedMineSearchHelper4.getBlockPos().equals(this.blockPos) && this.speedMineSearchHelper4.get2142() >= Float.intBitsToFloat(1065353216) && (noSlow_lcl == null || !noSlow_lcl.shouldApply()) && z2) {
                     atomicBoolean.set(true);
-                    int i = minecraftClient.player.getInventory().selectedSlot;
+                    int i = minecraftClient.player.getInventory().getSelectedSlot();
                     int i2 = InventoryUtils.getBestToolSlot(this.speedMineSearchHelper4.getBlockPos(), !this.alternative.getValue().booleanValue());
                     if (this.alternative.getValue().booleanValue()) {
                         InventoryUtils.swapToHotbar(i2);
@@ -387,14 +436,17 @@ public class SpeedMine extends Module {
                     }
                     rotateToTarget(this.speedMineSearchHelper4.getBlockPos());
                     this.stopwatch4.reset();
-                    autoMine.speedMineHelper.do1227(this.speedMineSearchHelper4.getBlockPos());
+                    AutoMine autoMine_lcl = getAutoMine();
+                    if (autoMine_lcl != null) {
+                        autoMine_lcl.speedMineHelper.do1227(this.speedMineSearchHelper4.getBlockPos());
+                    }
                     this.speedMineSearchHelper4 = null;
                     ClientServices.tooltipsHelper.schedule(() -> {
                         if (this.alternative.getValue().booleanValue()) {
                             InventoryUtils.swapToHotbar(i2);
                         } else {
                             PacketSender.sendSelectedSlot(i, true);
-                            minecraftClient.player.getInventory().selectedSlot = i;
+                            minecraftClient.player.getInventory().setSelectedSlot(i);
                         }
                         atomicBoolean.set(false);
                     }, 2);
@@ -406,7 +458,7 @@ public class SpeedMine extends Module {
                     return;
                 }
                 if (shouldInterruptForSwap() && !minecraftClient.player.isSpectator() && !minecraftClient.player.isCreative() && WorldUtils.isBreakable(this.blockPos)) {
-                    if (this.limit.getValue().floatValue() != Float.intBitsToFloat(1065353216) || (getMiningProgress() / this.damage.getValue().floatValue() >= this.limit.getValue().floatValue() && (this.autoSwap.getValue() != SpeedMineMode_3.NONE || !this.holdingBest.getValue().booleanValue() || this.num == minecraftClient.player.getInventory().selectedSlot))) {
+                    if (this.limit.getValue().floatValue() != Float.intBitsToFloat(1065353216) || (getMiningProgress() / this.damage.getValue().floatValue() >= this.limit.getValue().floatValue() && (this.autoSwap.getValue() != SpeedMineMode_3.NONE || !this.holdingBest.getValue().booleanValue() || this.num == minecraftClient.player.getInventory().getSelectedSlot()))) {
                         rotateToTarget(this.blockPos);
                     }
                     if (getMiningProgress() >= this.damage.getValue().floatValue()) {
@@ -417,22 +469,23 @@ public class SpeedMine extends Module {
                             return;
                         }
                     }
-                    if (noSlow.shouldApply()) {
+                    NoSlow noSlow_lcl2 = getNoSlow();
+                    if (noSlow_lcl2 != null && noSlow_lcl2.shouldApply()) {
                         return;
                     }
                     if (!this.assistant.getValue().booleanValue() || isSafeToMine()) {
-                        int i3 = minecraftClient.player.getInventory().selectedSlot;
-                        BlockState blockState = minecraftClient.world.getBlockState(this.blockPos);
-                        this.speedMineRunnable = new SlotRestoreTask(this, minecraftClient.player.getMainHandStack().getItem(), this.num, minecraftClient.player.getInventory().selectedSlot);
+                        int i3 = minecraftClient.player.getInventory().getSelectedSlot();
+                        BlockState blockState = minecraftClient.level.getBlockState(this.blockPos);
+                        this.speedMineRunnable = new SlotRestoreTask(this, minecraftClient.player.getMainHandItem().getItem(), this.num, minecraftClient.player.getInventory().getSelectedSlot());
                         Direction direction1055 = getInteractDirection(this.blockPos);
-                        if (this.autoSwap.getValue() == SpeedMineMode_3.NONE || this.num == -1 || minecraftClient.player.getInventory().selectedSlot == this.num) {
+                        if (this.autoSwap.getValue() == SpeedMineMode_3.NONE || this.num == -1 || minecraftClient.player.getInventory().getSelectedSlot() == this.num) {
                             if (i3 != this.num && this.rebreak2.getValue() == SpeedMineMode_2.INSTANT && this.holdingBest.getValue().booleanValue()) {
                                 return;
                             }
                         } else if (this.autoSwap.getValue() == SpeedMineMode_3.SILENT && this.alternative.getValue().booleanValue()) {
                             InventoryUtils.swapToHotbar(this.num);
                         } else {
-                            this.num2 = minecraftClient.player.getInventory().selectedSlot;
+                            this.num2 = minecraftClient.player.getInventory().getSelectedSlot();
                             InventoryUtils.selectSlot(this.num);
                         }
                         this.stopwatch2.reset();
@@ -440,22 +493,23 @@ public class SpeedMine extends Module {
                             this.stopwatch4.reset();
                         }
                         if (this.swing.getValue().booleanValue()) {
-                            PacketSender.sendHandSwing(Hand.MAIN_HAND);
+                            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
                         }
                         if (!RotationManager.is724() && this.rebreak2.getValue() != SpeedMineMode_2.INSTANT) {
-                            PacketSender.sendPosition(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.isOnGround());
+                            PacketSender.sendPosition(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.onGround());
                         }
                         BlockPos blockPos = this.blockPos;
                         this.speedMineHelper_2.beginTracking(this.blockPos);
-                        PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
-                        if (antiCheat.isF2b2t() && this.rebreak2.getValue() == SpeedMineMode_2.NONE) {
-                            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, direction1055);
+                        PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
+                        AntiCheat antiCheat_lcl2 = getAntiCheat();
+                        if (antiCheat_lcl2 != null && antiCheat_lcl2.isF2b2t() && this.rebreak2.getValue() == SpeedMineMode_2.NONE) {
+                            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, direction1055);
                         }
                         ClientServices.stashFinderHelper.setUnconfirmedBreak(this.blockPos);
                         if (this.rebreak2.getValue() == SpeedMineMode_2.FAST) {
-                            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, direction1055);
-                            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
-                            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
+                            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, direction1055);
+                            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction1055);
+                            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction1055);
                             this.blockPos = null;
                         }
                         if (this.autoSwap.getValue() == SpeedMineMode_3.SILENT && this.num != -1) {
@@ -466,7 +520,10 @@ public class SpeedMine extends Module {
                                 } else if (i3 != this.num || this.f121.getValue() == SpeedMineMode_4.TICK) {
                                     InventoryUtils.selectSlot(i3);
                                 }
-                                autoCrystal.atomicBoolean.set(false);
+                                AutoCrystal autoCrystal_lcl = getAutoCrystal();
+                                if (autoCrystal_lcl != null) {
+                                    autoCrystal_lcl.atomicBoolean.set(false);
+                                }
                             };
                             if (this.f121.getValue() == SpeedMineMode_4.TICK) {
                                 atomicBoolean.set(true);
@@ -487,7 +544,7 @@ public class SpeedMine extends Module {
                             if (this.rotate.getValue().booleanValue() || !RotationManager.is1144()) {
                                 return;
                             }
-                            ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(blockPos.toCenterPos()), ClientServices.RotationManager.getYawStep()), 150);
+                            ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(Vec3.atCenterOf(blockPos)), ClientServices.RotationManager.getYawStep()), 150);
                             return;
                         }
                         reset();
@@ -522,13 +579,13 @@ public class SpeedMine extends Module {
     public void onTick(TickEvent tickEvent) {
         float f = this.tPSSync.getValue().booleanValue() ? ClientServices.holeSnapRenderHelper.getTickRateFactor() : Float.intBitsToFloat(1065353216);
         if (this.speedMineSearchHelper4 != null) {
-            this.speedMineSearchHelper4.addMiningProgress((float) (WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getStack(InventoryUtils.getBestToolSlot(this.speedMineSearchHelper4.getBlockPos(), !this.alternative.getValue().booleanValue())), minecraftClient.world.getBlockState(this.speedMineSearchHelper4.getBlockPos()), minecraftClient.player.isOnGround()) * f));
-            if (minecraftClient.world.isAir(this.speedMineSearchHelper4.getBlockPos())) {
+            this.speedMineSearchHelper4.addMiningProgress((float) (WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getItem(InventoryUtils.getBestToolSlot(this.speedMineSearchHelper4.getBlockPos(), !this.alternative.getValue().booleanValue())), minecraftClient.level.getBlockState(this.speedMineSearchHelper4.getBlockPos()), minecraftClient.player.onGround()) * f));
+            if (minecraftClient.level.getBlockState(this.speedMineSearchHelper4.getBlockPos()).isAir()) {
                 this.speedMineSearchHelper4 = null;
             }
         }
         if (this.blockPos2 != null) {
-            if (minecraftClient.world.getBlockState(this.blockPos2).getBlock() instanceof ShulkerBoxBlock) {
+            if (minecraftClient.level.getBlockState(this.blockPos2).getBlock() instanceof ShulkerBoxBlock) {
                 if (ClientServices.stashFinderHelper.isBlockConfirmed(this.blockPos2)) {
                     this.blockPos2 = null;
                 }
@@ -547,7 +604,7 @@ public class SpeedMine extends Module {
         }
         this.num = InventoryUtils.getBestToolSlot(this.blockPos, !this.alternative.getValue().booleanValue());
         if (this.rebreak2.getValue() == SpeedMineMode_2.INSTANT && this.blockPos != null) {
-            if (minecraftClient.world.getBlockState(this.blockPos).getBlock() == Blocks.AIR) {
+            if (minecraftClient.level.getBlockState(this.blockPos).getBlock() == Blocks.AIR) {
                 this.stopwatch2.reset();
             }
         }
@@ -559,7 +616,7 @@ public class SpeedMine extends Module {
                 }
                 return;
             } else {
-                this.arrayDeque.add(Boolean.valueOf(minecraftClient.player.isOnGround()));
+                this.arrayDeque.add(Boolean.valueOf(minecraftClient.player.onGround()));
                 if (this.arrayDeque.size() > 200) {
                     this.arrayDeque.removeLast();
                     return;
@@ -567,9 +624,9 @@ public class SpeedMine extends Module {
                 return;
             }
         }
-        BlockState blockState = minecraftClient.world.getBlockState(this.blockPos);
-        ItemStack stack = minecraftClient.player.getInventory().getStack(getEffectiveToolSlot());
-        if (getEffectiveToolSlot() != minecraftClient.player.getInventory().selectedSlot && this.f121.getValue() == SpeedMineMode_4.SLOW) {
+        BlockState blockState = minecraftClient.level.getBlockState(this.blockPos);
+        ItemStack stack = minecraftClient.player.getInventory().getItem(getEffectiveToolSlot());
+        if (getEffectiveToolSlot() != minecraftClient.player.getInventory().getSelectedSlot() && this.f121.getValue() == SpeedMineMode_4.SLOW) {
             stack = new ItemStack(stack.getItem());
         }
         boolean z = false;
@@ -580,10 +637,10 @@ public class SpeedMine extends Module {
             }
             this.val2 = this.val;
         }
-        if (!z || !blockState.isOf(Blocks.OBSIDIAN)) {
-            this.val += (float) (WorldUtils.getBlockBreakingDelta(stack, blockState, minecraftClient.player.isOnGround()) * f);
+        if (!z || !blockState.is(Blocks.OBSIDIAN)) {
+            this.val += (float) (WorldUtils.getBlockBreakingDelta(stack, blockState, minecraftClient.player.onGround()) * f);
         } else {
-            this.val = MathHelper.clamp(this.val, 0.0f, Float.intBitsToFloat(1065185444));
+            this.val = Mth.clamp(this.val, 0.0f, Float.intBitsToFloat(1065185444));
             this.val2 = this.val;
         }
     }
@@ -593,7 +650,7 @@ public class SpeedMine extends Module {
         if (motionEvent.getPhase() != KeyPearlMode.Pre || this.blockPos == null) {
             return;
         }
-        if (minecraftClient.player.getEyePos().distanceTo(this.blockPos.toCenterPos()) <= this.range.getValue().floatValue()) {
+        if (minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(this.blockPos)) <= this.range.getValue().floatValue()) {
             return;
         }
         cancelAndReset();
@@ -608,7 +665,7 @@ public class SpeedMine extends Module {
             if (this.blockPos == null) {
                 return;
             }
-            VoxelShape outlineShape = minecraftClient.world.getBlockState(this.blockPos).getOutlineShape(minecraftClient.world, this.blockPos);
+            VoxelShape outlineShape = minecraftClient.level.getBlockState(this.blockPos).getShape(minecraftClient.level, this.blockPos);
             boolean z = this.rebreak2.getValue() == SpeedMineMode_2.INSTANT;
             if (!outlineShape.isEmpty() && WorldUtils.isBreakable(this.blockPos)) {
                 this.speedMineHelper_3.startFadeOut();
@@ -620,11 +677,11 @@ public class SpeedMine extends Module {
                     return;
                 }
             }
-            float clamp = MathHelper.clamp(MathHelper.lerp(RenderUtil.getPartialTick(), this.val2, getMiningProgress()) / this.damage.getValue().floatValue(), 0.0f, Float.intBitsToFloat(1065353216));
+            float clamp = Mth.clamp(Mth.lerp(RenderUtil.getPartialTick(), this.val2, getMiningProgress()) / this.damage.getValue().floatValue(), 0.0f, Float.intBitsToFloat(1065353216));
             Color[] colorArray1773 = this.colorMode.getValue().getRenderColors(this, clamp);
-            Box offset = this.renderMode.getValue().getRenderBox(this, outlineShape.isEmpty() ? new Box(0.0d, 0.0d, 0.0d, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L)) : outlineShape.getBoundingBox(), clamp).offset(this.blockPos);
-            if (minecraftClient.world.getBlockState(this.blockPos).isAir()) {
-                offset = new Box(this.blockPos);
+            AABB offset = this.renderMode.getValue().getRenderBox(this, outlineShape.isEmpty() ? new AABB(0.0d, 0.0d, 0.0d, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L)) : outlineShape.bounds(), clamp).move(this.blockPos);
+            if (minecraftClient.level.getBlockState(this.blockPos).isAir()) {
+                offset = new AABB(this.blockPos);
             }
             if (!this.fade.getValue().booleanValue() || this.air.getValue().booleanValue()) {
                 BoxRenderer.drawFilledBox(inner_3.getMatrixStack(), offset, colorArray1773[0]);
@@ -649,7 +706,7 @@ public class SpeedMine extends Module {
             this.atomicBoolean2.set(true);
             ClientServices.tooltipsHelper.schedule(() -> {
                 this.atomicBoolean2.set(false);
-                minecraftClient.interactionManager.attackBlock(blockPos, Direction.UP);
+                minecraftClient.gameMode.startDestroyBlock(blockPos, Direction.UP);
             }, 1);
         }
         return isInstantBreakReady;
@@ -659,9 +716,9 @@ public class SpeedMine extends Module {
         if (!this.rotate.getValue().booleanValue() || RotationManager.is1144()) {
             return;
         }
-        Vec3d vec3d2430 = WorldUtils.findVisiblePoint(blockPos, AutoCraftMode.X8);
+        Vec3 vec3d2430 = WorldUtils.findVisiblePoint(blockPos, AutoCraftMode.X8);
         if (vec3d2430 == null) {
-            vec3d2430 = blockPos.toCenterPos();
+            vec3d2430 = Vec3.atCenterOf(blockPos);
         }
         ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(vec3d2430), ClientServices.RotationManager.getYawStep()), 150, true);
     }
@@ -670,11 +727,11 @@ public class SpeedMine extends Module {
         if (this.blockPos == null) {
             return 0.0d;
         }
-        return WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getStack(getEffectiveToolSlot()), minecraftClient.world.getBlockState(this.blockPos), minecraftClient.player.isOnGround()) * (this.tPSSync.getValue().booleanValue() ? ClientServices.holeSnapRenderHelper.getTickRateFactor() : Float.intBitsToFloat(1065353216));
+        return WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getItem(getEffectiveToolSlot()), minecraftClient.level.getBlockState(this.blockPos), minecraftClient.player.onGround()) * (this.tPSSync.getValue().booleanValue() ? ClientServices.holeSnapRenderHelper.getTickRateFactor() : Float.intBitsToFloat(1065353216));
     }
 
     public int getEffectiveToolSlot() {
-        return this.num < 0 ? minecraftClient.player.getInventory().selectedSlot : this.num;
+        return this.num < 0 ? minecraftClient.player.getInventory().getSelectedSlot() : this.num;
     }
 
     public void cancelAndReset() {
@@ -684,10 +741,10 @@ public class SpeedMine extends Module {
 
     public void reset() {
         if (this.blockPos != null && !isNotInGame()) {
-            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, getInteractDirection(this.blockPos));
-            PacketSender.sendHandSwing(Hand.MAIN_HAND);
-            ((DuckClientPlayerInteractionManager)(Object) minecraftClient.interactionManager).setBreakingBlock(false);
-            ((DuckClientPlayerInteractionManager)(Object) minecraftClient.interactionManager).setBreakingProgress(0.0f);
+            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos, getInteractDirection(this.blockPos));
+            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
+            ((DuckClientPlayerInteractionManager)(Object) minecraftClient.gameMode).setBreakingBlock(false);
+            ((DuckClientPlayerInteractionManager)(Object) minecraftClient.gameMode).setBreakingProgress(0.0f);
         }
         this.blockPos = null;
         this.val = 0.0f;
@@ -698,18 +755,18 @@ public class SpeedMine extends Module {
     }
 
     public boolean isSafeToMine() {
-        if (!minecraftClient.world.getBlockState(getMineTargetPos()).isOf(Blocks.OBSIDIAN)) {
+        if (!minecraftClient.level.getBlockState(getMineTargetPos()).is(Blocks.OBSIDIAN)) {
             return true;
         }
-        Box box = new Box(getMineTargetPos());
+        AABB box = new AABB(getMineTargetPos());
         boolean z = false;
-        for (Entity entity : minecraftClient.world.getEntities()) {
-            if ((entity instanceof PlayerEntity) && entity != minecraftClient.player && !z) {
-                if (entity.getBoundingBox().stretch(0.0d, Double.longBitsToDouble(4607182418800017408L), 0.0d).expand(Double.longBitsToDouble(4607182418800017408L), 0.0d, Double.longBitsToDouble(4607182418800017408L)).intersects(box)) {
+        for (Entity entity : minecraftClient.level.entitiesForRendering()) {
+            if ((entity instanceof Player) && entity != minecraftClient.player && !z) {
+                if (entity.getBoundingBox().expandTowards(0.0d, Double.longBitsToDouble(4607182418800017408L), 0.0d).inflate(Double.longBitsToDouble(4607182418800017408L), 0.0d, Double.longBitsToDouble(4607182418800017408L)).intersects(box)) {
                     z = true;
                 }
-            } else if (entity instanceof EndCrystalEntity) {
-                if (entity.getBoundingBox().expand(0.0d, MathConstants.val3, 0.0d).intersects(box)) {
+            } else if (entity instanceof EndCrystal) {
+                if (entity.getBoundingBox().inflate(0.0d, MathConstants.val3, 0.0d).intersects(box)) {
                     return true;
                 }
             } else {
@@ -725,12 +782,13 @@ public class SpeedMine extends Module {
     }
 
     public int get1050(BlockPos blockPos) {
-        if (noGlitchBlocks.isToggled() && noGlitchBlocks.break_.getValue().booleanValue()) {
+        NoGlitchBlocks noGlitchBlocks_lcl = getNoGlitchBlocks();
+        if (noGlitchBlocks_lcl != null && noGlitchBlocks_lcl.isToggled() && noGlitchBlocks_lcl.break_.getValue().booleanValue()) {
             return -1;
         }
         int i = InventoryUtils.getBestToolSlot(this.blockPos, !this.alternative.getValue().booleanValue());
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
-        double d = WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getStack(i), minecraftClient.world.getBlockState(blockPos), minecraftClient.player.isOnGround());
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
+        double d = WorldUtils.getBlockBreakingDelta(minecraftClient.player.getInventory().getItem(i), minecraftClient.level.getBlockState(blockPos), minecraftClient.player.onGround());
         if ((this.autoSwap.getValue() != SpeedMineMode_3.NONE || i == i2) && d > this.damage.getValue().floatValue()) {
             return i;
         }
@@ -741,14 +799,14 @@ public class SpeedMine extends Module {
         if (isToggled()) {
             return this.blockPos;
         }
-        if (!((DuckClientPlayerInteractionManager)(Object) minecraftClient.interactionManager).isBreakingBlock() || ((DuckClientPlayerInteractionManager)(Object) minecraftClient.interactionManager).getBreakingProgress() < Double.longBitsToDouble(4606281698874543309L)) {
+        if (!((DuckClientPlayerInteractionManager)(Object) minecraftClient.gameMode).isBreakingBlock() || ((DuckClientPlayerInteractionManager)(Object) minecraftClient.gameMode).getBreakingProgress() < Double.longBitsToDouble(4606281698874543309L)) {
             return null;
         }
-        return ((DuckClientPlayerInteractionManager)(Object) minecraftClient.interactionManager).getCurrentBreakingBlock();
+        return ((DuckClientPlayerInteractionManager)(Object) minecraftClient.gameMode).getCurrentBreakingBlock();
     }
 
     public float getMiningProgress() {
-        return MathHelper.clamp(this.val, 0.0f, Float.intBitsToFloat(1065353216));
+        return Mth.clamp(this.val, 0.0f, Float.intBitsToFloat(1065353216));
     }
 
     public BlockPos getMineTargetPos() {
@@ -774,7 +832,7 @@ public class SpeedMine extends Module {
     }
 
     public boolean isBlockAllowed(BlockPos blockPos) {
-        return this.mode.getValue().isAllowedBySetting(minecraftClient.world.getBlockState(blockPos).getBlock(), this.blocks);
+        return this.mode.getValue().isAllowedBySetting(minecraftClient.level.getBlockState(blockPos).getBlock(), this.blocks);
     }
 
     public float getStrokeWidth() {

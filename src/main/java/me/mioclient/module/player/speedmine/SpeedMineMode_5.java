@@ -2,17 +2,11 @@ package me.mioclient.module.player.speedmine;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.anim.AnimationProgress;
-
-import me.mioclient.api.NamedValue;
 
 import java.awt.Color;
 import me.mioclient.module.player.SpeedMine;
-import me.mioclient.util.anim.AnimationProgress;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedMineMode_5.class */
 public enum SpeedMineMode_5 implements NamedValue {
     PROGRESS("Progress") { // from class: me.mioclient.module.player.speedmine.SpeedMineMode_5.Inner
         @Override // me.mioclient.module.player.speedmine.SpeedMineMode_5

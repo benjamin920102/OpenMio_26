@@ -5,8 +5,8 @@ import me.mioclient.api.ClientAccessor;
 import me.mioclient.event.events.input.CharEvent;
 import me.mioclient.event.events.input.KeyEvent;
 import me.mioclient.module.misc.BetterChat;
-import net.minecraft.client.Keyboard;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.KeyboardHandler;
+import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,39 +15,42 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
-@Mixin({Keyboard.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinKeyboard.class */
+@Mixin({KeyboardHandler.class})
+
 public class MixinKeyboard {
 
     @Shadow
     @Final
-    private MinecraftClient field_1678;
+    private Minecraft minecraft;
 
-    @Inject(method = {"onKey"}, at = {@At("TAIL")}, cancellable = true)
-    private void onKey(long j, int i, int i2, int i3, int i4, CallbackInfo callbackInfo) {
-        if (i >= 0 && this.field_1678.currentScreen == null && i3 == 1) {
-            KeyEvent keyEvent = new KeyEvent(i, false);
-            ClientAccessor.eventBus.fireEvent(keyEvent);
-            if (keyEvent.isCancelled()) {
+    /* 26.2 port: KeyboardHandler.onKey(long,int,int,int,int) ->
+       keyPress(long, int action, KeyEvent(key, scancode, modifiers));
+       action 1 == GLFW press, same as before. */
+    @Inject(method = {"keyPress"}, at = {@At("TAIL")}, cancellable = true)
+    private void onKey(long window, int action, net.minecraft.client.input.KeyEvent keyEvent, CallbackInfo callbackInfo) {
+        if (keyEvent.key() >= 0 && this.minecraft.gui.screen() == null && action == 1) {
+            KeyEvent event = new KeyEvent(keyEvent.key(), false);
+            ClientAccessor.eventBus.fireEvent(event);
+            if (event.isCancelled()) {
                 callbackInfo.cancel();
             }
         }
     }
 
-    @Inject(method = {"onChar"}, at = {@At("HEAD")})
-    public void onChar(long j, int i, int i2, CallbackInfo callbackInfo) {
-        if (this.field_1678.currentScreen == null && j == this.field_1678.getWindow().getHandle()) {
-            ClientAccessor.eventBus.fireEvent(new CharEvent(i));
+    /* 26.2 port: onChar(long,int,int) -> charTyped(long, CharacterEvent). */
+    @Inject(method = {"charTyped"}, at = {@At("HEAD")})
+    public void onChar(long window, net.minecraft.client.input.CharacterEvent characterEvent, CallbackInfo callbackInfo) {
+        if (this.minecraft.gui.screen() == null && window == this.minecraft.getWindow().handle()) {
+            ClientAccessor.eventBus.fireEvent(new CharEvent(characterEvent.codepoint()));
         }
     }
 
-    @Inject(method = {"processF3"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/ChatHud;clear(Z)V", shift = At.Shift.BEFORE)})
+    @Inject(method = {"processF3"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/ChatComponent;clear(Z)V", shift = At.Shift.BEFORE)}, require = 0)
     private void processF3Pre(int i, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         BetterChat.flag2 = true;
     }
 
-    @Inject(method = {"processF3"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/ChatHud;clear(Z)V", shift = At.Shift.AFTER)})
+    @Inject(method = {"processF3"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/ChatComponent;clear(Z)V", shift = At.Shift.AFTER)}, require = 0)
     private void processF3Post(int i, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         BetterChat.flag2 = false;
     }

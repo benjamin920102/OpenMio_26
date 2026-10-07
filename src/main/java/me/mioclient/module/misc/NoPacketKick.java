@@ -2,16 +2,13 @@ package me.mioclient.module.misc;
 
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/NoPacketKick.class */
 public class NoPacketKick extends Module {
     public Setting<Boolean> message = add(new BooleanSetting("Message", false));
 
@@ -20,7 +17,7 @@ public class NoPacketKick extends Module {
         setDrawn(false);
     }
 
-    public Text getText1411(Throwable th) {
-        return Text.translatable("disconnect.genericReason", new Object[]{new StringTemplate().arg(String.valueOf(th)).format("Internal Exception: \u0001")}).formatted(Formatting.RED);
+    public Component getText1411(Throwable th) {
+        return Component.translatable("disconnect.genericReason", new Object[]{new StringTemplate().arg(String.valueOf(th)).format("Internal Exception: \u0001")}).withStyle(ChatFormatting.RED);
     }
 }

@@ -3,10 +3,7 @@ package me.mioclient.command;
 import me.mioclient.mode.misc.KeybindMode;
 
 import me.mioclient.api.Keybind;
-import me.mioclient.mode.misc.KeybindMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KeybindFeature_3.class */
 public class KeybindFeature_3 extends KeybindFeature {
     public boolean flag;
 

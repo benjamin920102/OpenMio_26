@@ -2,12 +2,6 @@ package me.mioclient.mode.world;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StashFinderMode.class */
 public enum StashFinderMode implements NamedValue {
     OVERWORLD("overworld", "Overworld"),
     THE_NETHER("the_nether", "Nether"),

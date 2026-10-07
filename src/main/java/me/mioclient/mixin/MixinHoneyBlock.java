@@ -2,20 +2,17 @@ package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import me.mioclient.module.movement.NoSlow;
-import net.minecraft.block.HoneyBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.HoneyBlock;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-/* compiled from: 0.java */
 @Mixin({HoneyBlock.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinHoneyBlock.class */
+
 public class MixinHoneyBlock {
     private static NoSlow noslow;
 
@@ -31,12 +28,15 @@ public class MixinHoneyBlock {
 
     }
 
+    /* 26.2 port: Block.onEntityCollision -> entityInside; HoneyBlock.isSliding ->
+       isSlidingDown (bytecode-verified: entityInside invokes it). Same NoSlow
+       bypass semantics. */
     @Shadow
-    private boolean method_23356(BlockPos blockPos, Entity entity) {
+    private boolean isSlidingDown(BlockPos blockPos, Entity entity) {
         return false;
     }
 
-    @Redirect(method = {"onEntityCollision"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/block/HoneyBlock;isSliding(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/entity/Entity;)Z"))
+    @Redirect(method = {"entityInside"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/HoneyBlock;isSlidingDown(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean onEntityCollisionHook(HoneyBlock honeyBlock, BlockPos blockPos, Entity entity) {
         NoSlow noslow_lcl = getNoslow();
 
@@ -45,6 +45,6 @@ public class MixinHoneyBlock {
         if (noslow_lcl.isToggled() && noslow_lcl.honey.getValue().booleanValue()) {
             return false;
         }
-        return method_23356(blockPos, entity);
+        return isSlidingDown(blockPos, entity);
     }
 }

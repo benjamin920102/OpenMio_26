@@ -9,8 +9,6 @@ import me.mioclient.util.world.BlockPlacer;
 
 import me.mioclient.module.combat.automine.MineStrategyBase;
 import me.mioclient.module.combat.automine.MineTargetState;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -21,26 +19,43 @@ import java.util.List;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.combat.AutoMine;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3i;
-import me.mioclient.module.combat.automine.AutoMineLogic;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Vec3i;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoMineSearchHelper42_3.class */
 public final class FeetTargetStrategy extends MineStrategyBase {
-    public static AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
-    public static SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving autoCrystal/speedmine null. */
+    private static AutoCrystal autoCrystal;
+    private static SpeedMine speedmine;
+
+    public static AutoCrystal getAutoCrystal() {
+        if (autoCrystal == null && ClientServices.moduleInjector != null) {
+            try {
+                autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoCrystal;
+    }
+
+    public static SpeedMine getSpeedmine() {
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedmine;
+    }
     public static final List<Vec3i> list = List.of(new Vec3i(1, 0, 0), new Vec3i(0, 0, 1), new Vec3i(0, 1, 0), new Vec3i(0, 0, -1), new Vec3i(-1, 0, 0));
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/AutoMineSearchHelper42_3$Record.class */
+    
+    
     public static final class Record {
         public final BlockPos blockPos;
         public final BlockPos blockPos2;
@@ -49,9 +64,6 @@ public final class FeetTargetStrategy extends MineStrategyBase {
             this.blockPos = blockPos;
             this.blockPos2 = blockPos2;
         }
-
-
-
 
         public BlockPos getTargetBlockPos() {
             return this.blockPos;
@@ -73,11 +85,11 @@ public final class FeetTargetStrategy extends MineStrategyBase {
         if (playerEntity886 == null || isSpaceBelowEmpty((Entity) playerEntity886)) {
             return;
         }
-        if (!is1210((PlayerEntity) playerEntity886) || z) {
-            BlockPos ofFloored = BlockPos.ofFloored(((PlayerEntity) playerEntity886).getPos());
+        if (!is1210((Player) playerEntity886) || z) {
+            BlockPos ofFloored = BlockPos.containing(((Player) playerEntity886).position());
             List<BlockPos> list2010 = PlayerUtils.getSurroundPositions(playerEntity886);
-            Block block = minecraftClient.world.getBlockState(ofFloored).getBlock();
-            boolean z2 = block.getBlastResistance() >= Float.intBitsToFloat(1142292480) && block != Blocks.AIR;
+            Block block = minecraftClient.level.getBlockState(ofFloored).getBlock();
+            boolean z2 = block.getExplosionResistance() >= Float.intBitsToFloat(1142292480) && block != Blocks.AIR;
             if (!this.autoMine.speedMineHelper.is1228(500L) || ofFloored.equals(this.autoMine.speedMineHelper.getBlockPos())) {
                 z2 = false;
             }
@@ -99,7 +111,7 @@ public final class FeetTargetStrategy extends MineStrategyBase {
         BlockPos blockPos2 = null;
         boolean z3 = false;
         list2.sort(Comparator.comparing(blockPos3 -> {
-            if (minecraftClient.player.getBoundingBox().intersects(new Box(blockPos3))) {
+            if (minecraftClient.player.getBoundingBox().intersects(new AABB(blockPos3))) {
                 return Double.valueOf(Double.longBitsToDouble(-4556649414143246336L));
             }
             if (PlayerUtils.getSurroundPositions(minecraftClient.player).contains(blockPos3)) {
@@ -113,15 +125,17 @@ public final class FeetTargetStrategy extends MineStrategyBase {
                 }
                 Vec3i next = it.next();
                 if (next.getY() == 0) {
-                    if (isCrystalPlaceableAt(blockPos3.add(next).down())) {
+                    if (isCrystalPlaceableAt(blockPos3.offset(next).below())) {
                         z4 = true;
                         break;
                     }
                 }
             }
-            double squaredDistance = blockPos3.getSquaredDistance(minecraftClient.player.getPos());
+            double squaredDistance = net.minecraft.world.phys.Vec3.atCenterOf(blockPos3).distanceToSqr(minecraftClient.player.position());
             if (!z4) {
-                squaredDistance += Math.pow(speedmine.range.getMaxValue().floatValue(), Double.longBitsToDouble(4611686018427387904L));
+                SpeedMine speedmine_lcl = getSpeedmine();
+                float rangeMax = speedmine_lcl != null ? speedmine_lcl.range.getMaxValue().floatValue() : 6.0f;
+                squaredDistance += Math.pow(rangeMax, Double.longBitsToDouble(4611686018427387904L));
             }
             return Double.valueOf(-squaredDistance);
         }));
@@ -129,14 +143,15 @@ public final class FeetTargetStrategy extends MineStrategyBase {
         while (it.hasNext()) {
             BlockPos next = it.next();
             if (z2) {
-                next = next.down();
+                next = next.below();
             }
-            boolean z4 = WorldUtils.isAir(next) && next.equals(speedmine.getMineTargetPos());
+            SpeedMine speedmine_lcl = getSpeedmine();
+            boolean z4 = WorldUtils.isAir(next) && speedmine_lcl != null && next.equals(speedmine_lcl.getMineTargetPos());
             boolean z5 = this.autoMine.logic.getValue() == AutoMineLogic.GRIM || this.autoMine.logic.getValue() == AutoMineLogic.GRIMV3;
             if (z) {
                 z4 = false;
             }
-            if (speedmine.hasCooldownElapsed(400L) && z5) {
+            if (speedmine_lcl != null && speedmine_lcl.hasCooldownElapsed(400L) && z5) {
                 z4 = false;
             }
             if (is1208(next) || z2 || z5) {
@@ -159,7 +174,7 @@ public final class FeetTargetStrategy extends MineStrategyBase {
     public boolean is1208(BlockPos blockPos) {
         Iterator<Vec3i> it = list.iterator();
         while (it.hasNext()) {
-            if (isCrystalPlaceableAt(blockPos.add(it.next()).down())) {
+            if (isCrystalPlaceableAt(blockPos.offset(it.next()).below())) {
                 return true;
             }
         }
@@ -175,24 +190,28 @@ public final class FeetTargetStrategy extends MineStrategyBase {
                 }
             }
         }
-        List list2 = BlockPos.stream(minecraftClient.player.getBoundingBox().withMaxY(minecraftClient.player.getY())).map((v0) -> {
-            return v0.toImmutable();
+        List list2 = BlockPos.betweenClosedStream(minecraftClient.player.getBoundingBox().setMaxY(minecraftClient.player.getY())).map((v0) -> {
+            return v0.immutable();
         }).filter(blockPos2 -> {
-            return minecraftClient.world.getBlockState(blockPos2).getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480);
+            return minecraftClient.level.getBlockState(blockPos2).getBlock().getExplosionResistance() >= Float.intBitsToFloat(1142292480);
         }).toList();
         return list2.size() == 1 && list2.contains(blockPos);
     }
 
-    public boolean is1210(PlayerEntity playerEntity) {
-        return BlockPos.stream(playerEntity.getBoundingBox().withMaxY(playerEntity.getY())).map((v0) -> {
-            return v0.toImmutable();
+    public boolean is1210(Player playerEntity) {
+        return BlockPos.betweenClosedStream(playerEntity.getBoundingBox().setMaxY(playerEntity.getY())).map((v0) -> {
+            return v0.immutable();
         }).allMatch(blockPos -> {
-            return minecraftClient.world.getBlockState(blockPos).isOf(Blocks.BEDROCK);
+            return minecraftClient.level.getBlockState(blockPos).is(Blocks.BEDROCK);
         });
     }
 
     public boolean isCrystalPlaceableAt(BlockPos blockPos) {
-        return BlockPlacer.isCrystalPlaceable(blockPos, autoCrystal.f112.getValue().booleanValue(), true, false, false, autoCrystal.lowerHitBox.getValue().booleanValue(), autoCrystal.hBFix.getValue().booleanValue());
+        AutoCrystal autoCrystal_lcl = getAutoCrystal();
+        if (autoCrystal_lcl == null) {
+            return false;
+        }
+        return BlockPlacer.isCrystalPlaceable(blockPos, autoCrystal_lcl.f112.getValue().booleanValue(), true, false, false, autoCrystal_lcl.lowerHitBox.getValue().booleanValue(), autoCrystal_lcl.hBFix.getValue().booleanValue());
     }
 
     @Override // me.mioclient.module.combat.automine.MineStrategyBase, me.mioclient.module.combat.automine.MineTargetStrategy

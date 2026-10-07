@@ -4,11 +4,6 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.ColorUtils;
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.awt.Color;
 import java.util.Iterator;
@@ -18,68 +13,63 @@ import me.mioclient.mixin.ducks.DuckHandledScreen;
 import me.mioclient.module.misc.ChestSearchBar;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.HopperScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.HopperScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.resources.language.I18n;
+import org.joml.Matrix3x2fStack;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.Holder;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChestSearchOverlay.class */
 public class ChestSearchOverlay {
-    public static TextFieldWidget textFieldWidget;
+    public static EditBox textFieldWidget;
     public static final ChestSearchOverlay mixinTextFieldWidgetHelper = new ChestSearchOverlay();
     public static ChestSearchBar chestSearchBar = (ChestSearchBar) ClientServices.moduleInjector.getModule(ChestSearchBar.class);
     public static String text = "";
     public static int num = 0;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/MixinTextFieldWidgetHelper$AfterInit.class */
+    
     public static class AfterInit implements ScreenEvents.AfterInit {
-        public void afterInit(MinecraftClient minecraftClient, Screen screen, int i, int i2) {
+        public void afterInit(Minecraft minecraftClient, Screen screen, int i, int i2) {
             if (!ChestSearchOverlay.chestSearchBar.isToggled()) {
                 ChestSearchOverlay.textFieldWidget = null;
                 return;
             }
-            if (!(screen instanceof GenericContainerScreen) && !(screen instanceof ShulkerBoxScreen) && !(screen instanceof HopperScreen)) {
+            if (!(screen instanceof ContainerScreen) && !(screen instanceof ShulkerBoxScreen) && !(screen instanceof HopperScreen)) {
                 ChestSearchOverlay.textFieldWidget = null;
                 return;
             }
-            DuckHandledScreen duckHandledScreen = (DuckHandledScreen)((HandledScreen) screen);
-            ChestSearchOverlay.textFieldWidget = new TextFieldWidget(MinecraftClient.getInstance().textRenderer, duckHandledScreen.getX() + 81, duckHandledScreen.getY() + 5, 88, 10, Text.literal(""));
-            ChestSearchOverlay.textFieldWidget.setText(ChestSearchOverlay.text);
+            DuckHandledScreen duckHandledScreen = (DuckHandledScreen)((AbstractContainerScreen) screen);
+            ChestSearchOverlay.textFieldWidget = new EditBox(Minecraft.getInstance().font, duckHandledScreen.getX() + 81, duckHandledScreen.getY() + 5, 88, 10, Component.literal(""));
+            ChestSearchOverlay.textFieldWidget.setValue(ChestSearchOverlay.text);
             ChestSearchOverlay.textFieldWidget.setFocused(false);
             ChestSearchOverlay.textFieldWidget.setMaxLength(32);
-            ChestSearchOverlay.textFieldWidget.setDrawsBackground(false);
-            ChestSearchOverlay.textFieldWidget.setChangedListener(str -> {
+            ChestSearchOverlay.textFieldWidget.setBordered(false);
+            ChestSearchOverlay.textFieldWidget.setResponder(str -> {
                 ChestSearchOverlay.text = str;
             });
-            Screens.getButtons(screen).add(ChestSearchOverlay.textFieldWidget);
+            Screens.getWidgets(screen).add(ChestSearchOverlay.textFieldWidget);
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/MixinTextFieldWidgetHelper$BiPredicate.class */
+    
+    
     public interface BiPredicate extends java.util.function.BiPredicate<String, String> {
     }
 
@@ -89,15 +79,15 @@ public class ChestSearchOverlay {
         ScreenEvents.AFTER_INIT.register(new AfterInit());
     }
 
-    public void onDrawGui(DrawContext drawContext, Screen screen, MatrixStack matrixStack, float f, float f2, float f3) {
+    public void onDrawGui(GuiGraphicsExtractor drawContext, Screen screen, Matrix3x2fStack matrixStack, float f, float f2, float f3) {
         if (!chestSearchBar.isToggled() || textFieldWidget == null) {
             return;
         }
-        matrixStack.push();
-        matrixStack.translate(0.0f, 0.0f, Float.intBitsToFloat(1140457472));
+        matrixStack.pushMatrix();
+        matrixStack.translate(0.0f, 0.0f);
         DuckHandledScreen duckHandledScreen = (DuckHandledScreen) screen;
-        if (!textFieldWidget.getText().isBlank() && (screen instanceof HandledScreen)) {
-            ScreenHandler screenHandler = ((HandledScreen) screen).getScreenHandler();
+        if (!textFieldWidget.getValue().isBlank() && (screen instanceof AbstractContainerScreen)) {
+            AbstractContainerMenu screenHandler = ((AbstractContainerScreen) screen).getMenu();
             int x = duckHandledScreen.getX();
             int y = duckHandledScreen.getY();
             num = 0;
@@ -106,30 +96,28 @@ public class ChestSearchOverlay {
                 Slot slot = (Slot) it.next();
                 int i = x + slot.x;
                 int i2 = y + slot.y;
-                ItemStack stack = slot.getStack();
-                if (namesMatch(stack, textFieldWidget.getText())) {
+                ItemStack stack = slot.getItem();
+                if (namesMatch(stack, textFieldWidget.getValue())) {
                     num++;
                 } else {
-                    RenderSystem.disableDepthTest();
-                    RenderUtil.INSTANCE.drawFilledRect(matrixStack, i, i2, i + 16, i2 + 16, -1442840576);
+                    drawContext.fill(i, i2, i + 16, i2 + 16, -1442840576);
                 }
-                if (isFull(stack, textFieldWidget.getText())) {
-                    drawContext.fill(i, i2, i + 16, i2 + 16, -500, ColorUtils.toIntWithAlpha(Color.green, 100));
+                if (isFull(stack, textFieldWidget.getValue())) {
+                    drawContext.fill(i, i2, i + 16, i2 + 16, ColorUtils.toIntWithAlpha(Color.green, 100));
                 }
             }
         }
-        if (num != 0 || textFieldWidget.getText().isEmpty()) {
-            textFieldWidget.setEditableColor(16777215);
+        if (num != 0 || textFieldWidget.getValue().isEmpty()) {
+            textFieldWidget.setTextColor(16777215);
         } else {
-            textFieldWidget.setEditableColor(16733525);
+            textFieldWidget.setTextColor(16733525);
         }
-        DiffuseLighting.enableGuiDepthLighting();
-        matrixStack.pop();
+        matrixStack.popMatrix();
     }
 
     public static boolean namesMatch(ItemStack itemStack, String str) {
-        ContainerComponent containerComponent;
-        String strip = Formatting.strip(str.trim().toLowerCase(Locale.ROOT));
+        ItemContainerContents containerComponent;
+        String strip = ChatFormatting.stripFormatting(str.trim().toLowerCase(Locale.ROOT));
         if (strip == null || strip.isEmpty()) {
             return true;
         }
@@ -137,15 +125,15 @@ public class ChestSearchOverlay {
             return false;
         }
         Item item = itemStack.getItem();
-        if (item.getTranslationKey().contains("shulker_box") && (containerComponent = (ContainerComponent) itemStack.get(DataComponentTypes.CONTAINER)) != null) {
-            Iterator it = containerComponent.iterateNonEmpty().iterator();
+        if (item.getDescriptionId().contains("shulker_box") && (containerComponent = (ItemContainerContents) itemStack.get(DataComponents.CONTAINER)) != null) {
+            Iterator it = containerComponent.nonEmptyItemCopyStream().iterator();
             while (it.hasNext()) {
                 if (namesMatch((ItemStack) it.next(), strip)) {
                     return true;
                 }
             }
         }
-        String strip2 = Formatting.strip(itemStack.getName().getString().trim().toLowerCase(Locale.ROOT));
+        String strip2 = ChatFormatting.stripFormatting(itemStack.getHoverName().getString().trim().toLowerCase(Locale.ROOT));
         BiPredicate biPredicate = (v0, v1) -> {
             return v0.contains(v1);
         };
@@ -161,31 +149,31 @@ public class ChestSearchOverlay {
                 return Pattern.compile(str3).matcher(str2).find();
             };
         }
-        ItemEnchantmentsComponent itemEnchantmentsComponent = (ItemEnchantmentsComponent) itemStack.get(DataComponentTypes.STORED_ENCHANTMENTS);
+        ItemEnchantments itemEnchantmentsComponent = (ItemEnchantments) itemStack.get(DataComponents.STORED_ENCHANTMENTS);
         if (itemEnchantmentsComponent != null) {
-            Iterator it2 = itemEnchantmentsComponent.getEnchantmentEntries().iterator();
+            Iterator it2 = itemEnchantmentsComponent.entrySet().iterator();
             while (it2.hasNext()) {
                 if (testEnchant(biPredicate, strip, (Object2IntMap.Entry) it2.next())) {
                     return true;
                 }
             }
         }
-        if (itemStack.hasEnchantments()) {
-            Iterator it3 = itemStack.getEnchantments().getEnchantmentEntries().iterator();
+        if (itemStack.isEnchanted()) {
+            Iterator it3 = itemStack.getEnchantments().entrySet().iterator();
             while (it3.hasNext()) {
                 if (testEnchant(biPredicate, strip, (Object2IntMap.Entry) it3.next())) {
                     return true;
                 }
             }
         }
-        if (biPredicate.test(I18n.translate(item.getTranslationKey(itemStack), new Object[0]).toLowerCase(Locale.ROOT), strip)) {
+        if (biPredicate.test(I18n.get(item.getDescriptionId()).toLowerCase(Locale.ROOT), strip)) {
             return true;
         }
-        PotionContentsComponent potionContentsComponent = (PotionContentsComponent) itemStack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents potionContentsComponent = (PotionContents) itemStack.get(DataComponents.POTION_CONTENTS);
         if (potionContentsComponent != null) {
-            Iterator it4 = potionContentsComponent.getEffects().iterator();
+            Iterator it4 = potionContentsComponent.getAllEffects().iterator();
             while (it4.hasNext()) {
-                if (biPredicate.test(I18n.translate(((StatusEffectInstance) it4.next()).getTranslationKey(), new Object[0]).toLowerCase(Locale.ROOT), strip)) {
+                if (biPredicate.test(I18n.get(((MobEffectInstance) it4.next()).getDescriptionId()).toLowerCase(Locale.ROOT), strip)) {
                     return true;
                 }
             }
@@ -193,23 +181,23 @@ public class ChestSearchOverlay {
         return biPredicate.test(strip2, strip);
     }
 
-    public static boolean testEnchant(BiPredicate biPredicate, String str, Object2IntMap.Entry<RegistryEntry<Enchantment>> entry) {
+    public static boolean testEnchant(BiPredicate biPredicate, String str, Object2IntMap.Entry<Holder<Enchantment>> entry) {
         if (entry == null) {
             return false;
         }
-        return biPredicate.test(Enchantment.getName((RegistryEntry) entry.getKey(), entry.getIntValue()).toString().toLowerCase(Locale.ROOT).replaceAll("enchantment", ""), str);
+        return biPredicate.test(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).getString().toLowerCase(Locale.ROOT).replaceAll("enchantment", ""), str);
     }
 
     public static boolean isFull(ItemStack itemStack, String str) {
-        ContainerComponent containerComponent;
+        ItemContainerContents containerComponent;
         if (!chestSearchBar.highlightFull.getValue().booleanValue()) {
             return false;
         }
-        String strip = Formatting.strip(str.trim().toLowerCase(Locale.ROOT));
-        if (strip == null || strip.isEmpty() || itemStack.isEmpty() || !itemStack.getItem().getTranslationKey().contains("shulker_box") || (containerComponent = (ContainerComponent) itemStack.get(DataComponentTypes.CONTAINER)) == null || containerComponent.stream().toList().size() != 27) {
+        String strip = ChatFormatting.stripFormatting(str.trim().toLowerCase(Locale.ROOT));
+        if (strip == null || strip.isEmpty() || itemStack.isEmpty() || !itemStack.getItem().getDescriptionId().contains("shulker_box") || (containerComponent = (ItemContainerContents) itemStack.get(DataComponents.CONTAINER)) == null || containerComponent.allItemsCopyStream().toList().size() != 27) {
             return false;
         }
-        Iterator it = containerComponent.stream().toList().iterator();
+        Iterator it = containerComponent.allItemsCopyStream().toList().iterator();
         while (it.hasNext()) {
             if (!namesMatch((ItemStack) it.next(), strip)) {
                 return false;

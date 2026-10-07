@@ -2,12 +2,6 @@ package me.mioclient.module.combat.autocrystal;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoCrystalMode.class */
 public enum AutoCrystalMode implements NamedValue {
     ALWAYS("Always"),
     STRICT("Strict"),

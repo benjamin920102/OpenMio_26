@@ -2,10 +2,8 @@ package me.mioclient.event.events.player;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/UpdateSetPosEvent.class */
 public class UpdateSetPosEvent extends Event {
     public double val;
     public double val2;
@@ -17,13 +15,13 @@ public class UpdateSetPosEvent extends Event {
         this.val3 = d3;
     }
 
-    public void setPos(Vec3d vec3d) {
+    public void setPos(Vec3 vec3d) {
         this.val = vec3d.x;
         this.val2 = vec3d.y;
         this.val3 = vec3d.z;
     }
 
-    public Vec3d toVec3d() {
-        return new Vec3d(this.val, this.val2, this.val3);
+    public Vec3 toVec3d() {
+        return new Vec3(this.val, this.val2, this.val3);
     }
 }

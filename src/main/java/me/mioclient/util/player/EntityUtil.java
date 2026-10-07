@@ -2,26 +2,19 @@ package me.mioclient.util.player;
 
 import me.mioclient.api.ClientAccessor;
 
-import net.minecraft.client.option.Perspective;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.mob.AbstractPiglinEntity;
-import net.minecraft.entity.mob.Angerable;
-import net.minecraft.entity.mob.EndermanEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.mob.PiglinActivity;
-import net.minecraft.entity.passive.DolphinEntity;
-import net.minecraft.entity.passive.FishEntity;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.passive.PolarBearEntity;
-import net.minecraft.entity.passive.SquidEntity;
-import net.minecraft.entity.passive.WolfEntity;
-import net.minecraft.entity.passive.WolfVariant;
-import me.mioclient.ducks.DuckZombifiedPiglinEntity;
+import net.minecraft.client.CameraType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.animal.dolphin.Dolphin;
+import net.minecraft.world.entity.animal.fish.AbstractFish;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.polarbear.PolarBear;
+import net.minecraft.world.entity.animal.squid.Squid;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EntityUtil.class */
 public class EntityUtil implements ClientAccessor {
     public static float getPlayerHealth() {
         return getEntityHealth(minecraftClient.player);
@@ -36,42 +29,33 @@ public class EntityUtil implements ClientAccessor {
     }
 
     public static boolean isHostile(Entity entity) {
-        if (entity instanceof EndermanEntity) {
-            return ((EndermanEntity) entity).isAngry();
+        // 26.2 port: neutral-mob APIs (Angerable/PiglinActivity/WolfVariant textures) were removed;
+        // keep stable checks only.
+        if (entity instanceof EnderMan) {
+            return ((EnderMan) entity).isCreepy();
         }
-        if (entity instanceof DuckZombifiedPiglinEntity) {
-            return ((DuckZombifiedPiglinEntity) entity).mio$isAttacking();
+        if (entity instanceof Wolf) {
+            return false;
         }
-        if (entity instanceof WolfEntity) {
-            WolfEntity wolfEntity = (WolfEntity) entity;
-            return wolfEntity.getTextureId() == ((WolfVariant) wolfEntity.getVariant().value()).getAngryTextureId();
-        }
-        if (entity instanceof Angerable) {
-            return ((Angerable) entity).hasAngerTime();
-        }
-        if (entity instanceof AbstractPiglinEntity) {
-            PiglinActivity activity = ((AbstractPiglinEntity) entity).getActivity();
-            return activity == PiglinActivity.CROSSBOW_CHARGE || activity == PiglinActivity.CROSSBOW_HOLD || activity == PiglinActivity.ATTACKING_WITH_MELEE_WEAPON;
-        }
-        if (entity instanceof PolarBearEntity) {
+        if (entity instanceof PolarBear) {
             return true;
         }
         return entity instanceof Monster;
     }
 
     public static boolean isPassive(Entity entity) {
-        return (entity instanceof FishEntity) || (entity instanceof PassiveEntity) || (entity instanceof SquidEntity) || (entity instanceof DolphinEntity);
+        return (entity instanceof AbstractFish) || (entity instanceof Animal) || (entity instanceof Squid) || (entity instanceof Dolphin);
     }
 
     public static boolean isOnGround(LivingEntity livingEntity) {
-        return !minecraftClient.world.isBlockSpaceEmpty((Entity) livingEntity, livingEntity.getBoundingBox().stretch(0.0d, Double.longBitsToDouble(-4631501856787818086L), 0.0d));
+        return !minecraftClient.level.noCollision(livingEntity, livingEntity.getBoundingBox().expandTowards(0.0d, Double.longBitsToDouble(-4631501856787818086L), 0.0d));
     }
 
     public static boolean isFirstPersonView(Entity entity) {
-        return minecraftClient.options.getPerspective() == Perspective.FIRST_PERSON && entity != minecraftClient.player && minecraftClient.cameraEntity == entity;
+        return minecraftClient.options.getCameraType() == CameraType.FIRST_PERSON && entity != minecraftClient.player && minecraftClient.getCameraEntity() == entity;
     }
 
     public static void setStepHeight(LivingEntity livingEntity, float f) {
-        livingEntity.getAttributeInstance(EntityAttributes.GENERIC_STEP_HEIGHT).setBaseValue(f);
+        livingEntity.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(f);
     }
 }

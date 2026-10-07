@@ -1,7 +1,5 @@
 package me.mioclient.module.player.cheststealer;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SlotStackCount.class */
 public final class SlotStackCount {
     public final int num;
     public final int num2;

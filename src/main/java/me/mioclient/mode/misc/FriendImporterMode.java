@@ -12,12 +12,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.NbtIo;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode.class */
 public enum FriendImporterMode {
     FUTURE("Future") { // from class: me.mioclient.Mode.Inner_2
         @Override // me.mioclient.Mode
@@ -90,12 +89,17 @@ public enum FriendImporterMode {
                     throw new FileNotFoundException();
                 }
                 ArrayList arrayList = new ArrayList();
-                Iterator it = NbtIo.read(file.toPath()).getList("friends", 10).iterator();
+                CompoundTag root = NbtIo.read(file.toPath());
+                if (root == null) {
+                    return Collections.emptyList();
+                }
+                ListTag friends = root.getListOrEmpty("friends");
+                Iterator it = friends.iterator();
                 while (it.hasNext()) {
-                    NbtCompound nbtCompound = (NbtCompound)((NbtElement) it.next());
+                    CompoundTag nbtCompound = (CompoundTag)((Tag) it.next());
                     if (nbtCompound.contains("name")) {
-                        String string = nbtCompound.getString("name");
-                        if (!arrayList.contains(string)) {
+                        String string = nbtCompound.getStringOr("name", "");
+                        if (!string.isEmpty() && !arrayList.contains(string)) {
                             arrayList.add(string);
                         }
                     }

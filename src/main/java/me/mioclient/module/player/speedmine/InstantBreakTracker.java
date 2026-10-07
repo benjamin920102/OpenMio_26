@@ -7,18 +7,11 @@ import me.mioclient.util.world.WorldUtils;
 
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-
-import me.mioclient.event.events.network.PacketReceiveEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.util.world.WorldUtils;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/InstantBreakTracker.class */
 public final class InstantBreakTracker {
     public static final long num = 750;
     public final SpeedMine speedMine;
@@ -31,16 +24,16 @@ public final class InstantBreakTracker {
     }
 
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        BlockUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof BlockUpdateS2CPacket) {
-            BlockUpdateS2CPacket blockUpdateS2CPacket = packet904;
-            if (blockUpdateS2CPacket.getState().isAir() && blockUpdateS2CPacket.getPos().equals(this.blockPos)) {
+        ClientboundBlockUpdatePacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundBlockUpdatePacket ? (ClientboundBlockUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundBlockUpdatePacket) {
+            ClientboundBlockUpdatePacket blockUpdateS2CPacket = packet904;
+            if (blockUpdateS2CPacket.getBlockState().isAir() && blockUpdateS2CPacket.getPos().equals(this.blockPos)) {
                 reset();
             }
         }
-        ChunkDeltaUpdateS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof ChunkDeltaUpdateS2CPacket ? (ChunkDeltaUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof ChunkDeltaUpdateS2CPacket) {
-            packet9042.visitUpdates((blockPos, blockState) -> {
+        ClientboundSectionBlocksUpdatePacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundSectionBlocksUpdatePacket ? (ClientboundSectionBlocksUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundSectionBlocksUpdatePacket) {
+            packet9042.runUpdates((blockPos, blockState) -> {
                 if (blockPos.equals(this.blockPos) && blockState.isAir()) {
                     reset();
                 }

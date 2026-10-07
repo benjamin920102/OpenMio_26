@@ -2,14 +2,6 @@ package me.mioclient.mode.client;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-import com.mojang.blaze3d.systems.RenderSystem;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchMode.class */
 public enum SearchMode implements NamedValue {
     NORMAL("Normal"),
     PROTANOPIA("Protanopia") { // from class: me.mioclient.mode.client.SearchMode.Inner
@@ -20,10 +12,9 @@ public enum SearchMode implements NamedValue {
 
         @Override // me.mioclient.mode.client.SearchMode
         public void runWithShaderColor(java.lang.Runnable runnable) {
-            float[] floatArray1028 = getShaderColor();
-            RenderSystem.setShaderColor(floatArray1028[0], floatArray1028[1], floatArray1028[2], floatArray1028[3]);
+            // 26.2: RenderSystem.setShaderColor was removed with the new GPU backend.
+            // BoxRenderer.applyShaderColor is now a pass-through, so just run.
             runnable.run();
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     },
     DEUTERANOPIA("Deuteranopia") { // from class: me.mioclient.mode.client.SearchMode.Inner_3
@@ -34,10 +25,8 @@ public enum SearchMode implements NamedValue {
 
         @Override // me.mioclient.mode.client.SearchMode
         public void runWithShaderColor(java.lang.Runnable runnable) {
-            float[] floatArray1028 = getShaderColor();
-            RenderSystem.setShaderColor(floatArray1028[0], floatArray1028[1], floatArray1028[2], floatArray1028[3]);
+            // 26.2: RenderSystem.setShaderColor was removed with the new GPU backend.
             runnable.run();
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     },
     TRITANOPIA("Tritanopia") { // from class: me.mioclient.mode.client.SearchMode.Inner_2
@@ -48,10 +37,8 @@ public enum SearchMode implements NamedValue {
 
         @Override // me.mioclient.mode.client.SearchMode
         public void runWithShaderColor(java.lang.Runnable runnable) {
-            float[] floatArray1028 = getShaderColor();
-            RenderSystem.setShaderColor(floatArray1028[0], floatArray1028[1], floatArray1028[2], floatArray1028[3]);
+            // 26.2: RenderSystem.setShaderColor was removed with the new GPU backend.
             runnable.run();
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     };
 

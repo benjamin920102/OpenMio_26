@@ -4,23 +4,18 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.mode.combat.BlockerOffsetMode;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.ArrayList;
 import java.util.List;
-import me.mioclient.mode.combat.BlockerOffsetMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Delay;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import me.mioclient.module.Module;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Blocker.class */
 public class Blocker extends Delay {
     public Setting<BlockerOffsetMode> offsets = add(new EnumSetting<>("Offsets", BlockerOffsetMode.SURROUND));
     public Setting<Boolean> corners = add(new BooleanSetting("Corners", false, v -> this.offsets.getValue() != BlockerOffsetMode.CEV));
@@ -40,7 +35,7 @@ public class Blocker extends Delay {
     public List<BlockPos> getPlacePositions() {
         ArrayList<BlockPos> arrayList = new ArrayList();
         for (Vec3i vec3i : this.offsets.getValue().getOffsets()) {
-            BlockPos add = BlockPos.ofFloored(minecraftClient.player.getPos()).add(vec3i);
+            BlockPos add = BlockPos.containing(minecraftClient.player.position()).offset(vec3i);
             if (ClientServices.breakHighlightHelper.getBreakProgress(add) >= this.blockDamage.getValue().floatValue()) {
                 arrayList.add(add);
             }
@@ -55,24 +50,24 @@ public class Blocker extends Delay {
                     break;
                 }
                 Vec3i vec3i2 = vec3iArray2842[i];
-                if (blockPos.getY() != ((int) minecraftClient.player.getPos().getY())) {
+                if (blockPos.getY() != ((int) minecraftClient.player.position().y)) {
                     break;
                 }
-                Vec3i ofFloored = BlockPos.ofFloored(minecraftClient.player.getPos());
+                Vec3i ofFloored = BlockPos.containing(minecraftClient.player.position());
                 if (!this.corners.getValue().booleanValue()) {
                     if (blockPos.subtract(ofFloored).equals(vec3i2)) {
-                        arrayList2.add(blockPos.add(vec3i2));
+                        arrayList2.add(blockPos.offset(vec3i2));
                         break;
                     }
-                } else if (!blockPos.add(vec3i2).equals(ofFloored)) {
-                    arrayList2.add(blockPos.add(vec3i2));
+                } else if (!blockPos.offset(vec3i2).equals(ofFloored)) {
+                    arrayList2.add(blockPos.offset(vec3i2));
                 }
                 i++;
             }
             if (blockPos.getY() == minecraftClient.player.getY() + Double.longBitsToDouble(4613937818241073152L)) {
-                arrayList2.add(blockPos.down());
+                arrayList2.add(blockPos.below());
             } else {
-                arrayList2.add(blockPos.up());
+                arrayList2.add(blockPos.above());
             }
         }
         return arrayList2;

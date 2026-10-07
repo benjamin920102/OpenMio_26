@@ -8,10 +8,9 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/LiteralArgumentType.class */
 public class LiteralArgumentType implements com.mojang.brigadier.arguments.ArgumentType<String> {
     public final String[] stringArr;
 
@@ -38,7 +37,7 @@ public class LiteralArgumentType implements com.mojang.brigadier.arguments.Argum
                 return suggestionsBuilder.buildFuture();
             }
         }
-        if (CommandSource.shouldSuggest(suggestionsBuilder.getRemaining(), this.stringArr[0])) {
+        if (SharedSuggestionProvider.matchesSubStr(suggestionsBuilder.getRemaining(), this.stringArr[0])) {
             suggestionsBuilder.suggest(this.stringArr[0]);
         }
         return suggestionsBuilder.buildFuture();

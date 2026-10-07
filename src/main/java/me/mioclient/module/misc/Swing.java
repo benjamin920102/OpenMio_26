@@ -2,30 +2,23 @@ package me.mioclient.module.misc;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.ScaffoldHelperMode;
-
-import me.mioclient.api.NamedValue;
 
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
 import me.mioclient.module.combat.Mainhand;
 import me.mioclient.module.combat.Offhand;
-import me.mioclient.mode.combat.ScaffoldHelperMode;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing.class */
 public class Swing extends Module {
-    public Setting<ScaffoldHelperMode> hand = add(new EnumSetting<>("Hand", ScaffoldHelperMode.scaffoldHelperMode));
+    public Setting<ScaffoldHelperMode> hand = add(new EnumSetting<>("InteractionHand", ScaffoldHelperMode.scaffoldHelperMode));
     public Setting<MixinLivingEntityMode> type = add(new EnumSetting<>("Type", MixinLivingEntityMode.VANILLA));
     public Setting<Double> speed = add(new NumberSetting<>("Speed", 1.0, 0.1, 3.0));
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing$MixinLivingEntityMode.class */
+    
     public enum MixinLivingEntityMode implements NamedValue {
         VANILLA("Vanilla"),
         ONE_EIGHT("1.8"),
@@ -43,19 +36,18 @@ public class Swing extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/Swing$ScaffoldHelperMode.class */
+    
     public static enum ScaffoldHelperMode implements NamedValue {
         scaffoldHelperMode("Mainhand") {
             @Override // me.mioclient.module.misc.Swing.ScaffoldHelperMode
-            public Hand getHand() {
-                return Hand.MAIN_HAND;
+            public InteractionHand getHand() {
+                return InteractionHand.MAIN_HAND;
             }
         },
         scaffoldHelperMode2("Offhand") {
             @Override // me.mioclient.module.misc.Swing.ScaffoldHelperMode
-            public Hand getHand() {
-                return Hand.OFF_HAND;
+            public InteractionHand getHand() {
+                return InteractionHand.OFF_HAND;
             }
         },
         PACKET("Packet"),
@@ -72,7 +64,7 @@ public class Swing extends Module {
             return this.name;
         }
 
-        public Hand getHand() {
+        public InteractionHand getHand() {
             return null;
         }
     }

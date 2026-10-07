@@ -1,17 +1,13 @@
 package me.mioclient.module.combat.automine;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.module.combat.automine.MineStrategyBase;
-import me.mioclient.module.combat.automine.MineTargetState;
-
 import me.mioclient.module.combat.AutoMine;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.EnderChestBlockEntity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.EnderChestBlockEntity;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoMineSearchHelper42_4.class */
 public final class EnderChestTargetStrategy extends MineStrategyBase {
     public EnderChestTargetStrategy(AutoMine autoMine) {
         super(autoMine);
@@ -21,13 +17,13 @@ public final class EnderChestTargetStrategy extends MineStrategyBase {
     public void findTargets(MineTargetState autoMineHelper) {
         BlockPos blockPos = null;
         for (BlockEntity blockEntity : ClientServices.stashFinderHelper.getLoadedBlockEntities()) {
-            if (minecraftClient.player.getEyePos().distanceTo(blockEntity.getPos().toCenterPos()) <= Double.longBitsToDouble(4612136378390124954L) && (blockEntity instanceof EnderChestBlockEntity)) {
-                if (isValidMineTarget(blockEntity.getPos())) {
+            if (minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(blockEntity.getBlockPos())) <= Double.longBitsToDouble(4612136378390124954L) && (blockEntity instanceof EnderChestBlockEntity)) {
+                if (isValidMineTarget(blockEntity.getBlockPos())) {
                     if (blockPos != null) {
-                        if (isSpeedMineTarget(blockEntity.getPos())) {
+                        if (isSpeedMineTarget(blockEntity.getBlockPos())) {
                         }
                     }
-                    blockPos = blockEntity.getPos();
+                    blockPos = blockEntity.getBlockPos();
                 }
             }
         }

@@ -5,8 +5,6 @@ import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AutoReconnect.class */
 public class AutoReconnect extends Module {
     public Setting<Float> delay = add(new NumberSetting<>("Delay", 5.0f, 1.0f, 60.0f).setSuffix("s"));
 

@@ -2,8 +2,6 @@ package me.mioclient.command;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import java.util.Iterator;
@@ -12,12 +10,10 @@ import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.Colors;
 import me.mioclient.module.client.UI;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_31.class */
 public class GlobalSettingCommand extends CommandFeature {
     public GlobalSettingCommand() {
         super("global");
@@ -25,7 +21,7 @@ public class GlobalSettingCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.literal("color").then(CommandFeature.argument("value", BoolArgumentType.bool()).executes(commandContext -> {
             forEachModuleSetting((module, setting) -> {
                 if ((module instanceof Colors) || (module instanceof UI) || !(setting instanceof ColorSetting)) {

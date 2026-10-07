@@ -7,19 +7,24 @@ import me.mioclient.util.anim.ValueAnimator;
 import me.mioclient.util.math.ColorUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.shape.Shape2DRenderer;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.anim.ValueAnimator;
 
 import java.awt.Color;
 import me.mioclient.module.client.HUD;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HudEdgeDragHandler.class */
 public final class HudEdgeDragHandler implements ClientAccessor {
-    public static HUD hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving hud null. */
+    private static HUD hud;
+
+    public static HUD getHud() {
+        if (hud == null && ClientServices.moduleInjector != null) {
+            try {
+                hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+            } catch (Exception e) {
+            }
+        }
+        return hud;
+    }
     public boolean flag;
     public boolean flag2;
     public boolean flag3;
@@ -27,29 +32,33 @@ public final class HudEdgeDragHandler implements ClientAccessor {
     public final ValueAnimator zoomHelper = new ValueAnimator();
     public final ValueAnimator zoomHelper2 = new ValueAnimator();
 
-    public void do1010(DrawContext drawContext, int i, int i2, float f) {
-        int scaledWindowWidth = drawContext.getScaledWindowWidth();
-        int scaledWindowHeight = drawContext.getScaledWindowHeight();
+    public void do1010(GuiGraphicsExtractor drawContext, int i, int i2, float f) {
+        HUD hud_lcl = getHud();
+        if (hud_lcl == null) {
+            return;
+        }
+        int scaledWindowWidth = drawContext.guiWidth();
+        int scaledWindowHeight = drawContext.guiHeight();
         boolean z = isNearHorizontalEdge((double) i) || this.flag3;
         boolean z2 = isNearVerticalEdge((double) i2) || this.flag4;
         this.zoomHelper.animateTo(z ? Float.intBitsToFloat(1124859904) : 0.0f, 250L);
         this.zoomHelper2.animateTo((z2 && this.zoomHelper.getValue() == 0.0f) ? Float.intBitsToFloat(1124859904) : 0.0f, 250L);
         if (this.zoomHelper.getValue() > 0.0f) {
             if (this.flag3) {
-                hud.setSafeAreaX(this.flag ? Math.abs(i - scaledWindowWidth) : i);
+                hud_lcl.setSafeAreaX(this.flag ? Math.abs(i - scaledWindowWidth) : i);
             }
             int i3 = ColorUtils.toIntWithAlpha(Color.black, (int) this.zoomHelper.getValue());
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, 0.0f, hud.getSafeAreaX(), scaledWindowHeight, i3);
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), scaledWindowWidth - hud.getSafeAreaX(), 0.0f, scaledWindowWidth, scaledWindowHeight, i3);
+            drawContext.fill(0, 0, hud_lcl.getSafeAreaX(), scaledWindowHeight, i3);
+            drawContext.fill(scaledWindowWidth - hud_lcl.getSafeAreaX(), 0, scaledWindowWidth, scaledWindowHeight, i3);
             return;
         }
         if (this.zoomHelper2.getValue() > 0.0f) {
             if (this.flag4) {
-                hud.setSafeAreaY(this.flag2 ? Math.abs(i2 - scaledWindowHeight) : i2);
+                hud_lcl.setSafeAreaY(this.flag2 ? Math.abs(i2 - scaledWindowHeight) : i2);
             }
             int i4 = ColorUtils.toIntWithAlpha(Color.black, (int) this.zoomHelper2.getValue());
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, 0.0f, scaledWindowWidth, hud.getSafeAreaY(), i4);
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, scaledWindowHeight - hud.getSafeAreaY(), scaledWindowWidth, scaledWindowHeight, i4);
+            drawContext.fill(0, 0, scaledWindowWidth, hud_lcl.getSafeAreaY(), i4);
+            drawContext.fill(0, scaledWindowHeight - hud_lcl.getSafeAreaY(), scaledWindowWidth, scaledWindowHeight, i4);
         }
     }
 
@@ -61,8 +70,8 @@ public final class HudEdgeDragHandler implements ClientAccessor {
         if (!this.flag3) {
             this.flag4 = isNearVerticalEdge(d2);
         }
-        this.flag = d > ((double) (((float) minecraftClient.getWindow().getScaledWidth()) / Float.intBitsToFloat(1073741824)));
-        this.flag2 = d2 > ((double) (((float) minecraftClient.getWindow().getScaledHeight()) / Float.intBitsToFloat(1073741824)));
+        this.flag = d > ((double) (((float) minecraftClient.getWindow().getGuiScaledWidth()) / Float.intBitsToFloat(1073741824)));
+        this.flag2 = d2 > ((double) (((float) minecraftClient.getWindow().getGuiScaledHeight()) / Float.intBitsToFloat(1073741824)));
     }
 
     public void mouseReleased(double d, double d2, int i) {
@@ -74,10 +83,18 @@ public final class HudEdgeDragHandler implements ClientAccessor {
     }
 
     public boolean isNearHorizontalEdge(double d) {
-        return d < ((double) (hud.getSafeAreaX() + 1)) || d > ((double) ((minecraftClient.getWindow().getScaledWidth() - hud.getSafeAreaX()) - 1));
+        HUD hud_lcl = getHud();
+        if (hud_lcl == null) {
+            return false;
+        }
+        return d < ((double) (hud_lcl.getSafeAreaX() + 1)) || d > ((double) ((minecraftClient.getWindow().getGuiScaledWidth() - hud_lcl.getSafeAreaX()) - 1));
     }
 
     public boolean isNearVerticalEdge(double d) {
-        return d < ((double) (hud.getSafeAreaY() + 1)) || d > ((double) ((minecraftClient.getWindow().getScaledHeight() - hud.getSafeAreaY()) - 1));
+        HUD hud_lcl = getHud();
+        if (hud_lcl == null) {
+            return false;
+        }
+        return d < ((double) (hud_lcl.getSafeAreaY() + 1)) || d > ((double) ((minecraftClient.getWindow().getGuiScaledHeight() - hud_lcl.getSafeAreaY()) - 1));
     }
 }

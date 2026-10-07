@@ -2,20 +2,15 @@ package me.mioclient.command;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import me.mioclient.module.Module;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_8.class */
 public final class AliasCommand extends CommandFeature {
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/Feature_8$Mode.class */
+    
+    
     public enum Mode {
         MODULE(new ModuleArgumentType()),
         PLAYER(new ExamplesArgumentType_3());
@@ -32,11 +27,11 @@ public final class AliasCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(buildAliasCommand(Mode.MODULE)).then(buildAliasCommand(Mode.PLAYER));
     }
 
-    public ArgumentBuilder<CommandSource, ?> buildAliasCommand(Mode mode) {
+    public ArgumentBuilder<CommandSourceStack, ?> buildAliasCommand(Mode mode) {
         return CommandFeature.literal(mode.name().toLowerCase()).then(CommandFeature.literal("set").then(CommandFeature.argument("target", mode.argumentType).then(CommandFeature.argument("alias", StringArgumentType.string()).executes(commandContext -> {
             String str = (String) commandContext.getArgument("alias", String.class);
             if (mode == Mode.MODULE) {

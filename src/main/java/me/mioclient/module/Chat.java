@@ -2,12 +2,9 @@ package me.mioclient.module;
 
 import me.mioclient.render.hud.ResizableHudElement;
 
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ChatComponent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Chat.class */
 public class Chat extends me.mioclient.module.HudModule {
     public Chat() {
         super("Chat", new String[0]);
@@ -18,7 +15,7 @@ public class Chat extends me.mioclient.module.HudModule {
         if (this.moduleListSearchHelper4.getMeasuredSize() == null) {
             return 0.0f;
         }
-        return ((this.moduleListSearchHelper4.getY() - (minecraftClient.getWindow().getScaledHeight() - Float.intBitsToFloat(1109393408))) / getScale()) + getSpeed();
+        return ((this.moduleListSearchHelper4.getY() - (minecraftClient.getWindow().getGuiScaledHeight() - Float.intBitsToFloat(1109393408))) / getScale()) + getSpeed();
     }
 
     public float getChatXOffset() {
@@ -29,20 +26,20 @@ public class Chat extends me.mioclient.module.HudModule {
     }
 
     public float getScale() {
-        return ((Double) minecraftClient.options.getChatScale().getValue()).floatValue();
+        return minecraftClient.options.chatScale().get().floatValue();
     }
 
     public float getSpeed() {
-        return ChatHud.getHeight(((Double) minecraftClient.options.getChatHeightUnfocused().getValue()).floatValue());
+        return ChatComponent.getHeight(minecraftClient.options.chatHeightUnfocused().get().floatValue());
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         super.renderContent(drawContext);
     }
 
     @Override // me.mioclient.module.HudModule
     public float[] getSize() {
-        return new float[]{(((Double) minecraftClient.options.getChatWidth().getValue()).floatValue() * Float.intBitsToFloat(1133248512)) + Float.intBitsToFloat(1109393408) + (Float.intBitsToFloat(1094713344) * getScale()), getSpeed() * getScale()};
+        return new float[]{(minecraftClient.options.chatWidth().get().floatValue() * Float.intBitsToFloat(1133248512)) + Float.intBitsToFloat(1109393408) + (Float.intBitsToFloat(1094713344) * getScale()), getSpeed() * getScale()};
     }
 }

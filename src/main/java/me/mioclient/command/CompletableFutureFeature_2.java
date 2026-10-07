@@ -5,24 +5,19 @@ import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.util.client.ChatUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.texture.ResourceTexture;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.renderer.texture.SimpleTexture;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.Identifier;
 import me.mioclient.mixin.ducks.DuckTextureManager;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CompletableFutureFeature_2.class */
 public class CompletableFutureFeature_2 extends CommandFeature {
     public static final byte[] byteArr = {-119, 80, 78, 71, 13, 10, 26, 10};
     public CompletableFuture<Void> completableFuture;
@@ -34,12 +29,12 @@ public class CompletableFutureFeature_2 extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.executes(commandContext -> {
             if (!this.completableFuture.isDone()) {
                 return 0;
             }
-            ChatUtils.sendMessage(Text.literal("Reloading Mio resources..."), ChatUtils.signatureOf(this));
+            ChatUtils.sendMessage(Component.literal("Reloading Mio resources..."), ChatUtils.signatureOf(this));
             this.completableFuture = CompletableFuture.runAsync(() -> {
                 HashSet<Identifier> hashSet = new HashSet<>();
                 for (Identifier identifier : ((DuckTextureManager) minecraftClient.getTextureManager()).getAllTextures().keySet()) {
@@ -53,8 +48,8 @@ public class CompletableFutureFeature_2 extends CommandFeature {
                     try {
                         readAllBytes = Files.readAllBytes(ConfigManager.path.resolve(identifier2.getPath()));
                     } catch (IOException | java.lang.RuntimeException e) {
-                        ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(e.getMessage()).format("Invalid Image! \u0001")).styled(style -> {
-                            return style.withFormatting(Formatting.RED);
+                        ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(e.getMessage()).format("Invalid Image! \u0001")).withStyle(style -> {
+                            return style.applyFormat(ChatFormatting.RED);
                         }), ChatUtils.createSignature(-999));
                         return;
                     }
@@ -66,14 +61,14 @@ public class CompletableFutureFeature_2 extends CommandFeature {
                             throw new java.lang.RuntimeException("File is not a png");
                         }
                     }
-                    minecraftClient.getTextureManager().destroyTexture(identifier2);
-                    minecraftClient.getTextureManager().registerTexture(identifier2, new ResourceTexture(identifier2));
+                    minecraftClient.getTextureManager().release(identifier2);
+                    minecraftClient.getTextureManager().register(identifier2, new SimpleTexture(identifier2));
                 });
                 ClientServices.killstreakSoundManager.reloadWorldRenderer();
             }, executorService);
             this.completableFuture.whenComplete((r4, th) -> {
-                ChatUtils.sendMessage(Text.literal("Reload complete!").styled(style -> {
-                    return style.withFormatting(Formatting.GREEN);
+                ChatUtils.sendMessage(Component.literal("Reload complete!").withStyle(style -> {
+                    return style.applyFormat(ChatFormatting.GREEN);
                 }), ChatUtils.signatureOf(this));
             });
             return 1;

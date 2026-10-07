@@ -10,23 +10,12 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.anim.ValueAnimator;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.gui.screen.ClickGuiScreen;
 import me.mioclient.gui.ClosableElement;
-import me.mioclient.gui.widget.ModuleButton;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
-import me.mioclient.util.anim.ValueAnimator;
 
 import me.mioclient.api.Setting;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.manager.ScissorStackManager;
-import me.mioclient.gui.widget.PanelComponent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SettingPresetSettingButton.class */
 public abstract class SettingPresetSettingButton<T> extends PanelComponent {
     public final ClosableElement presetHelper_2;
     public Setting<T> setting;
@@ -71,8 +60,8 @@ public abstract class SettingPresetSettingButton<T> extends PanelComponent {
         return z;
     }
 
-    public void renderScrolling(MatrixStack matrixStack, String str, java.lang.Runnable runnable) {
-        matrixStack.push();
+    public void renderScrolling(PoseStack matrixStack, String str, java.lang.Runnable runnable) {
+        matrixStack.pushPose();
         updateScroll(ClientTextRenderer.INSTANCE.getStringWidth(str));
         float f = -this.zoomHelper.getValue();
         boolean z = (f == 0.0f || (this instanceof PresetSettingPresetSettingButton)) ? false : true;
@@ -87,7 +76,7 @@ public abstract class SettingPresetSettingButton<T> extends PanelComponent {
             Shape2DRenderer.resetShadowOffset();
             ScissorStackManager.popClipRegion();
         }
-        matrixStack.pop();
+        matrixStack.popPose();
     }
 
     public void updateScroll(float f) {

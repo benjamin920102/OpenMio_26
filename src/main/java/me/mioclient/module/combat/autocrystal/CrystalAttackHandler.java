@@ -7,33 +7,58 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.event.EventBus;
 
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.misc.Swing;
 import me.mioclient.module.render.Hitmarker;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.Items;
-import net.minecraft.item.SwordItem;
-import net.minecraft.item.ToolItem;
-import net.minecraft.util.Hand;
-import me.mioclient.mode.combat.ScaffoldHelperMode;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Items;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CrystalAttackHandler.class */
 public class CrystalAttackHandler implements ClientAccessor {
-    public static final Swing swing = (Swing) ClientServices.moduleInjector.getModule(Swing.class);
-    public static AutoCrystal ac = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
-    public static Hitmarker hitmarker = (Hitmarker) ClientServices.moduleInjector.getModule(Hitmarker.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving swing/ac/hitmarker null. */
+    private static Swing swing;
+    private static AutoCrystal ac;
+    private static Hitmarker hitmarker;
+
+    public static Swing getSwing() {
+        if (swing == null && ClientServices.moduleInjector != null) {
+            try {
+                swing = (Swing) ClientServices.moduleInjector.getModule(Swing.class);
+            } catch (Exception e) {
+            }
+        }
+        return swing;
+    }
+
+    public static AutoCrystal getAc() {
+        if (ac == null && ClientServices.moduleInjector != null) {
+            try {
+                ac = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+            } catch (Exception e) {
+            }
+        }
+        return ac;
+    }
+
+    public static Hitmarker getHitmarker() {
+        if (hitmarker == null && ClientServices.moduleInjector != null) {
+            try {
+                hitmarker = (Hitmarker) ClientServices.moduleInjector.getModule(Hitmarker.class);
+            } catch (Exception e) {
+            }
+        }
+        return hitmarker;
+    }
     public final Stopwatch stopwatch = new Stopwatch();
     public long num;
     public int current;
@@ -62,66 +87,85 @@ public class CrystalAttackHandler implements ClientAccessor {
         if (this.current != -1 && !z) {
             return false;
         }
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         boolean isWeaknessSwapActive = isWeaknessSwapActive();
         this.current = i;
         PacketSender.sendInteractEntity(this.current);
-        Entity entityById = minecraftClient.world.getEntityById(i);
-        if (entityById != null && entityById.getWorld() != null && entityById != minecraftClient.player && entityById.getWorld().isClient && hitmarker.shouldTrackEntity(entityById) && (entityById instanceof EndCrystalEntity)) {
-            hitmarker.num = System.currentTimeMillis();
-            hitmarker.num2 = 255;
-            hitmarker.flag = true;
+        Entity entityById = minecraftClient.level.getEntity(i);
+        Hitmarker hitmarker_lcl = getHitmarker();
+        if (entityById != null && entityById.level() != null && entityById != minecraftClient.player && entityById.level().isClientSide() && hitmarker_lcl != null && hitmarker_lcl.shouldTrackEntity(entityById) && (entityById instanceof EndCrystal)) {
+            hitmarker_lcl.num = System.currentTimeMillis();
+            hitmarker_lcl.num2 = 255;
+            hitmarker_lcl.flag = true;
         }
-        Hand hand = minecraftClient.player.getOffHandStack().getItem() == Items.END_CRYSTAL ? Hand.OFF_HAND : Hand.MAIN_HAND;
-        if (!(entityById instanceof EndCrystalEntity) && entityById != null) {
-            hand = Hand.MAIN_HAND;
+        InteractionHand hand = minecraftClient.player.getOffhandItem().getItem() == Items.END_CRYSTAL ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        if (!(entityById instanceof EndCrystal) && entityById != null) {
+            hand = InteractionHand.MAIN_HAND;
         }
         do1117(hand);
         if (z) {
-            PacketSender.sendHandSwing(Hand.MAIN_HAND);
+            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
         } else {
-            minecraftClient.player.swingHand(hand);
+            minecraftClient.player.swing(hand);
         }
-        if (!isWeaknessSwapActive || ac.weakness.getValue() != ScaffoldHelperMode.SILENT) {
+        AutoCrystal ac_lcl = getAc();
+        if (ac_lcl == null || !isWeaknessSwapActive || ac_lcl.weakness.getValue() != ScaffoldHelperMode.SILENT) {
             return true;
         }
-        ac.incrementSwapCounter();
+        ac_lcl.incrementSwapCounter();
         InventoryUtils.selectSlot(i2);
         return true;
     }
 
     public boolean isInstantAttackEnabled() {
-        return ac.instant.getValue() != AutoCrystalMode.NONE;
+        AutoCrystal ac_lcl = getAc();
+        if (ac_lcl == null) {
+            return false;
+        }
+        return ac_lcl.instant.getValue() != AutoCrystalMode.NONE;
     }
 
     public int getAttackDelay() {
-        return ac.delay2.getValue().intValue();
+        AutoCrystal ac_lcl = getAc();
+        if (ac_lcl == null) {
+            return 0;
+        }
+        return ac_lcl.delay2.getValue().intValue();
     }
 
     public int get1116() {
-        return ac.ticksExisted.getValue().intValue();
+        AutoCrystal ac_lcl = getAc();
+        if (ac_lcl == null) {
+            return 0;
+        }
+        return ac_lcl.ticksExisted.getValue().intValue();
     }
 
-    public void do1117(Hand hand) {
-        if (!this.stopwatch.hasElapsedAndResetMs(200 + this.num) || hand != Hand.MAIN_HAND || swing.hand.getValue() == Swing.ScaffoldHelperMode.scaffoldHelperMode2 || swing.type.getValue() == Swing.MixinLivingEntityMode.VANILLA) {
+    public void do1117(InteractionHand hand) {
+        Swing swing_lcl = getSwing();
+        if (swing_lcl == null) {
             return;
         }
-        minecraftClient.player.resetLastAttackedTicks();
+        if (!this.stopwatch.hasElapsedAndResetMs(200 + this.num) || hand != InteractionHand.MAIN_HAND || swing_lcl.hand.getValue() == Swing.ScaffoldHelperMode.scaffoldHelperMode2 || swing_lcl.type.getValue() == Swing.MixinLivingEntityMode.VANILLA) {
+            return;
+        }
+        minecraftClient.player.resetAttackStrengthTicker();
         this.num = (long) (Math.random() * Double.longBitsToDouble(4643985272004935680L));
     }
 
     public boolean isWeaknessSwapActive() {
         int i;
-        if (ac.weakness.getValue() == ScaffoldHelperMode.NONE) {
+        AutoCrystal ac_lcl = getAc();
+        if (ac_lcl == null || ac_lcl.weakness.getValue() == ScaffoldHelperMode.NONE) {
             return false;
         }
-        if (!minecraftClient.player.hasStatusEffect(StatusEffects.WEAKNESS) || (minecraftClient.player.getMainHandStack().getItem() instanceof ToolItem) || (i = InventoryUtils.findInHotbar(itemStack -> {
-            return itemStack.getItem() instanceof SwordItem;
+        if (!minecraftClient.player.hasEffect(MobEffects.WEAKNESS) || minecraftClient.player.getMainHandItem().has(DataComponents.TOOL) || (i = InventoryUtils.findInHotbar(itemStack -> {
+            return itemStack.is(ItemTags.SWORDS);
         })) == -1) {
             return false;
         }
-        if (ac.weakness.getValue() == ScaffoldHelperMode.SILENT) {
-            ac.incrementSwapCounter();
+        if (ac_lcl.weakness.getValue() == ScaffoldHelperMode.SILENT) {
+            ac_lcl.incrementSwapCounter();
         }
         InventoryUtils.selectSlot(i);
         return true;

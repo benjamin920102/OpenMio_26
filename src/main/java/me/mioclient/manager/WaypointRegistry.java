@@ -7,9 +7,6 @@ import me.mioclient.util.registry.AbstractCollectionRegistry;
 import me.mioclient.util.world.Waypoint;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.world.Waypoint;
-import me.mioclient.util.registry.AbstractCollectionRegistry;
 
 import me.mioclient.event.EventBus;
 
@@ -21,10 +18,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.util.registry.CollectionRegistry;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/WaypointRegistry.class */
 public final class WaypointRegistry extends AbstractCollectionRegistry<Waypoint, List<Waypoint>> implements ClientAccessor, JsonConfigurable {
     public WaypointRegistry() {
         super(new ArrayList());
@@ -36,9 +30,9 @@ public final class WaypointRegistry extends AbstractCollectionRegistry<Waypoint,
             return Collections.emptyList();
         }
         return ((List<Waypoint>) this.registry).stream().filter(waypointsEnumSettingHelper -> {
-            return waypointsEnumSettingHelper.getServer().equalsIgnoreCase(minecraftClient.player.networkHandler.getServerInfo() == null ? "singleplayer" : minecraftClient.player.networkHandler.getServerInfo().address);
+            return waypointsEnumSettingHelper.getServer().equalsIgnoreCase(minecraftClient.player.connection.getServerData() == null ? "singleplayer" : minecraftClient.player.connection.getServerData().ip);
         }).sorted(Comparator.comparing(waypointsEnumSettingHelper2 -> {
-            return Double.valueOf(minecraftClient.player.squaredDistanceTo(waypointsEnumSettingHelper2.getX(), waypointsEnumSettingHelper2.getY(), waypointsEnumSettingHelper2.getZ()));
+            return Double.valueOf(minecraftClient.player.distanceToSqr(waypointsEnumSettingHelper2.getX(), waypointsEnumSettingHelper2.getY(), waypointsEnumSettingHelper2.getZ()));
         })).toList();
     }
 

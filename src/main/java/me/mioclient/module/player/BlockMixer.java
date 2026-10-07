@@ -7,14 +7,11 @@ import java.util.Random;
 import me.mioclient.api.Category;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.module.Module;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/BlockMixer.class */
 public class BlockMixer extends Module {
     public final Random random;
 
@@ -25,14 +22,14 @@ public class BlockMixer extends Module {
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem) {
+        if (minecraftClient.player.getMainHandItem().getItem() instanceof BlockItem) {
             switchToRandomBlock();
         }
     }
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if ((sendImmediatelyEvent.getPacket() instanceof PlayerInteractBlockC2SPacket) && (minecraftClient.player.getMainHandStack().getItem() instanceof BlockItem)) {
+        if ((sendImmediatelyEvent.getPacket() instanceof ServerboundUseItemOnPacket) && (minecraftClient.player.getMainHandItem().getItem() instanceof BlockItem)) {
             switchToRandomBlock();
         }
     }
@@ -40,7 +37,7 @@ public class BlockMixer extends Module {
     public void switchToRandomBlock() {
         ArrayList arrayList = new ArrayList();
         for (int i = 0; i < 9; i++) {
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i);
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i);
             if (!stack.isEmpty() && (stack.getItem() instanceof BlockItem)) {
                 arrayList.add(Integer.valueOf(i));
             }
@@ -48,6 +45,6 @@ public class BlockMixer extends Module {
         if (arrayList.size() < 2) {
             return;
         }
-        minecraftClient.player.getInventory().selectedSlot = ((Integer) arrayList.get(this.random.nextInt(arrayList.size()))).intValue();
+        minecraftClient.player.getInventory().setSelectedSlot(((Integer) arrayList.get(this.random.nextInt(arrayList.size()))).intValue());
     }
 }

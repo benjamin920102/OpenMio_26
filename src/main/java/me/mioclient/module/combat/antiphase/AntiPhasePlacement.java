@@ -3,31 +3,26 @@ package me.mioclient.module.combat.antiphase;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AntiPhasePlacement.class */
 public final class AntiPhasePlacement {
     public final BlockPos blockPos;
     public final Direction direction;
-    public final Box box;
+    public final AABB box;
 
-    public AntiPhasePlacement(BlockPos blockPos, Direction direction, Box box) {
+    public AntiPhasePlacement(BlockPos blockPos, Direction direction, AABB box) {
         this.blockPos = blockPos;
         this.direction = direction;
         this.box = box;
     }
 
-    public Vec3d getFaceCenter() {
-        Vec3d centerPos = this.blockPos.toCenterPos();
-        return centerPos.offset(this.direction, Double.longBitsToDouble(4602678819172646912L));
+    public Vec3 getFaceCenter() {
+        Vec3 centerPos = Vec3.atCenterOf(this.blockPos);
+        return centerPos.relative(this.direction, Double.longBitsToDouble(4602678819172646912L));
     }
-
-
-
 
     public BlockPos getBlockPos() {
         return this.blockPos;
@@ -37,7 +32,7 @@ public final class AntiPhasePlacement {
         return this.direction;
     }
 
-    public Box getBox() {
+    public AABB getBox() {
         return this.box;
     }
 }

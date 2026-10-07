@@ -4,8 +4,6 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.JsonConfigurable;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
 
 import me.mioclient.event.EventBus;
 
@@ -19,10 +17,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import me.mioclient.module.misc.ChatFilter;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChatFilterRegistry.class */
 public class ChatFilterRegistry implements ClientAccessor, JsonConfigurable {
     public static ChatFilter chatFilter = (ChatFilter) ClientServices.moduleInjector.getModule(ChatFilter.class);
     public final List<ChatFilterEntry> list = Collections.synchronizedList(new ArrayList());
@@ -116,7 +112,7 @@ public class ChatFilterRegistry implements ClientAccessor, JsonConfigurable {
         synchronized (this.list) {
             arrayList = new ArrayList();
             for (ChatFilterEntry data : this.list) {
-                arrayList.add("%s%s%s: \"%s\"".formatted(Formatting.GRAY, data.getId(), Formatting.RESET, data.getFilter()));
+                arrayList.add("%s%s%s: \"%s\"".formatted(ChatFormatting.GRAY, data.getId(), ChatFormatting.RESET, data.getFilter()));
             }
         }
         return arrayList;

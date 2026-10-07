@@ -4,11 +4,9 @@ import com.google.gson.JsonElement;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EntityListObjectSetting.class */
 public class EntityListObjectSetting<T> extends ObjectSetting<T> {
     public final Registry<T> registry;
 
@@ -26,16 +24,20 @@ public class EntityListObjectSetting<T> extends ObjectSetting<T> {
 
     @Override // me.mioclient.setting.ObjectSetting
     public T fromStringObj(String str) {
-        return (T) this.registry.getOrEmpty(Identifier.of(str)).orElse(null);
+        Identifier id = Identifier.tryParse(str);
+        if (id == null) {
+            return null;
+        }
+        return (T) this.registry.getOptional(id).orElse(null);
     }
 
     @Override // me.mioclient.setting.ObjectSetting
     public String toStringObj(T t) {
-        Identifier id = this.registry.getId(t);
+        Identifier id = this.registry.getKey(t);
         if (id == null) {
             return null;
         }
-        return id.toShortTranslationKey();
+        return id.toString();
     }
 
     @Override // me.mioclient.setting.ObjectSetting
@@ -50,7 +52,8 @@ public class EntityListObjectSetting<T> extends ObjectSetting<T> {
             Iterator it = jsonElement.getAsJsonArray().iterator();
             while (it.hasNext()) {
                 JsonElement jsonElement2 = (JsonElement) it.next();
-                ((Set) getValue()).add(this.registry.get(Identifier.of(jsonElement2.getAsString())));
+                Identifier id2 = Identifier.tryParse(jsonElement2.getAsString());
+                ((Set) getValue()).add(id2 == null ? null : this.registry.getOptional(id2).orElse(null));
             }
         }
     }

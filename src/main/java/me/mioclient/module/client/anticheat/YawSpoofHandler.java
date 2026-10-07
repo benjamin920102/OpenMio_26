@@ -9,20 +9,12 @@ import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.event.events.network.PacketSendEvent;
-import me.mioclient.mixin.ducks.DuckPlayerMoveC2SPacket;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import me.mioclient.mode.combat.CrystalRotationMode;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/YawSpoofHandler.class */
 public final class YawSpoofHandler implements ClientAccessor {
     public final AntiCheat antiCheat;
     public boolean flag;
@@ -34,33 +26,44 @@ public final class YawSpoofHandler implements ClientAccessor {
     public void onUpdate() {
         if (is328()) {
             if (this.antiCheat.rotations.getValue() == CrystalRotationMode.SILENT) {
-                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYaw(), minecraftClient.player.getPitch(), minecraftClient.player.isOnGround());
+                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYRot(), minecraftClient.player.getXRot(), minecraftClient.player.onGround());
             }
             setYawSpoofActive(true);
         }
     }
 
     public void spoofYawOnMovePacket(PacketSendEvent sendImmediatelyEvent) {
-        DuckPlayerMoveC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerMoveC2SPacket ? (DuckPlayerMoveC2SPacket)(sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerMoveC2SPacket) {
-            DuckPlayerMoveC2SPacket duckPlayerMoveC2SPacket = (DuckPlayerMoveC2SPacket)((PlayerMoveC2SPacket) packet904);
-            if (shouldSpoofYaw((PlayerMoveC2SPacket) duckPlayerMoveC2SPacket)) {
-                duckPlayerMoveC2SPacket.setYaw(((PlayerMoveC2SPacket) duckPlayerMoveC2SPacket).getYaw(0.0f) + Float.intBitsToFloat(1359354950));
-            }
+        // 26.2 port (verified): ServerboundMovePlayerPacket is immutable — cancel + resend
+        // with spoofed yaw, preserving the original subtype (NoFall pattern).
+        if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket pkt)) {
+            return;
+        }
+        if (!shouldSpoofYaw(pkt)) {
+            return;
+        }
+        net.minecraft.client.player.LocalPlayer pl = minecraftClient.player;
+        float spoofedYaw = pkt.getYRot(pl.getYRot()) + Float.intBitsToFloat(1359354950);
+        boolean onGround = pkt.isOnGround();
+        boolean hc = pkt.horizontalCollision();
+        sendImmediatelyEvent.cancel();
+        if (pkt instanceof ServerboundMovePlayerPacket.PosRot) {
+            pl.connection.send(new ServerboundMovePlayerPacket.PosRot(pkt.getX(pl.getX()), pkt.getY(pl.getY()), pkt.getZ(pl.getZ()), spoofedYaw, pkt.getXRot(pl.getXRot()), onGround, hc));
+        } else if (pkt instanceof ServerboundMovePlayerPacket.Rot) {
+            pl.connection.send(new ServerboundMovePlayerPacket.Rot(spoofedYaw, pkt.getXRot(pl.getXRot()), onGround, hc));
         }
     }
 
     public boolean is328() {
-        return shouldSpoofYaw((PlayerMoveC2SPacket) null);
+        return shouldSpoofYaw((ServerboundMovePlayerPacket) null);
     }
 
-    public boolean shouldSpoofYaw(PlayerMoveC2SPacket playerMoveC2SPacket) {
+    public boolean shouldSpoofYaw(ServerboundMovePlayerPacket playerMoveC2SPacket) {
         if ((!MovementUtils.is2181() && ClientServices.feetPlaceHelper.getEffectiveSpeed() < Double.longBitsToDouble(4617315517961601024L)) || !this.antiCheat.f2b2t.getValue().booleanValue() || PlayerUtils.isReallyFallFlying()) {
             return false;
         }
         if (playerMoveC2SPacket != null) {
-            boolean z = (minecraftClient.currentScreen instanceof HandledScreen) && minecraftClient.player.currentScreenHandler == minecraftClient.player.playerScreenHandler;
-            if (!playerMoveC2SPacket.changesLook() && !z) {
+            boolean z = (minecraftClient.gui.screen() instanceof AbstractContainerScreen) && minecraftClient.player.containerMenu == minecraftClient.player.inventoryMenu;
+            if (!playerMoveC2SPacket.hasRotation() && !z) {
                 return false;
             }
         }

@@ -2,8 +2,6 @@ package me.mioclient.event.events.client;
 
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/EnableEvent.class */
 public final class EnableEvent {
     public final Module module;
 

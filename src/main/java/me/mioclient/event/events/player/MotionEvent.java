@@ -2,10 +2,6 @@ package me.mioclient.event.events.player;
 
 import me.mioclient.mode.combat.KeyPearlMode;
 
-import me.mioclient.mode.combat.KeyPearlMode;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/MotionEvent.class */
 public final class MotionEvent extends me.mioclient.event.Event {
     public final KeyPearlMode keyPearlMode;
     public final double val;

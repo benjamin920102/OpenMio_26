@@ -3,13 +3,8 @@ package me.mioclient.command;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.inventory.SlotPair;
 
-import me.mioclient.util.inventory.SlotPair;
-import me.mioclient.util.inventory.InventoryUtils;
+import net.minecraft.world.item.Item;
 
-import net.minecraft.item.Item;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SelectSlotAction.class */
 public class SelectSlotAction implements ItemSwapHandler {
     @Override // me.mioclient.command.ItemSwapHandler
     public void swapForward(SlotPair data_4) {
@@ -23,6 +18,6 @@ public class SelectSlotAction implements ItemSwapHandler {
 
     @Override // me.mioclient.command.ItemSwapHandler
     public SlotPair getSlotPair(Item item) {
-        return new SlotPair(InventoryUtils.findInHotbar(item), minecraftClient.player.getInventory().selectedSlot);
+        return new SlotPair(InventoryUtils.findInHotbar(item), minecraftClient.player.getInventory().getSelectedSlot());
     }
 }

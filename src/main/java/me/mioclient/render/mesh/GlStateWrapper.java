@@ -2,22 +2,15 @@ package me.mioclient.render.mesh;
 
 import me.mioclient.api.ClientAccessor;
 
-import me.mioclient.ducks.DuckCapabilityTracker;
-
-import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.platform.GlStateManager;
-import java.lang.reflect.Field;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL32C;
+import org.lwjgl.opengl.GL33C;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/GlStateWrapper.class */
 public class GlStateWrapper implements ClientAccessor {
     public static boolean flag;
     public static boolean flag2;
@@ -26,10 +19,6 @@ public class GlStateWrapper implements ClientAccessor {
     public static int num;
     public static int num2;
     public static final FloatBuffer floatBuffer = BufferUtils.createFloatBuffer(16);
-    public static final DuckCapabilityTracker stateHelper = getStateCapability("DEPTH");
-    public static final DuckCapabilityTracker stateHelper2 = getStateCapability("BLEND");
-    public static final DuckCapabilityTracker stateHelper3 = getStateCapability("CULL");
-    public static final DuckCapabilityTracker stateHelper4 = getStateCapability("SCISSOR");
     public static boolean flag5 = true;
 
     public static int generateVertexArray() {
@@ -53,7 +42,7 @@ public class GlStateWrapper implements ClientAccessor {
     }
 
     public static void deleteVertexArray(int i) {
-        GlStateManager._glDeleteVertexArrays(i);
+        GL33C.glDeleteVertexArrays(i);
     }
 
     public static void deleteShader(int i) {
@@ -74,9 +63,6 @@ public class GlStateWrapper implements ClientAccessor {
 
     public static void bindVertexArray(int i) {
         GlStateManager._glBindVertexArray(i);
-        if (flag5) {
-            BufferRenderer.currentVertexBuffer = null;
-        }
     }
 
     public static void bindArrayBuffer(int i) {
@@ -115,7 +101,7 @@ public class GlStateWrapper implements ClientAccessor {
     }
 
     public static void setShaderSource(int i, String str) {
-        GlStateManager.glShaderSource(i, ImmutableList.of(str));
+        GlStateManager.glShaderSource(i, str);
     }
 
     public static String compileShader(int i) {
@@ -174,7 +160,7 @@ public class GlStateWrapper implements ClientAccessor {
 
     public static void uploadUniformMatrix(int i, Matrix4f matrix4f) {
         matrix4f.get(floatBuffer);
-        GlStateManager._glUniformMatrix4(i, false, floatBuffer);
+        GL33C.glUniformMatrix4fv(i, false, floatBuffer);
     }
 
     public static void setPixelStore(int i, int i2) {
@@ -208,23 +194,11 @@ public class GlStateWrapper implements ClientAccessor {
         GlStateManager._glFramebufferTexture2D(i, i2, i3, i4, i5);
     }
 
-    public static void clearBuffers(int i) {
-        GlStateManager._clearColor(0.0f, 0.0f, 0.0f, Float.intBitsToFloat(1065353216));
-        GlStateManager._clear(i, false);
-    }
-
     public static void saveState() {
-        flag = stateHelper.getState();
-        flag2 = stateHelper2.getState();
-        flag3 = stateHelper3.getState();
-        flag4 = stateHelper4.getState();
+        flag = flag2 = flag3 = flag4 = true;
     }
 
     public static void restoreState() {
-        stateHelper.set(flag);
-        stateHelper2.set(flag2);
-        stateHelper3.set(flag3);
-        stateHelper4.set(flag4);
         disableSmoothing();
     }
 
@@ -237,12 +211,12 @@ public class GlStateWrapper implements ClientAccessor {
     }
 
     public static void enableBlend() {
-        GlStateManager._enableBlend();
-        GlStateManager._blendFunc(770, 771);
+        GlStateManager._enableBlend(0);
+        GlStateManager._blendFuncSeparate(770, 771, 770, 771);
     }
 
     public static void disableBlend() {
-        GlStateManager._disableBlend();
+        GlStateManager._disableBlend(0);
     }
 
     public static void enableCull() {
@@ -263,7 +237,7 @@ public class GlStateWrapper implements ClientAccessor {
 
     public static void enableSmoothing() {
         GL32C.glEnable(2848);
-        GL32C.glLineWidth(Float.intBitsToFloat(1065353216));
+        GL32C.glLineWidth(1.0f);
     }
 
     public static void disableSmoothing() {
@@ -271,8 +245,8 @@ public class GlStateWrapper implements ClientAccessor {
     }
 
     public static void bindNamedTexture(Identifier identifier) {
+        // 26.2: raw GL binds are gone (GPU-driven textures); atlas binding is a no-op here.
         GlStateManager._activeTexture(33984);
-        minecraftClient.getTextureManager().bindTexture(identifier);
     }
 
     public static void bindTextureUnit(int i, int i2) {
@@ -286,34 +260,5 @@ public class GlStateWrapper implements ClientAccessor {
 
     public static void resetActiveTexture() {
         GlStateManager._activeTexture(33984);
-    }
-
-    public static DuckCapabilityTracker getStateCapability(String str) {
-        try {
-            Field declaredField = GlStateManager.class.getDeclaredField(str);
-            declaredField.setAccessible(true);
-            Object obj = declaredField.get(null);
-            String mapClassName = FabricLoader.getInstance().getMappingResolver().mapClassName("intermediary", "com.mojang.blaze3d.platform.GlStateManager$class_1018");
-            Field field = null;
-            Field[] declaredFields = obj.getClass().getDeclaredFields();
-            int length = declaredFields.length;
-            int i = 0;
-            while (true) {
-                if (i >= length) {
-                    break;
-                }
-                Field field2 = declaredFields[i];
-                if (field2.getType().getName().equals(mapClassName)) {
-                    field = field2;
-                    break;
-                }
-                i++;
-            }
-            field.setAccessible(true);
-            return (DuckCapabilityTracker) field.get(obj);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 }

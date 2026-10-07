@@ -11,8 +11,6 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ExamplesArgumentType_2.class */
 public class ExamplesArgumentType_2 implements com.mojang.brigadier.arguments.ArgumentType<Boolean> {
     public static final Collection<String> collection = Arrays.asList("true", "false", "toggle");
     public final BooleanSetting booleanSetting;

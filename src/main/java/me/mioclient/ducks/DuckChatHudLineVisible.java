@@ -2,20 +2,17 @@ package me.mioclient.ducks;
 
 import me.mioclient.util.anim.AnimationProgress;
 
-import me.mioclient.util.anim.AnimationProgress;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.OrderedText;
+import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.util.FormattedCharSequence;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckChatHudLineVisible.class */
 public interface DuckChatHudLineVisible {
-    MessageSignatureData getSignature();
+    MessageSignature getSignature();
 
-    void setSignature(MessageSignatureData messageSignatureData);
+    void setSignature(MessageSignature MessageSignature);
 
-    OrderedText getContent();
+    FormattedCharSequence getContent();
 
-    void setContent(OrderedText orderedText);
+    void setContent(FormattedCharSequence orderedText);
 
     AnimationProgress getProgress();
 

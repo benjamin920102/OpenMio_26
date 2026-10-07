@@ -2,8 +2,6 @@ package me.mioclient.util.client;
 
 import me.mioclient.loader.ModInitializerBridge;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MusicTrackState.class */
 public class MusicTrackState {
     public static int num;
     public static String string;

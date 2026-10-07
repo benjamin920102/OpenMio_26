@@ -8,26 +8,19 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.player.MovementUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.player.MovementUtils;
-
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.MoveEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.mixin.ducks.DuckPlayerMoveC2SPacket;
+import me.mioclient.network.PacketSender;
 import me.mioclient.module.movement.ElytraFly;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.mode.combat.KeyPearlMode;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BounceElytraFlight.class */
 public class BounceElytraFlight extends ElytraFlyModeBase {
     public long num;
     public boolean flag;
@@ -40,7 +33,7 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
 
     @Override // me.mioclient.module.movement.elytrafly.ElytraFlyModeBase
     public void onEnable() {
-        if (minecraftClient.player.isFallFlying() && !minecraftClient.player.isOnGround()) {
+        if (minecraftClient.player.isFallFlying() && !minecraftClient.player.onGround()) {
             this.flag = true;
             minecraftClient.player.stopFallFlying();
         }
@@ -51,14 +44,14 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
 
     @Override // me.mioclient.module.movement.elytrafly.ElytraFlyModeBase
     public void handleTick(TickEvent tickEvent) {
-        if (minecraftClient.player.isOnGround()) {
+        if (minecraftClient.player.onGround()) {
             this.flag = false;
         } else if (minecraftClient.player.isFallFlying()) {
             this.flag = true;
         }
-        boolean z = minecraftClient.player.input.jumping;
+        boolean z = minecraftClient.player.input.keyPresses.jump();
         if (this.elytraFly.takeoff.getValue() == ElytraFly.ElytraFlyMode_2.STRICT) {
-            z = !minecraftClient.player.isOnGround() && minecraftClient.player.getVelocity().getY() < Double.longBitsToDouble(4591870180066957722L);
+            z = !minecraftClient.player.onGround() && minecraftClient.player.getDeltaMovement().y < Double.longBitsToDouble(4591870180066957722L);
         } else {
             ClientServices.holeSnapHelper.releaseTickRate(this.elytraFly);
         }
@@ -70,7 +63,7 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
 
     @Override // me.mioclient.module.movement.elytrafly.ElytraFlyModeBase
     public void handleMove(MoveEvent moveEvent) {
-        if (!minecraftClient.player.isFallFlying() && this.flag && !minecraftClient.player.horizontalCollision && minecraftClient.player.getVelocity().getY() < 0.0d) {
+        if (!minecraftClient.player.isFallFlying() && this.flag && !minecraftClient.player.horizontalCollision && minecraftClient.player.getDeltaMovement().y < 0.0d) {
             this.flag2 = true;
         }
         if (minecraftClient.player.isFallFlying()) {
@@ -78,16 +71,16 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
                 this.num = System.currentTimeMillis();
             }
             float floatValue = this.elytraFly.speed2.getValue().floatValue();
-            double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, MathHelper.lerp(MathHelper.clamp(((float) (System.currentTimeMillis() - this.num)) / Float.intBitsToFloat(1140457472), 0.0f, Float.intBitsToFloat(1065353216)), this.elytraFly.start.getValue().floatValue(), floatValue));
-            minecraftClient.player.setVelocity(doubleArray2507[0], 0.0d, doubleArray2507[1]);
+            double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, Mth.lerp(Mth.clamp(((float) (System.currentTimeMillis() - this.num)) / Float.intBitsToFloat(1140457472), 0.0f, Float.intBitsToFloat(1065353216)), this.elytraFly.start.getValue().floatValue(), floatValue));
+            minecraftClient.player.setDeltaMovement(doubleArray2507[0], 0.0d, doubleArray2507[1]);
             moveEvent.setY(0.0d);
-            minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, 0.0d));
+            minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, 0.0d));
         }
     }
 
     @Override // me.mioclient.module.movement.elytrafly.ElytraFlyModeBase
     public void handlePacketReceive(PacketReceiveEvent channelRead0Event) {
-        if ((channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) && minecraftClient.player.isFallFlying() && !minecraftClient.player.isOnGround()) {
+        if ((channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) && minecraftClient.player.isFallFlying() && !minecraftClient.player.onGround()) {
             this.num = System.currentTimeMillis();
             minecraftClient.player.stopFallFlying();
         }
@@ -95,13 +88,25 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
 
     @Override // me.mioclient.module.movement.elytrafly.ElytraFlyModeBase
     public void handlePacketSend(PacketSendEvent sendImmediatelyEvent) {
-        DuckPlayerMoveC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerMoveC2SPacket ? (DuckPlayerMoveC2SPacket)(sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerMoveC2SPacket) {
-            DuckPlayerMoveC2SPacket duckPlayerMoveC2SPacket = (DuckPlayerMoveC2SPacket)((PlayerMoveC2SPacket) packet904);
-            if (!minecraftClient.player.isFallFlying() || minecraftClient.player.isOnGround() || minecraftClient.player.getVelocity().getY() >= Double.longBitsToDouble(4591870180066957722L) || !MovementUtils.is2181()) {
-                return;
-            }
-            duckPlayerMoveC2SPacket.setPitch(Float.intBitsToFloat(-1063256064));
+        if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket move)) {
+            return;
+        }
+        if (!minecraftClient.player.isFallFlying() || minecraftClient.player.onGround() || minecraftClient.player.getDeltaMovement().y >= Double.longBitsToDouble(4591870180066957722L) || !MovementUtils.is2181()) {
+            return;
+        }
+        // 26.2 MojMap: ServerboundMovePlayerPacket is IMMUTABLE — cancel + resend with modified XRot
+        sendImmediatelyEvent.cancel();
+        float newXRot = Float.intBitsToFloat(-1063256064);
+        boolean og = move.isOnGround();
+        boolean hc = move.horizontalCollision();
+        if (move.hasPosition() && move.hasRotation()) {
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.PosRot(new Vec3(move.getX(0.0d), move.getY(0.0d), move.getZ(0.0d)), move.getYRot(0.0f), newXRot, og, hc));
+        } else if (move.hasPosition()) {
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.Pos(new Vec3(move.getX(0.0d), move.getY(0.0d), move.getZ(0.0d)), og, hc));
+        } else if (move.hasRotation()) {
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.Rot(move.getYRot(0.0f), newXRot, og, hc));
+        } else {
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.StatusOnly(og, hc));
         }
     }
 
@@ -111,6 +116,7 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
             return;
         }
         boolean z = false;
+        // 26.2: MotionEvent.onGround -> isOnGround, setYRot/getYRot -> setYaw/getYaw, setXRot/getXRot -> setPitch/getPitch
         if (this.elytraFly.hasElytra() && !motionEvent.isOnGround()) {
             if (!minecraftClient.player.isFallFlying()) {
                 z = true;
@@ -124,8 +130,8 @@ public class BounceElytraFlight extends ElytraFlyModeBase {
             }
         }
         if (z) {
-            motionEvent.setYaw(motionEvent.getYaw() + (minecraftClient.player.age % 2 == 0 ? -2 : 2));
-            motionEvent.setPitch(motionEvent.getPitch() + (minecraftClient.player.age % 2 == 0 ? -2 : 2));
+            motionEvent.setYaw(motionEvent.getYaw() + (minecraftClient.player.tickCount % 2 == 0 ? -2 : 2));
+            motionEvent.setPitch(motionEvent.getPitch() + (minecraftClient.player.tickCount % 2 == 0 ? -2 : 2));
         }
     }
 

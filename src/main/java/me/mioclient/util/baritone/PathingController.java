@@ -1,10 +1,7 @@
 package me.mioclient.util.baritone;
 
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.module.Feature;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PathingController.class */
 public interface PathingController {
     void addPauseRequest(me.mioclient.module.Feature feature);
 

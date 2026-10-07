@@ -3,8 +3,6 @@ package me.mioclient.module.render.tooltips;
 import java.io.DataOutput;
 import org.jetbrains.annotations.NotNull;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TooltipsDataOutput.class */
 public class ByteCountingOutput implements DataOutput {
     public int num;
 

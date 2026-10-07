@@ -2,10 +2,6 @@ package me.mioclient.module.render;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import java.awt.Color;
 import java.util.Calendar;
 import me.mioclient.api.Category;
@@ -13,17 +9,15 @@ import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.biome.Biome;
 import me.mioclient.ducks.DuckSimpleOption;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience.class */
 public class Ambience extends Module {
     public Setting<MixinEntityRendererMode> brightness = add(new EnumSetting<>("Brightness", MixinEntityRendererMode.GAMMA));
     public Setting<Color> color = add(new ColorSetting("Color", new Color(-1, true), v -> this.brightness.getValue() == Ambience.MixinEntityRendererMode.SCREEN));
@@ -37,8 +31,7 @@ public class Ambience extends Module {
     public Setting<Float> amount = add(new NumberSetting<>("Amount", 1.0f, 0.0f, 1.0f));
     public double val;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience$AmbiencePredicateMode.class */
+    
     public enum AmbiencePredicateMode implements NamedValue {
         CLEAR("Clear", Biome.Precipitation.NONE),
         SNOW("Snow", Biome.Precipitation.SNOW),
@@ -63,8 +56,7 @@ public class Ambience extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Ambience$MixinEntityRendererMode.class */
+    
     public enum MixinEntityRendererMode implements NamedValue {
         SCREEN("Screen"),
         GAMMA("Gamma"),
@@ -87,22 +79,22 @@ public class Ambience extends Module {
     public Ambience() {
         super("Ambience", "Changes several ambient things.", Category.RENDER, new String[0]);
         this.lightLevel.setChangeCallback(() -> {
-            if (this.brightness.getValue() != MixinEntityRendererMode.SKY || minecraftClient.world == null) {
+            if (this.brightness.getValue() != MixinEntityRendererMode.SKY || minecraftClient.level == null) {
                 return;
             }
-            minecraftClient.worldRenderer.reload();
+            minecraftClient.levelRenderer.sectionOcclusionGraph().invalidate();
         });
         this.brightness.setChangeCallback(() -> {
             if (isNotInGame()) {
                 return;
             }
-            if (minecraftClient.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
-                if (minecraftClient.player.getStatusEffect(StatusEffects.NIGHT_VISION).getAmplifier() == 68) {
-                    minecraftClient.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            if (minecraftClient.player.hasEffect(MobEffects.NIGHT_VISION)) {
+                if (minecraftClient.player.getEffect(MobEffects.NIGHT_VISION).getAmplifier() == 68) {
+                    minecraftClient.player.removeEffect(MobEffects.NIGHT_VISION);
                 }
             }
             if (this.brightness.getValue() != MixinEntityRendererMode.GAMMA) {
-                ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
+                ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.gamma()).forceSetValue(Double.valueOf(this.val));
             }
         });
         setDrawn(false);
@@ -110,24 +102,24 @@ public class Ambience extends Module {
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        this.val = ((Double) minecraftClient.options.getGamma().getValue()).doubleValue();
+        this.val = ((Double) minecraftClient.options.gamma().get()).doubleValue();
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
         if (!isNotInGame()) {
-            minecraftClient.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            minecraftClient.player.removeEffect(MobEffects.NIGHT_VISION);
         }
-        ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(this.val));
+        ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.gamma()).forceSetValue(Double.valueOf(this.val));
     }
 
     @Override // me.mioclient.module.Module
     public void onToggle() {
-        if (minecraftClient.worldRenderer == null) {
+        if (minecraftClient.levelRenderer == null) {
             return;
         }
         if (this.brightness.getValue() == MixinEntityRendererMode.SKY || this.brightness.getValue() == MixinEntityRendererMode.SCREEN) {
-            minecraftClient.worldRenderer.reload();
+            minecraftClient.levelRenderer.sectionOcclusionGraph().invalidate();
         }
     }
 
@@ -138,16 +130,15 @@ public class Ambience extends Module {
         }
         if (this.worldTime.getValue().booleanValue()) {
             long j = getWorldTime();
-            minecraftClient.world.setTime(j);
-            minecraftClient.world.setTimeOfDay(j);
+            ((net.minecraft.client.multiplayer.ClientLevel.ClientLevelData) minecraftClient.level.getLevelData()).setGameTime(j);
         }
         if (this.brightness.getValue() == MixinEntityRendererMode.GAMMA) {
-            ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getGamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
+            ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.gamma()).forceSetValue(Double.valueOf(Double.longBitsToDouble(4652007308841189376L)));
         } else if (this.brightness.getValue() == MixinEntityRendererMode.POTION) {
-            if (minecraftClient.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
+            if (minecraftClient.player.hasEffect(MobEffects.NIGHT_VISION)) {
                 return;
             }
-            minecraftClient.player.addStatusEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, -1, 68));
+            minecraftClient.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 68));
         }
     }
 

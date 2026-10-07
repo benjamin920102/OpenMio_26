@@ -1,11 +1,9 @@
 package me.mioclient.mode.client;
 
 import java.util.function.Supplier;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_5.class */
 public enum CursorType {
     STANDARD(() -> {
         return Long.valueOf(GLFW.glfwCreateStandardCursor(221185));
@@ -36,7 +34,7 @@ public enum CursorType {
         if (this == current) {
             return;
         }
-        GLFW.glfwSetCursor(MinecraftClient.getInstance().getWindow().getHandle(), getCursorHandle());
+        GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().handle(), getCursorHandle());
         current = this;
     }
 }

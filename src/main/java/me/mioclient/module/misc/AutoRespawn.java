@@ -5,12 +5,9 @@ import me.mioclient.util.time.Stopwatch;
 import me.mioclient.api.Category;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.DeathScreen;
+import net.minecraft.client.gui.screens.DeathScreen;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AutoRespawn.class */
 public class AutoRespawn extends Module {
     public final Stopwatch stopwatch;
 
@@ -22,8 +19,8 @@ public class AutoRespawn extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        if ((minecraftClient.currentScreen instanceof DeathScreen) && this.stopwatch.hasElapsedMs(150L)) {
-            minecraftClient.player.requestRespawn();
+        if ((minecraftClient.gui.screen() instanceof DeathScreen) && this.stopwatch.hasElapsedMs(150L)) {
+            minecraftClient.player.respawn();
             this.stopwatch.reset();
         }
     }

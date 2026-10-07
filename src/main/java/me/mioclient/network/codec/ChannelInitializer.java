@@ -2,8 +2,6 @@ package me.mioclient.network.codec;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -12,8 +10,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChannelInitializer.class */
 public class ChannelInitializer extends io.netty.channel.ChannelInitializer<SocketChannel> {
     /* renamed from: do1825, reason: merged with bridge method [inline-methods] */
     public void initChannel(SocketChannel socketChannel) {

@@ -2,18 +2,16 @@ package me.mioclient.event.events.network;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.level.chunk.LevelChunk;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/LoadChunkFromPacketEvent.class */
 public class LoadChunkFromPacketEvent extends Event {
-    public final WorldChunk worldChunk;
+    public final LevelChunk worldChunk;
 
-    public LoadChunkFromPacketEvent(WorldChunk worldChunk) {
+    public LoadChunkFromPacketEvent(LevelChunk worldChunk) {
         this.worldChunk = worldChunk;
     }
 
-    public WorldChunk getChunk() {
+    public LevelChunk getChunk() {
         return this.worldChunk;
     }
 }

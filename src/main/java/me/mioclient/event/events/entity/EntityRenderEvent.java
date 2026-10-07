@@ -2,23 +2,20 @@ package me.mioclient.event.events.entity;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EntityEvent_2.class */
 public class EntityRenderEvent extends Event {
     public Entity entity;
-    public MatrixStack matrixStack;
-    public VertexConsumerProvider vertexConsumerProvider;
+    public PoseStack matrixStack;
+    public SubmitNodeCollector vertexConsumerProvider;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/EntityEvent_2$Inner.class */
+    
     public static class Inner extends EntityRenderEvent {
         public static final Inner inner = new Inner();
 
-        public static Inner of(Entity entity, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider) {
+        public static Inner of(Entity entity, PoseStack matrixStack, SubmitNodeCollector vertexConsumerProvider) {
             inner.entity = entity;
             inner.matrixStack = matrixStack;
             inner.vertexConsumerProvider = vertexConsumerProvider;
@@ -27,12 +24,11 @@ public class EntityRenderEvent extends Event {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/EntityEvent_2$Inner_2.class */
+    
     public static class Inner_2 extends EntityRenderEvent {
         public static final Inner_2 inner_2 = new Inner_2();
 
-        public static Inner_2 getInner_21412(Entity entity, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider) {
+        public static Inner_2 getInner_21412(Entity entity, PoseStack matrixStack, SubmitNodeCollector vertexConsumerProvider) {
             inner_2.entity = entity;
             inner_2.matrixStack = matrixStack;
             inner_2.vertexConsumerProvider = vertexConsumerProvider;
@@ -45,11 +41,11 @@ public class EntityRenderEvent extends Event {
         return this.entity;
     }
 
-    public MatrixStack getMatrixStack() {
+    public PoseStack getMatrixStack() {
         return this.matrixStack;
     }
 
-    public VertexConsumerProvider getVertexConsumerProvider() {
+    public SubmitNodeCollector getVertexConsumerProvider() {
         return this.vertexConsumerProvider;
     }
 }

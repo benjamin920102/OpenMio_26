@@ -6,18 +6,11 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.util.anim.AnimationProgress;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
-
 import java.awt.Color;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.api.Setting;
-import me.mioclient.util.anim.AnimationProgress;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Lag.class */
 public class Lag extends me.mioclient.module.HudModule {
     public Setting<Color> setting;
     public final AnimationProgress progress;
@@ -30,7 +23,7 @@ public class Lag extends me.mioclient.module.HudModule {
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         String string773 = getBindString();
         this.progress.animateToggle(string773 != null);
         if (string773 == null) {
@@ -46,7 +39,7 @@ public class Lag extends me.mioclient.module.HudModule {
     }
 
     public String getBindString() {
-        if ((Math.max(System.currentTimeMillis() - ClientServices.holeSnapRenderHelper.getLastPacketTime(), 0L) <= 1000 || minecraftClient.isInSingleplayer()) && !isInHudEditor()) {
+        if ((Math.max(System.currentTimeMillis() - ClientServices.holeSnapRenderHelper.getLastPacketTime(), 0L) <= 1000 || minecraftClient.hasSingleplayerServer()) && !isInHudEditor()) {
             return null;
         }
         return "The server is not responding for %.1fs".formatted(Float.valueOf(((float) (System.currentTimeMillis() - ClientServices.holeSnapRenderHelper.getLastPacketTime())) / Float.intBitsToFloat(1148846080)));

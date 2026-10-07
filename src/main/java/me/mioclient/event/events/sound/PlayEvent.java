@@ -2,10 +2,8 @@ package me.mioclient.event.events.sound;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/PlayEvent.class */
 public final class PlayEvent extends Event {
     public final SoundInstance soundInstance;
 

@@ -4,15 +4,11 @@ import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.movement.Speed;
-import me.mioclient.mode.combat.KeyPearlMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedModeHandler.class */
 public abstract class SpeedModeHandler implements ClientAccessor {
     public final Speed speed;
     public final double val = Double.longBitsToDouble(4598847156609680094L);
@@ -34,8 +30,8 @@ public abstract class SpeedModeHandler implements ClientAccessor {
             this.num = 4;
             this.val2 = 0.0d;
         }
-        double x = minecraftClient.player.getX() - minecraftClient.player.prevX;
-        double z = minecraftClient.player.getZ() - minecraftClient.player.prevZ;
+        double x = minecraftClient.player.getX() - minecraftClient.player.xo;
+        double z = minecraftClient.player.getZ() - minecraftClient.player.zo;
         this.val3 = Math.sqrt((x * x) + (z * z));
     }
 
@@ -46,6 +42,7 @@ public abstract class SpeedModeHandler implements ClientAccessor {
     }
 
     public boolean hasVerticalCollision() {
-        return !minecraftClient.world.isSpaceEmpty(minecraftClient.player.getBoundingBox().offset(0.0d, minecraftClient.player.getVelocity().y, 0.0d));
+        // 26.2: AABB.offset -> move
+        return !minecraftClient.level.noCollision(minecraftClient.player.getBoundingBox().move(0.0d, minecraftClient.player.getDeltaMovement().y, 0.0d));
     }
 }

@@ -2,12 +2,6 @@ package me.mioclient.module.player.speedmine;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedMineMode_4.class */
 public enum SpeedMineMode_4 implements NamedValue {
     OFF("Off"),
     TICK("Tick"),

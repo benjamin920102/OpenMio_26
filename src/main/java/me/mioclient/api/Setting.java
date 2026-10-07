@@ -4,15 +4,10 @@ import me.mioclient.setting.EnumJsonConverter;
 
 import me.mioclient.mode.setting.HoleSnapMode;
 
-
 import java.util.Objects;
 import java.util.function.Predicate;
-import me.mioclient.setting.EnumJsonConverter;
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.module.Feature;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/api/Setting.class */
 public abstract class Setting<T> extends Feature implements ValueProvider<T>, JsonConfigurable {
     public T defaultValue;
     public boolean flag;
@@ -141,7 +136,6 @@ public abstract class Setting<T> extends Feature implements ValueProvider<T>, Js
 
     public abstract void loadFromString(String str);
 
-    /* JADX WARN: Multi-variable type inference failed */
     public void setValue(T t) {
         setCurrentValue(t);
         if (this.hasBounds) {

@@ -2,10 +2,11 @@ package me.mioclient.event.events.network;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/ExplosionVelocityEvent.class */
+/* 26.2 port: ClientboundExplodePacket is now a record (center/radius/knockback);
+   knockback overrides are applied by redispatching a rebuilt packet (see mixin). */
 public class ExplosionVelocityEvent extends Event {
     public final double val;
     public final double val2;
@@ -15,8 +16,8 @@ public class ExplosionVelocityEvent extends Event {
     public float val6;
     public float val7;
 
-    public ExplosionVelocityEvent(ExplosionS2CPacket explosionS2CPacket) {
-        this(explosionS2CPacket.getX(), explosionS2CPacket.getY(), explosionS2CPacket.getZ(), explosionS2CPacket.getRadius(), explosionS2CPacket.getPlayerVelocityX(), explosionS2CPacket.getPlayerVelocityY(), explosionS2CPacket.getPlayerVelocityZ());
+    public ExplosionVelocityEvent(ClientboundExplodePacket explosionS2CPacket) {
+        this(explosionS2CPacket.center().x, explosionS2CPacket.center().y, explosionS2CPacket.center().z, explosionS2CPacket.radius(), (float) explosionS2CPacket.playerKnockback().orElse(Vec3.ZERO).x, (float) explosionS2CPacket.playerKnockback().orElse(Vec3.ZERO).y, (float) explosionS2CPacket.playerKnockback().orElse(Vec3.ZERO).z);
     }
 
     public ExplosionVelocityEvent(double d, double d2, double d3, float f, float f2, float f3, float f4) {
@@ -67,5 +68,9 @@ public class ExplosionVelocityEvent extends Event {
 
     public void setPlayerVelocityZ(float f) {
         this.val7 = f;
+    }
+
+    public Vec3 getKnockback() {
+        return new Vec3(this.val5, this.val6, this.val7);
     }
 }

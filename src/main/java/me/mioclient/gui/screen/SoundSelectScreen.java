@@ -7,9 +7,7 @@ import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.RenderUtil;
 
 import java.io.IOException;
@@ -20,22 +18,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import me.mioclient.api.Setting;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.setting.PresetPresetSettingButton;
-import me.mioclient.util.client.SoundIdentifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SoundSelectScreen.class */
 public class SoundSelectScreen extends AbstractClickGuiScreen {
     public Setting<SoundIdentifier> setting;
     public final Screen screen;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/SettingFontsLlamaRenderHelper$Inner.class */
+    
+    
     public class Inner extends PresetPresetSettingButton {
         public final SoundIdentifier searchIdentifier;
 
@@ -45,7 +38,7 @@ public class SoundSelectScreen extends AbstractClickGuiScreen {
         }
 
         @Override // me.mioclient.setting.PresetPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-        public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+        public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
             if (SoundSelectScreen.this.setting.getValue().equals(this.searchIdentifier)) {
                 RenderUtil.INSTANCE.drawFilledRectColor(matrixStack, this.presetEnumSettingHelper.getX() + 1, this.presetEnumSettingHelper.getY() + this.num + Float.intBitsToFloat(1056964608), (this.presetEnumSettingHelper.getX() + this.presetEnumSettingHelper.getTotalWidth()) - 1, ((this.presetEnumSettingHelper.getY() + this.num) + getFontHeight()) - Float.intBitsToFloat(1056964608), getUI().color.getValue());
             } else {
@@ -75,7 +68,7 @@ public class SoundSelectScreen extends AbstractClickGuiScreen {
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
     public void requestClose() {
-        minecraftClient.setScreen(this.screen);
+        minecraftClient.gui.setScreen(this.screen);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen

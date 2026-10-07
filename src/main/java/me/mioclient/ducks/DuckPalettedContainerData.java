@@ -1,17 +1,15 @@
 package me.mioclient.ducks;
 
-import net.minecraft.util.collection.PaletteStorage;
-import net.minecraft.world.chunk.Palette;
-import net.minecraft.world.chunk.PalettedContainer;
+import net.minecraft.util.BitStorage;
+import net.minecraft.world.level.chunk.Palette;
+import net.minecraft.world.level.chunk.PalettedContainer;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckPalettedContainerData.class */
 public interface DuckPalettedContainerData<T> {
-    PaletteStorage mio$storage();
+    BitStorage mio$storage();
 
     Palette<T> mio$palette();
 
-    static PaletteStorage getPaletteStorage(PalettedContainer<?> palettedContainer) {
+    static BitStorage getPaletteStorage(PalettedContainer<?> palettedContainer) {
         return ((DuckPalettedContainer) palettedContainer).mio$data().mio$storage();
     }
 

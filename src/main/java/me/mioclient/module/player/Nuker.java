@@ -1,4 +1,5 @@
 package me.mioclient.module.player;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.event.events.player.RotationTickEvent;
 
@@ -6,19 +7,13 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -29,40 +24,66 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import me.mioclient.module.render.Crosshair;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/Nuker.class */
 public class Nuker extends Module {
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static final ItemSaver itemSaver = (ItemSaver) ClientServices.moduleInjector.getModule(ItemSaver.class);
-    public static final SpeedMine speedMine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null. */
+    private static AntiCheat antiCheat;
+    private static ItemSaver itemSaver;
+    private static SpeedMine speedMine;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static ItemSaver getItemSaver() {
+        if (itemSaver == null && ClientServices.moduleInjector != null) {
+            try {
+                itemSaver = (ItemSaver) ClientServices.moduleInjector.getModule(ItemSaver.class);
+            } catch (Exception e) {
+            }
+        }
+        return itemSaver;
+    }
+
+    public static SpeedMine getSpeedMine() {
+        if (speedMine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedMine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedMine;
+    }
     public Setting<NukerMode_2> mode = add(new EnumSetting<>("Mode", NukerMode_2.nukerMode_2));
     public Setting<NukerMode_3> shape = add(new EnumSetting<>("Shape", NukerMode_3.nukerMode_3));
     public Setting<NukerMode> sort = add(new EnumSetting<>("Sort", NukerMode.CLOSEST));
@@ -74,21 +95,20 @@ public class Nuker extends Module {
     public Setting<Boolean> creative = add(new BooleanSetting("Creative", false));
     public Setting<Boolean> flatten = add(new BooleanSetting("Flatten", false));
     public Setting<Boolean> baritoneArea = add(new BooleanSetting("BaritoneArea", false));
-    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", Registries.BLOCK));
+    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", BuiltInRegistries.BLOCK));
     public final List<Record> list;
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public BlockPos blockPos;
     public int num;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/Nuker$NukerMode.class */
+    
     public enum NukerMode implements NamedValue {
         CLOSEST("Closest", blockPos -> {
-            return Double.valueOf(ClientAccessor.minecraftClient.player.getEyePos().squaredDistanceTo(blockPos.toCenterPos()));
+            return Double.valueOf(ClientAccessor.minecraftClient.player.getEyePosition().distanceToSqr(Vec3.atCenterOf(blockPos)));
         }),
         FURTHEST("Furthest", blockPos2 -> {
-            return Double.valueOf(-ClientAccessor.minecraftClient.player.getEyePos().squaredDistanceTo(blockPos2.toCenterPos()));
+            return Double.valueOf(-ClientAccessor.minecraftClient.player.getEyePosition().distanceToSqr(Vec3.atCenterOf(blockPos2)));
         }),
         TOP("Top", blockPos3 -> {
             return Double.valueOf(-blockPos3.getY());
@@ -111,8 +131,7 @@ public class Nuker extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/Nuker$NukerMode_2.class */
+    
     public static enum NukerMode_2 implements NamedValue {
         nukerMode_2("Shulkers") {
             @Override
@@ -124,7 +143,7 @@ public class Nuker extends Module {
             @Override
             public boolean isBlockMatchForMode(BlockPos blockPos, Block block, Nuker nuker) {
                 if (block instanceof BedBlock) {
-                    if (ClientAccessor.minecraftClient.world.getBlockState(blockPos).get(BedBlock.PART) == BedPart.HEAD) {
+                    if (ClientAccessor.minecraftClient.level.getBlockState(blockPos).getValue(BedBlock.PART) == BedPart.HEAD) {
                         return true;
                     }
                 }
@@ -160,13 +179,12 @@ public class Nuker extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/Nuker$NukerMode_3.class */
+    
     public static enum NukerMode_3 implements NamedValue {
         nukerMode_3("Sphere") {
             @Override
             public List<BlockPos> getBlocksToBreak(Nuker nuker) {
-                return WorldUtils.getBlocksInRadius(ClientAccessor.minecraftClient.player.getPos(), nuker.range.getValue().floatValue(), true);
+                return WorldUtils.getBlocksInRadius(ClientAccessor.minecraftClient.player.position(), nuker.range.getValue().floatValue(), true);
             }
         },
         nukerMode_32("Tunnel") {
@@ -174,8 +192,8 @@ public class Nuker extends Module {
             public List<BlockPos> getBlocksToBreak(Nuker nuker) {
                 ArrayList arrayList = new ArrayList();
                 for (int i = 0; i <= Math.ceil(nuker.range.getValue().floatValue()); i++) {
-                    for (int i2 = 0; i2 < Math.ceil(ClientAccessor.minecraftClient.player.getHeight()); i2++) {
-                        arrayList.add(ClientAccessor.minecraftClient.player.getBlockPos().up(i2).offset(ClientAccessor.minecraftClient.player.getHorizontalFacing(), i));
+                    for (int i2 = 0; i2 < Math.ceil(ClientAccessor.minecraftClient.player.getBbHeight()); i2++) {
+                        arrayList.add(ClientAccessor.minecraftClient.player.blockPosition().above(i2).relative(ClientAccessor.minecraftClient.player.getDirection(), i));
                     }
                 }
                 return arrayList;
@@ -184,7 +202,7 @@ public class Nuker extends Module {
         nukerMode_33("Crosshair") {
             @Override
             public List<BlockPos> getBlocksToBreak(Nuker nuker) {
-                BlockHitResult blockHitResult = (ClientAccessor.minecraftClient.crosshairTarget) instanceof BlockHitResult ? (BlockHitResult) (ClientAccessor.minecraftClient.crosshairTarget) : null;
+                BlockHitResult blockHitResult = (ClientAccessor.minecraftClient.hitResult) instanceof BlockHitResult ? (BlockHitResult) (ClientAccessor.minecraftClient.hitResult) : null;
                 return blockHitResult instanceof BlockHitResult ? Collections.singletonList(blockHitResult.getBlockPos()) : Collections.emptyList();
             }
         };
@@ -205,9 +223,8 @@ public class Nuker extends Module {
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/Nuker$Record.class */
+    
+    
     public static final class Record {
         public final BlockPos blockPos;
         public final long num;
@@ -216,9 +233,6 @@ public class Nuker extends Module {
             this.blockPos = blockPos;
             this.num = j;
         }
-
-
-
 
         public BlockPos getBlockPos() {
             return this.blockPos;
@@ -245,7 +259,7 @@ public class Nuker extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        minecraftClient.options.attackKey.setPressed(false);
+        minecraftClient.options.keyAttack.setDown(false);
     }
 
     @Listen
@@ -259,12 +273,13 @@ public class Nuker extends Module {
         this.blockPos = null;
         this.num = 0;
         if (this.stopwatch2.hasElapsedMs(this.delay.getValue().intValue())) {
-            if (speedMine.isToggled()) {
-                if (!speedMine.hasCooldownElapsed(this.delay.getValue().intValue())) {
+            SpeedMine speedMine_lcl = getSpeedMine();
+            if (speedMine_lcl != null && speedMine_lcl.isToggled()) {
+                if (!speedMine_lcl.hasCooldownElapsed(this.delay.getValue().intValue())) {
                     return;
                 }
             }
-            boolean z = this.creative.getValue().booleanValue() || speedMine.extraBreak.getValue().booleanValue();
+            boolean z = this.creative.getValue().booleanValue() || (speedMine_lcl != null && speedMine_lcl.isToggled() && speedMine_lcl.extraBreak.getValue().booleanValue());
             List<BlockPos> list437 = this.shape.getValue().getBlocksToBreak(this);
             list437.sort(Comparator.comparing(blockPos -> {
                 return this.sort.getValue().function.apply(blockPos);
@@ -280,7 +295,8 @@ public class Nuker extends Module {
                         if (!z && this.blockPos != null) {
                             return;
                         }
-                        if (speedMine.isToggled() && speedMine.extraBreak.getValue().booleanValue() && this.num >= 2) {
+                        SpeedMine speedMine_lcl2 = getSpeedMine();
+                        if (speedMine_lcl2 != null && speedMine_lcl2.isToggled() && speedMine_lcl2.extraBreak.getValue().booleanValue() && this.num >= 2) {
                             return;
                         }
                     } else {
@@ -304,12 +320,13 @@ public class Nuker extends Module {
                 }
             }
             if (this.rotate.getValue().booleanValue()) {
-                ClientServices.RotationManager.requestRotations(RotationManager.getRotationsToSide(blockPos.toCenterPos(), direction), 5);
+                ClientServices.RotationManager.requestRotations(RotationManager.getRotationsToSide(Vec3.atCenterOf(blockPos), direction), 5);
             }
             this.num++;
-            if (speedMine.isToggled()) {
+            SpeedMine speedMine_lcl = getSpeedMine();
+            if (speedMine_lcl != null && speedMine_lcl.isToggled()) {
                 SpeedMine.flag = true;
-                minecraftClient.interactionManager.attackBlock(blockPos, direction);
+                minecraftClient.gameMode.startDestroyBlock(blockPos, direction);
                 SpeedMine.flag = false;
                 this.blockPos = blockPos;
                 this.stopwatch.reset();
@@ -317,12 +334,13 @@ public class Nuker extends Module {
             }
             int i2 = -1;
             double longBitsToDouble = Double.longBitsToDouble(-4616189618054758400L);
-            BlockState blockState = minecraftClient.world.getBlockState(blockPos);
+            BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+            ItemSaver itemSaver_lcl = getItemSaver();
             for (i = 0; i < 9; i++) {
-                double miningSpeedMultiplier = minecraftClient.player.getInventory().getStack(i).getMiningSpeedMultiplier(blockState);
-                if (itemSaver.isToggled()) {
-                    ItemSaver itemSaver2 = itemSaver;
-                    i = ItemSaver.isToolSafe(minecraftClient.player.getInventory().getStack(i)) ? 0 : i + 1;
+                double miningSpeedMultiplier = minecraftClient.player.getInventory().getItem(i).getDestroySpeed(blockState);
+                if (itemSaver_lcl != null && itemSaver_lcl.isToggled()) {
+                    ItemSaver itemSaver2 = itemSaver_lcl;
+                    i = ItemSaver.isToolSafe(minecraftClient.player.getInventory().getItem(i)) ? 0 : i + 1;
                 }
                 if (miningSpeedMultiplier > longBitsToDouble) {
                     longBitsToDouble = miningSpeedMultiplier;
@@ -333,21 +351,22 @@ public class Nuker extends Module {
             this.stopwatch.reset();
             if (!this.creative.getValue().booleanValue()) {
                 InventoryUtils.selectSlot(i2);
-                minecraftClient.interactionManager.updateBlockBreakingProgress(blockPos, direction);
-                minecraftClient.player.swingHand(Hand.MAIN_HAND);
+                minecraftClient.gameMode.continueDestroyBlock(blockPos, direction);
+                minecraftClient.player.swing(InteractionHand.MAIN_HAND);
                 return;
             }
-            if (antiCheat.isF2b2t()) {
+            AntiCheat antiCheat_lcl = getAntiCheat();
+            if (antiCheat_lcl != null && antiCheat_lcl.isF2b2t()) {
                 InventoryUtils.selectSlot(i2);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos.add(0, 500, 0), direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, this.blockPos.offset(0, 500, 0), direction);
             } else {
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction);
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.blockPos, direction);
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.blockPos, direction);
             }
-            PacketSender.sendHandSwing(Hand.MAIN_HAND);
+            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
             this.list.add(new Record(this.blockPos, System.currentTimeMillis()));
         }
     }
@@ -358,7 +377,7 @@ public class Nuker extends Module {
         })) {
             return false;
         }
-        double sqrt = Math.sqrt(blockPos.getSquaredDistance(minecraftClient.player.getEyePos()));
+        double sqrt = Math.sqrt(blockPos.distToCenterSqr(minecraftClient.player.getEyePosition()));
         if (!WorldUtils.isPositionVisible((Vec3i) blockPos) && sqrt > this.wallRange.getValue().floatValue()) {
             return false;
         }
@@ -372,16 +391,17 @@ public class Nuker extends Module {
     }
 
     public boolean is2162() {
-        if (!speedMine.isToggled()) {
+        SpeedMine speedMine_lcl = getSpeedMine();
+        if (speedMine_lcl == null || !speedMine_lcl.isToggled()) {
             return false;
         }
-        BlockPos blockPos1053 = speedMine.getMineTargetPos();
+        BlockPos blockPos1053 = speedMine_lcl.getMineTargetPos();
         if (blockPos1053 == null) {
-            blockPos1053 = speedMine.getRebreakTargetPos();
+            blockPos1053 = speedMine_lcl.getRebreakTargetPos();
         }
         BlockPos blockPos = null;
-        if (speedMine.getSearchTarget() != null) {
-            blockPos = speedMine.getSearchTarget().getBlockPos();
+        if (speedMine_lcl.getSearchTarget() != null) {
+            blockPos = speedMine_lcl.getSearchTarget().getBlockPos();
         }
         if (WorldUtils.isBreakable(blockPos1053)) {
             return blockPos == null || !blockPos.equals(blockPos1053);
@@ -390,7 +410,7 @@ public class Nuker extends Module {
     }
 
     public BlockHitResult getCrosshairBlockHit() {
-        BlockHitResult blockHitResult = (minecraftClient.crosshairTarget) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.crosshairTarget) : null;
+        BlockHitResult blockHitResult = (minecraftClient.hitResult) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.hitResult) : null;
         if (!(blockHitResult instanceof BlockHitResult)) {
             return null;
         }

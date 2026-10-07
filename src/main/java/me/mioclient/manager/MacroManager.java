@@ -10,10 +10,6 @@ import me.mioclient.util.client.InputState;
 import me.mioclient.util.io.JsonValidator;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.registry.NamedRegistryList;
-import me.mioclient.util.io.JsonValidator;
-import me.mioclient.util.client.InputState;
 
 import me.mioclient.event.EventBus;
 
@@ -26,14 +22,9 @@ import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.api.Keybind;
 import me.mioclient.event.events.input.KeyEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.client.MacroTriggerEvent;
 import me.mioclient.command.KeybindFeature;
 import me.mioclient.command.KeybindFeature_3;
-import me.mioclient.mode.misc.KeybindMode;
-import me.mioclient.command.KeybindFeature;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchHelper4_12.class */
 public final class MacroManager extends NamedRegistryList<KeybindFeature> implements ClientAccessor, JsonConfigurable {
     public MacroManager() {
         eventBus.register(this);
@@ -41,7 +32,7 @@ public final class MacroManager extends NamedRegistryList<KeybindFeature> implem
 
     @Listen
     public void onKey(KeyEvent keyEvent) {
-        if (minecraftClient.currentScreen != null || isNotInGame()) {
+        if (minecraftClient.gui.screen() != null || isNotInGame()) {
             return;
         }
         for (KeybindFeature keybindFeature : (List<KeybindFeature>) this.registry) {
@@ -54,7 +45,7 @@ public final class MacroManager extends NamedRegistryList<KeybindFeature> implem
 
     @Listen
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        if (minecraftClient.currentScreen != null || isNotInGame()) {
+        if (minecraftClient.gui.screen() != null || isNotInGame()) {
             return;
         }
         for (KeybindFeature keybindFeature : (List<KeybindFeature>) this.registry) {

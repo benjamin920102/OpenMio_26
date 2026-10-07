@@ -2,13 +2,11 @@ package me.mioclient.render.shader;
 
 import me.mioclient.render.mesh.MeshBuilder;
 
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FullscreenQuad.class */
 public class FullscreenQuad {
     public static MeshBuilder byteBufferSearchHelper4;
-    public static final MatrixStack matrixStack = new MatrixStack();
+    public static final PoseStack matrixStack = new PoseStack();
 
     public static void init() {
         byteBufferSearchHelper4 = new MeshBuilder(MeshBuilder.Mode_2.Triangles, MeshBuilder.Mode.Vec2);
@@ -17,7 +15,7 @@ public class FullscreenQuad {
         byteBufferSearchHelper4.endBuild();
     }
 
-    public static void beginOutlinePass() {
+    public static void beginOutline() {
         byteBufferSearchHelper4.beginDraw(matrixStack);
     }
 

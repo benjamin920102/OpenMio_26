@@ -3,46 +3,35 @@ package me.mioclient.render.chams;
 import me.mioclient.util.player.ClonedPlayerEntity;
 
 import me.mioclient.render.RenderUtil;
+import me.mioclient.render.shape.BoxRenderer;
 
-import me.mioclient.render.mesh.TrajectoriesVertexConsumer;
 
 import me.mioclient.api.ClientAccessor;
 import me.mioclient.module.render.chams.BoatChamsRenderer;
 
-import me.mioclient.event.EventBus;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import me.mioclient.event.events.render.MatrixStackEvent;
-import me.mioclient.event.Listen;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.model.geom.ModelPart;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector4f;
-import me.mioclient.render.mesh.TrajectoriesVertexConsumer;
-import me.mioclient.util.player.ClonedPlayerEntity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChamsRenderDispatcher.class */
 public class ChamsRenderDispatcher implements ClientAccessor {
     public static final Vector4f vector4f = new Vector4f();
     public static final Vector4f vector4f2 = new Vector4f();
     public static final Vector4f vector4f3 = new Vector4f();
     public static final Vector4f vector4f4 = new Vector4f();
-    public static final Map<EntityType<?>, EntityRenderCallback<?>> map = new HashMap();
+    public static final Map<EntityType<?>, EntityRenderCallback<?>> map = new HashMap<>();
     public static final LivingEntityChamsRenderer searchHelper4_2 = new LivingEntityChamsRenderer();
-    public static final TrajectoriesVertexConsumer trajectoriesVertexConsumer = TrajectoriesVertexConsumer.createDefault();
-    public static final TrajectoriesVertexConsumer trajectoriesVertexConsumer2 = TrajectoriesVertexConsumer.createDefault();
     public static Color color;
     public static Color color2;
     public static boolean flag;
@@ -50,18 +39,6 @@ public class ChamsRenderDispatcher implements ClientAccessor {
 
     public ChamsRenderDispatcher() {
         throw new AssertionError();
-    }
-
-    @Listen(get219= -9999)
-    public static void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        RenderUtil.INSTANCE.setupRenderState();
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        trajectoriesVertexConsumer.drawBuffer();
-        RenderSystem.setShader(GameRenderer::getRenderTypeLinesProgram);
-        RenderSystem.lineWidth((float) val);
-        trajectoriesVertexConsumer2.drawBuffer();
-        RenderSystem.lineWidth(1.0f);
-        RenderUtil.INSTANCE.restoreRenderState();
     }
 
     public static void setChamsColors(Color color3, Color color4) {
@@ -77,26 +54,22 @@ public class ChamsRenderDispatcher implements ClientAccessor {
         return flag;
     }
 
-    public static void renderEntityChams(MatrixStack matrixStack, Entity entity) {
-        Vec3d pos = minecraftClient.gameRenderer.getCamera().getPos();
+    public static void renderEntityChams(PoseStack matrixStack, Entity entity) {
+        Vec3 pos = minecraftClient.gameRenderer.mainCamera().position();
         float f = RenderUtil.getPartialTick();
-        if (entity instanceof ClonedPlayerEntity) {
+        if (ClonedPlayerEntity.class.isInstance(entity)) {
             f = 1.0f;
         }
-        double lerp = MathHelper.lerp(f, entity.lastRenderX, entity.getX()) - pos.x;
-        double lerp2 = MathHelper.lerp(f, entity.lastRenderY, entity.getY()) - pos.y;
-        double lerp3 = MathHelper.lerp(f, entity.lastRenderZ, entity.getZ()) - pos.z;
-        Vec3d positionOffset = minecraftClient.getEntityRenderDispatcher().getRenderer(entity).getPositionOffset(entity, f);
-        double x = lerp + positionOffset.getX();
-        double y = lerp2 + positionOffset.getY();
-        double z = lerp3 + positionOffset.getZ();
-        matrixStack.push();
-        matrixStack.translate(x, y, z);
+        double lerp = Mth.lerp(f, (float) entity.xOld, (float) entity.getX()) - pos.x;
+        double lerp2 = Mth.lerp(f, (float) entity.yOld, (float) entity.getY()) - pos.y;
+        double lerp3 = Mth.lerp(f, (float) entity.zOld, (float) entity.getZ()) - pos.z;
+        matrixStack.pushPose();
+        matrixStack.translate(lerp, lerp2, lerp3);
         EntityRenderCallback helper_6616 = getEntityChamsRenderer(entity);
         if (helper_6616 != null) {
             helper_6616.do721(entity, RenderUtil.getPartialTick(), matrixStack);
         }
-        matrixStack.pop();
+        matrixStack.popPose();
     }
 
     public static <E extends Entity> EntityRenderCallback<E> getEntityChamsRenderer(E e) {
@@ -105,50 +78,80 @@ public class ChamsRenderDispatcher implements ClientAccessor {
 
     public static void renderModelPart(ChamsRenderContext matrixStackData, ModelPart modelPart) {
         if (modelPart.visible) {
-            matrixStackData.getMatrixStack().push();
-            modelPart.rotate(matrixStackData.getMatrixStack());
-            Iterator it = modelPart.cuboids.iterator();
-            while (it.hasNext()) {
-                renderCuboid(matrixStackData, (ModelPart.Cuboid) it.next());
-            }
-            Iterator it2 = modelPart.children.values().iterator();
-            while (it2.hasNext()) {
-                renderModelPart(matrixStackData, (ModelPart) it2.next());
-            }
-            matrixStackData.getMatrixStack().pop();
+            matrixStackData.getMatrixStack().pushPose();
+            modelPart.translateAndRotate(matrixStackData.getMatrixStack());
+            modelPart.visit(matrixStackData.getMatrixStack(), (pose, partPath, cubeIndex, cube) -> renderCube(matrixStackData, pose, cube));
+            matrixStackData.getMatrixStack().popPose();
         }
     }
 
-    public static void renderCuboid(ChamsRenderContext matrixStackData, ModelPart.Cuboid cuboid) {
-        for (ModelPart.Quad quad : cuboid.sides) {
-            vector4f.set(quad.vertices[0].pos.x / 16.0f, quad.vertices[0].pos.y / 16.0f, quad.vertices[0].pos.z / 16.0f, 1.0f);
-            vector4f2.set(quad.vertices[1].pos.x / 16.0f, quad.vertices[1].pos.y / 16.0f, quad.vertices[1].pos.z / 16.0f, 1.0f);
-            vector4f3.set(quad.vertices[2].pos.x / 16.0f, quad.vertices[2].pos.y / 16.0f, quad.vertices[2].pos.z / 16.0f, 1.0f);
-            vector4f4.set(quad.vertices[3].pos.x / 16.0f, quad.vertices[3].pos.y / 16.0f, quad.vertices[3].pos.z / 16.0f, 1.0f);
-            if (color2.getAlpha() != 0) {
-                if (!trajectoriesVertexConsumer.isBuilding()) {
-                    trajectoriesVertexConsumer.beginBuffer(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-                }
-                trajectoriesVertexConsumer.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), vector4f.x, vector4f.y, vector4f.z).color(color2.hashCode());
-                trajectoriesVertexConsumer.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), vector4f2.x, vector4f2.y, vector4f2.z).color(color2.hashCode());
-                trajectoriesVertexConsumer.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), vector4f3.x, vector4f3.y, vector4f3.z).color(color2.hashCode());
-                trajectoriesVertexConsumer.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), vector4f4.x, vector4f4.y, vector4f4.z).color(color2.hashCode());
-            }
-            if (color.getAlpha() != 0) {
-                if (!trajectoriesVertexConsumer2.isBuilding()) {
-                    trajectoriesVertexConsumer2.beginBuffer(VertexFormat.DrawMode.LINES, VertexFormats.LINES);
-                }
-                addOutlineEdge(matrixStackData, vector4f.x, vector4f.y, vector4f.z, vector4f2.x, vector4f2.y, vector4f2.z);
-                addOutlineEdge(matrixStackData, vector4f2.x, vector4f2.y, vector4f2.z, vector4f3.x, vector4f3.y, vector4f3.z);
-                addOutlineEdge(matrixStackData, vector4f3.x, vector4f3.y, vector4f3.z, vector4f4.x, vector4f4.y, vector4f4.z);
-                addOutlineEdge(matrixStackData, vector4f4.x, vector4f4.y, vector4f4.z, vector4f.x, vector4f.y, vector4f.z);
-            }
+    public static void renderCube(ChamsRenderContext matrixStackData, PoseStack.Pose pose, ModelPart.Cube cube) {
+        /* 26.2 backend: model cubes are drawn as vanilla gizmo cuboids. The cube
+           corners are transformed to world space by the pose snapshot (poses handed
+           down here are camera-relative). */
+        if (pose == null || cube == null) {
+            return;
         }
+        boolean fill = color2 != null && color2.getAlpha() != 0;
+        boolean stroke = color != null && color.getAlpha() != 0;
+        if (!fill && !stroke) {
+            return;
+        }
+        try {
+            net.minecraft.world.phys.Vec3 cam = minecraftClient.gameRenderer.mainCamera().position();
+            org.joml.Matrix4f matrix = pose.pose();
+            org.joml.Vector3f v = new org.joml.Vector3f();
+            double minX = Double.POSITIVE_INFINITY;
+            double minY = Double.POSITIVE_INFINITY;
+            double minZ = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            double maxY = Double.NEGATIVE_INFINITY;
+            double maxZ = Double.NEGATIVE_INFINITY;
+            float[] xs = new float[]{cube.minX, cube.maxX};
+            float[] ys = new float[]{cube.minY, cube.maxY};
+            float[] zs = new float[]{cube.minZ, cube.maxZ};
+            for (float x : xs) {
+                for (float y : ys) {
+                    for (float z : zs) {
+                        v.set(x, y, z);
+                        matrix.transformPosition(v);
+                        if (v.x < minX) {
+                            minX = v.x;
+                        }
+                        if (v.y < minY) {
+                            minY = v.y;
+                        }
+                        if (v.z < minZ) {
+                            minZ = v.z;
+                        }
+                        if (v.x > maxX) {
+                            maxX = v.x;
+                        }
+                        if (v.y > maxY) {
+                            maxY = v.y;
+                        }
+                        if (v.z > maxZ) {
+                            maxZ = v.z;
+                        }
+                    }
+                }
+            }
+            me.mioclient.render.GizmoRenderer.box(new net.minecraft.world.phys.AABB(minX + cam.x, minY + cam.y, minZ + cam.z, maxX + cam.x, maxY + cam.y, maxZ + cam.z),
+                    stroke ? color.hashCode() : 0, (float) val, fill ? color2.hashCode() : 0, false);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void renderCuboid(ChamsRenderContext matrixStackData, ModelPart.Cube cube) {
+        renderCube(matrixStackData, matrixStackData.getMatrixStack().last(), cube);
     }
 
     public static void addOutlineEdge(ChamsRenderContext matrixStackData, float f, float f2, float f3, float f4, float f5, float f6) {
-        trajectoriesVertexConsumer2.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), f, f2, f3).color(color.hashCode()).normal(matrixStackData.getMatrixStack().peek(), f4 - f, f5 - f2, f6 - f3);
-        trajectoriesVertexConsumer2.vertex(matrixStackData.getMatrixStack().peek().getPositionMatrix(), f4, f5, f6).color(color.hashCode()).normal(matrixStackData.getMatrixStack().peek(), f4 - f, f5 - f2, f6 - f3);
+        if (matrixStackData == null || matrixStackData.getMatrixStack() == null || color == null || color.getAlpha() == 0) {
+            return;
+        }
+        PoseStack.Pose pose = matrixStackData.getMatrixStack().last();
+        BoxRenderer.submitLinePair(matrixStackData.getMatrixStack(), pose, f, f2, f3, f4, f5, f6, color.hashCode());
     }
 
     public static void setOutlineWidth(double d) {
@@ -156,13 +159,7 @@ public class ChamsRenderDispatcher implements ClientAccessor {
     }
 
     static {
-        eventBus.registerStatic(ChamsRenderDispatcher.class);
-        map.put(EntityType.END_CRYSTAL, new EndCrystalRenderer());
-        map.put(EntityType.BOAT, new BoatChamsRenderer());
-        map.put(EntityType.CHEST_BOAT, new BoatChamsRenderer());
-        map.put(EntityType.LLAMA, new LlamaChamsRenderer());
-        map.put(EntityType.RABBIT, new RabbitChamsRenderer());
-        map.put(EntityType.ENDER_DRAGON, new DragonChamsRenderer());
+        map.put(EntityTypes.END_CRYSTAL, new EndCrystalRenderer());
         color = Color.white;
         color2 = Color.white;
     }

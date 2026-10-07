@@ -2,12 +2,8 @@ package me.mioclient.network.packet;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.network.codec.NetworkMessage;
-
 import io.netty.channel.ChannelHandlerContext;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FriendListSyncMessage.class */
 public class FriendListSyncMessage implements NetworkMessage {
     public String username;
     public String[] stringArr;

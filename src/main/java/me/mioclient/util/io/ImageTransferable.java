@@ -5,8 +5,6 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TransferDataFlavorsTransferable.class */
 public class ImageTransferable implements Transferable {
     public Image image;
 

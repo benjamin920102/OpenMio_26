@@ -12,30 +12,28 @@ import me.mioclient.render.hud.TextHudElement;
 import me.mioclient.util.math.GridPoint;
 import me.mioclient.util.math.MathUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.GridPoint;
-import me.mioclient.render.hud.HudTextLine;
-import me.mioclient.render.hud.TextHudElement;
-import me.mioclient.util.math.MathUtils;
-
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.setting.BooleanSetting;
-import me.mioclient.mode.setting.HoleSnapMode;
-import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.util.world.WorldUtils;
-import me.mioclient.mode.world.StashFinderMode;
 import me.mioclient.api.Setting;
 import me.mioclient.module.player.Freecam;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Position.class */
 public class Position extends me.mioclient.module.HudModule {
-    public static Freecam freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving freecam null (NPE). */
+    private static Freecam freecam;
+
+    public static Freecam getFreecam() {
+        if (freecam == null && ClientServices.moduleInjector != null) {
+            try {
+                freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
+            } catch (Exception e) {
+            }
+        }
+        return freecam;
+    }
     public Setting<Float> setting;
     public Setting<Boolean> setting2;
     public Setting<Boolean> setting3;
@@ -65,13 +63,14 @@ public class Position extends me.mioclient.module.HudModule {
         setElement(new TextHudElement(this, new HudTextLine(() -> {
             if (!isNotInGame()) {
                 if (this.setting.getValue().floatValue() > 0.0f) {
-                    if (!minecraftClient.player.getPos().isInRange(Vec3d.ZERO, this.setting.getValue().floatValue() * Float.intBitsToFloat(1148846080))) {
+                    if (minecraftClient.player.position().distanceTo(Vec3.ZERO) > this.setting.getValue().floatValue() * 1000.0f) {
                     }
                 }
-                boolean contains = minecraftClient.world.getRegistryKey().getValue().getPath().contains("nether");
-                Vec3d pos = minecraftClient.player.getPos();
-                if (freecam.isToggled()) {
-                    pos = minecraftClient.gameRenderer.getCamera().getPos().subtract(0.0d, minecraftClient.player.getHeight(), 0.0d);
+                boolean contains = minecraftClient.level.dimension().identifier().getPath().contains("nether");
+                Vec3 pos = minecraftClient.player.position();
+                Freecam freecam_lcl = getFreecam();
+                if (freecam_lcl != null && freecam_lcl.isToggled()) {
+                    pos = minecraftClient.gameRenderer.mainCamera().position().subtract(0.0d, minecraftClient.player.getBbHeight(), 0.0d);
                 }
                 if (this.setting3.getValue().booleanValue() && this.positionData != null) {
                     if (this.positionData.get476() == 0 && this.positionData.getGridY() == 0) {
@@ -79,17 +78,17 @@ public class Position extends me.mioclient.module.HudModule {
                     }
                     pos = pos.add(this.positionData.get476(), 0.0d, this.positionData.getGridY());
                 }
-                BlockPos ofFloored = BlockPos.ofFloored((net.minecraft.util.math.Position) pos);
-                BlockPos ofFloored2 = contains ? BlockPos.ofFloored(pos.multiply(Double.longBitsToDouble(4620693217682128896L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4620693217682128896L))) : BlockPos.ofFloored(pos.multiply(Double.longBitsToDouble(4593671619917905920L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4593671619917905920L)));
-                String string2921 = new StringTemplate().arg(String.valueOf(Formatting.WHITE)).format("XYZ: \u0001");
+                BlockPos ofFloored = BlockPos.containing(pos.x, pos.y, pos.z);
+                BlockPos ofFloored2 = contains ? BlockPos.containing(pos.multiply(Double.longBitsToDouble(4620693217682128896L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4620693217682128896L))) : BlockPos.containing(pos.multiply(Double.longBitsToDouble(4593671619917905920L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4593671619917905920L)));
+                String string2921 = new StringTemplate().arg(String.valueOf(ChatFormatting.WHITE)).format("XYZ: \u0001");
                 String string29212 = new StringTemplate().arg(ofFloored.getZ()).arg(ofFloored.getY()).arg(ofFloored.getX()).format("\u0001, \u0001, \u0001.");
                 String string29213 = new StringTemplate().arg(ofFloored2.getZ()).arg(ofFloored2.getY()).arg(ofFloored2.getX()).format(" (\u0001, \u0001, \u0001.)");
                 if (this.setting2.getValue().booleanValue() && WorldUtils.getDimension() != StashFinderMode.THE_END) {
                     string29212 = new StringTemplate().arg(string29213).arg(string29212).format("\u0001\u0001");
                 }
-                return Text.literal(new StringTemplate().arg(string29212).arg(string2921).format("\u0001\u0001"));
+                return Component.literal(new StringTemplate().arg(string29212).arg(string2921).format("\u0001\u0001"));
             }
-            return Text.literal("XYZ: %sREDACTED".formatted(Formatting.WHITE));
+            return Component.literal("XYZ: %sREDACTED".formatted(ChatFormatting.WHITE));
         }, () -> {
             return true;
         })));

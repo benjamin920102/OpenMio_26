@@ -5,23 +5,17 @@ import me.mioclient.event.events.render.HudRenderEvent;
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.render.shader.BlurFramebuffer;
 
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-
 import java.awt.Color;
-import me.mioclient.render.shader.BlurFramebuffer;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.event.events.render.HudRenderEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Blur.class */
 public class Blur extends Module {
     public Setting<Integer> radius = add(new NumberSetting<>("Radius", 6, 1, 8));
 
@@ -34,14 +28,14 @@ public class Blur extends Module {
         do991(matrixStackEvent_2.getDrawContext());
     }
 
-    public void do991(DrawContext drawContext) {
-        Screen screen = minecraftClient.currentScreen;
+    public void do991(GuiGraphicsExtractor drawContext) {
+        Screen screen = minecraftClient.gui.screen();
         if (screen instanceof AbstractClickGuiScreen) {
             return;
         }
-        if ((minecraftClient.currentScreen == null || (minecraftClient.currentScreen instanceof ChatScreen)) ? false : true) {
+        if ((minecraftClient.gui.screen() == null || (minecraftClient.gui.screen() instanceof ChatScreen)) ? false : true) {
             BlurFramebuffer.renderWithBlur(() -> {
-                drawContext.fill(0, 0, minecraftClient.getWindow().getScaledWidth(), minecraftClient.getWindow().getScaledHeight(), new Color(0.0f, 0.0f, 0.0f, Float.intBitsToFloat(1065353216)).hashCode());
+                drawContext.fill(0, 0, minecraftClient.getWindow().getGuiScaledWidth(), minecraftClient.getWindow().getGuiScaledHeight(), new Color(0.0f, 0.0f, 0.0f, Float.intBitsToFloat(1065353216)).hashCode());
             }, getBlurRadius());
         }
     }

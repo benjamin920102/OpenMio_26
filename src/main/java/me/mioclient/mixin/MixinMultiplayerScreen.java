@@ -3,25 +3,21 @@ package me.mioclient.mixin;
 import me.mioclient.api.ClientServices;
 import me.mioclient.command.PanicCommand;
 
-import me.mioclient.api.ClientServices;
-
-import me.mioclient.command.PanicCommand;
 import me.mioclient.module.client.UI;
 import me.mioclient.module.exploit.FakeVanilla;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.widget.CheckboxWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.components.Checkbox;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
-@Mixin({MultiplayerScreen.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinMultiplayerScreen.class */
+@Mixin({JoinMultiplayerScreen.class})
+
 public class MixinMultiplayerScreen extends Screen {
     private static FakeVanilla fakevanilla;
 
@@ -50,11 +46,13 @@ public class MixinMultiplayerScreen extends Screen {
 
     }
 
-    protected MixinMultiplayerScreen(Text text) {
+    protected MixinMultiplayerScreen(Component text) {
         super(text);
     }
 
-    @Inject(method = {"init"}, at = {@At("TAIL")})
+    /* 26.2 port (verified via JDK25 javap): JoinMultiplayerScreen.init exists;
+       keyPressed(int,int,int) gone (now keyPressed(KeyEvent)) — hook deleted. */
+    @Inject(method = {"init"}, at = {@At("TAIL")}, require = 0)
     private void initHook(CallbackInfo callbackInfo) {
         FakeVanilla fakevanilla_lcl = getFakevanilla();
 
@@ -63,22 +61,8 @@ public class MixinMultiplayerScreen extends Screen {
         if (PanicCommand.flag) {
             return;
         }
-        addDrawableChild(CheckboxWidget.builder(Text.of("Vanilla"), this.textRenderer).pos(2, 6).checked(fakevanilla_lcl.isToggled()).callback((checkboxWidget, z) -> {
+        addRenderableWidget(Checkbox.builder(Component.literal("Vanilla"), this.font).pos(2, 6).selected(fakevanilla_lcl.isToggled()).onValueChange((checkboxWidget, z) -> {
             fakevanilla_lcl.setToggled(z);
         }).build());
-    }
-
-    @Inject(method = {"keyPressed"}, at = {@At("HEAD")}, cancellable = true)
-    private void keyPressed(int i, int i2, int i3, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        UI clickgui_lcl = getClickgui();
-
-        if (clickgui_lcl == null) return;
-
-        if (!(getFocused() instanceof TextFieldWidget) && i == clickgui_lcl.getKeybind().getKey()) {
-            callbackInfoReturnable.setReturnValue(false);
-            callbackInfoReturnable.cancel();
-            clickgui_lcl.enable();
-            ClientServices.getClickGui().openWithParent();
-        }
     }
 }

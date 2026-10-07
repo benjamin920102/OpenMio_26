@@ -2,10 +2,8 @@ package me.mioclient.event.events.screen;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ScreenEvent.class */
 public class ScreenEvent extends Event {
     public final Screen screen;
     public final Screen screen2;

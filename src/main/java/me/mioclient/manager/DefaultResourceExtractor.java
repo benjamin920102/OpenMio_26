@@ -4,16 +4,11 @@ import me.mioclient.loader.EasterEggMessages;
 
 import me.mioclient.util.io.FileIO;
 
-import me.mioclient.util.io.FileIO;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.HashMap;
-import me.mioclient.loader.EasterEggMessages;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DefaultResourceExtractor.class */
 public final class DefaultResourceExtractor {
     public final HashMap<String, String> hashMap = new HashMap<>();
 

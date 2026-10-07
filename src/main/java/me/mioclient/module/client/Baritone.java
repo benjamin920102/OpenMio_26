@@ -7,16 +7,11 @@ import me.mioclient.module.KeybindModule;
 
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.ColorUtils;
-
 import me.mioclient.event.EventBus;
 
 import baritone.api.BaritoneAPI;
 import baritone.api.Settings;
 import java.awt.Color;
-import me.mioclient.event.events.client.ClientTickEvent;
-import me.mioclient.module.KeybindModule;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -25,14 +20,63 @@ import me.mioclient.module.movement.SafeWalk;
 import me.mioclient.module.movement.Step;
 import me.mioclient.module.player.AutoTool;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/Baritone.class */
 public class Baritone extends KeybindModule {
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static final Step step = (Step) ClientServices.moduleInjector.getModule(Step.class);
-    public static final AutoTool autoTool = (AutoTool) ClientServices.moduleInjector.getModule(AutoTool.class);
-    public static SafeWalk safeWalk = (SafeWalk) ClientServices.moduleInjector.getModule(SafeWalk.class);
-    public static Jesus jesus = (Jesus) ClientServices.moduleInjector.getModule(Jesus.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving module refs null. */
+    private static AntiCheat antiCheat;
+    private static Step step;
+    private static AutoTool autoTool;
+    private static SafeWalk safeWalk;
+    private static Jesus jesus;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static Step getStep() {
+        if (step == null && ClientServices.moduleInjector != null) {
+            try {
+                step = (Step) ClientServices.moduleInjector.getModule(Step.class);
+            } catch (Exception e) {
+            }
+        }
+        return step;
+    }
+
+    public static AutoTool getAutoTool() {
+        if (autoTool == null && ClientServices.moduleInjector != null) {
+            try {
+                autoTool = (AutoTool) ClientServices.moduleInjector.getModule(AutoTool.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoTool;
+    }
+
+    public static SafeWalk getSafeWalk() {
+        if (safeWalk == null && ClientServices.moduleInjector != null) {
+            try {
+                safeWalk = (SafeWalk) ClientServices.moduleInjector.getModule(SafeWalk.class);
+            } catch (Exception e) {
+            }
+        }
+        return safeWalk;
+    }
+
+    public static Jesus getJesus() {
+        if (jesus == null && ClientServices.moduleInjector != null) {
+            try {
+                jesus = (Jesus) ClientServices.moduleInjector.getModule(Jesus.class);
+            } catch (Exception e) {
+            }
+        }
+        return jesus;
+    }
     public Setting<Boolean> setting;
     public Setting<Boolean> setting2;
     public Setting<Boolean> setting3;
@@ -77,16 +121,21 @@ public class Baritone extends KeybindModule {
             BaritoneAPI.getSettings().goalRenderLineWidthPixels.value = Float.valueOf(Float.intBitsToFloat(1069547520));
         }
         if (this.setting3.getValue().booleanValue()) {
-            BaritoneAPI.getSettings().assumeStep.value = Boolean.valueOf(step.isToggled());
-            BaritoneAPI.getSettings().assumeExternalAutoTool.value = Boolean.valueOf(autoTool.isToggled());
-            BaritoneAPI.getSettings().assumeSafeWalk.value = Boolean.valueOf(safeWalk.isToggled());
-            BaritoneAPI.getSettings().assumeWalkOnWater.value = Boolean.valueOf(jesus.isToggled() && jesus.canJesus());
+            Step step_lcl = getStep();
+            AutoTool autoTool_lcl = getAutoTool();
+            SafeWalk safeWalk_lcl = getSafeWalk();
+            Jesus jesus_lcl = getJesus();
+            BaritoneAPI.getSettings().assumeStep.value = Boolean.valueOf(step_lcl != null && step_lcl.isToggled());
+            BaritoneAPI.getSettings().assumeExternalAutoTool.value = Boolean.valueOf(autoTool_lcl != null && autoTool_lcl.isToggled());
+            BaritoneAPI.getSettings().assumeSafeWalk.value = Boolean.valueOf(safeWalk_lcl != null && safeWalk_lcl.isToggled());
+            BaritoneAPI.getSettings().assumeWalkOnWater.value = Boolean.valueOf(jesus_lcl != null && jesus_lcl.isToggled() && jesus_lcl.canJesus());
         }
     }
 
     public void syncAntiCheatCompat() {
         Settings.Setting setting = BaritoneAPI.getSettings().antiCheatCompatibility;
-        boolean isYawSpoofActive = antiCheat.getYawSpoofHandler().isYawSpoofActive();
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        boolean isYawSpoofActive = antiCheat_lcl != null && antiCheat_lcl.getYawSpoofHandler().isYawSpoofActive();
         if (isYawSpoofActive != this.flag2) {
             if (isYawSpoofActive) {
                 this.flag = ((Boolean) setting.value).booleanValue();

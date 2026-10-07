@@ -3,20 +3,14 @@ package me.mioclient.module.combat;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.world.HoleData;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.HoleData;
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.combat.holefill.HoleFilter;
 import me.mioclient.module.combat.holefill.RangeHoleFilter;
 import me.mioclient.module.combat.holefill.SmartHoleFilter;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -25,24 +19,21 @@ import java.util.Set;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Delay;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.BlockPos;
 import me.mioclient.mixin.ducks.DuckAbstractBlock;
 import me.mioclient.module.Module;
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/HoleFill.class */
 public class HoleFill extends Delay {
-    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", Registries.BLOCK));
+    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", BuiltInRegistries.BLOCK));
     public Setting<Boolean> doubles = add(new BooleanSetting("Doubles", false));
     public Setting<HoleFillPredicateMode> mode = add(new EnumSetting<>("Mode", HoleFillPredicateMode.PLAIN));
     public Setting<Float> smartRange = add(new NumberSetting<>("SmartRange", 1.5f, 0.5f, 4.0f, v -> this.mode.getValue() == HoleFill.HoleFillPredicateMode.SMART).setSuffix("m"));
@@ -58,9 +49,8 @@ public class HoleFill extends Delay {
     public final HoleFilter holeFillHelper;
     public final HoleFilter holeFillHelper2;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/HoleFill$HoleFillPredicateMode.class */
+    
+    
     public enum HoleFillPredicateMode implements NamedValue {
         PLAIN("Plain"),
         SMART("Smart");

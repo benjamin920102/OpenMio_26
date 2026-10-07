@@ -7,25 +7,17 @@ import me.mioclient.util.anim.ValueAnimator;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.math.MathUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.math.MathUtils;
-import me.mioclient.util.anim.ValueAnimator;
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
-import me.mioclient.module.HudModule;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Setting;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Size.class */
 public class ResizableHudElement extends DraggableHudElement {
-    public static final Identifier identifier = Identifier.of("mio", "textures/triangle.png");
+    public static final Identifier identifier = Identifier.fromNamespaceAndPath("mio", "textures/triangle.png");
     public static ResizableHudElement size;
     public Setting<Float> setting;
     public final ValueAnimator zoomHelper;
@@ -37,11 +29,11 @@ public class ResizableHudElement extends DraggableHudElement {
         this.zoomHelper = new ValueAnimator();
     }
 
-    @Override // me.mioclient.render.hud.DraggableHudElement, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    @Override
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         float[] floatArray365 = this.moduleList.getSize();
-        matrixStack.push();
+        matrixStack.pushPose();
         if (this.flag) {
             matrixStack.scale(getScale(), getScale(), Float.intBitsToFloat(1065353216));
             matrixStack.translate(getX() / getScale(), getY() / getScale(), 0.0f);
@@ -69,22 +61,18 @@ public class ResizableHudElement extends DraggableHudElement {
             } else {
                 this.zoomHelper.animateTo(Float.intBitsToFloat(1045220557), 250L);
             }
-            matrixStack.push();
+            matrixStack.pushPose();
             float intBitsToFloat = Float.intBitsToFloat(1017118720);
             matrixStack.scale(intBitsToFloat, intBitsToFloat, Float.intBitsToFloat(1140457472));
             matrixStack.translate((floatArray365[0] - Float.intBitsToFloat(1084227584)) / intBitsToFloat, (floatArray365[1] - Float.intBitsToFloat(1084227584)) / intBitsToFloat, 0.0f);
             Color color811 = ColorUtils.getThemeColor();
-            RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(color811.getRed() / Float.intBitsToFloat(1132396544), color811.getGreen() / Float.intBitsToFloat(1132396544), color811.getBlue() / Float.intBitsToFloat(1132396544), this.zoomHelper.getValue() * ClientServices.getHud().getAlpha());
-            drawContext.drawTexture(identifier, 0, 0, 0, 0, 256, 256);
-            RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
-            RenderSystem.disableBlend();
-            matrixStack.pop();
+            drawContext.blit(RenderPipelines.GUI_TEXTURED, identifier, 0, 0, 0.0f, 0.0f, 256, 256, 256, 256);
+            matrixStack.popPose();
         }
-        matrixStack.pop();
+        matrixStack.popPose();
     }
 
-    @Override // me.mioclient.render.hud.DraggableHudElement
+    @Override
     public float[] getSize() {
         float[] floatArray365 = this.moduleList.getSize();
         floatArray365[0] = floatArray365[0] * getScale();
@@ -112,6 +100,6 @@ public class ResizableHudElement extends DraggableHudElement {
     }
 
     public boolean isMouseButtonDown(int i) {
-        return GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), i) == 1;
+        return GLFW.glfwGetMouseButton(minecraftClient.getWindow().handle(), i) == 1;
     }
 }

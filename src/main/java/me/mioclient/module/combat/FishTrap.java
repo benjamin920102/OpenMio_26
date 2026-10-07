@@ -5,18 +5,12 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.util.math.BoxMath;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.BoxMath;
-
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/FishTrap.class */
 public class FishTrap extends Range {
     public Object object;
 
@@ -34,7 +28,7 @@ public class FishTrap extends Range {
     }
 
     @Override // me.mioclient.module.combat.Range
-    public Vec3d getTargetPos(PlayerEntity playerEntity) {
+    public Vec3 getTargetPos(Player playerEntity) {
         if (getExtrapolationSetting().isAtMinimum()) {
             return super.getTargetPos(playerEntity);
         }
@@ -42,8 +36,8 @@ public class FishTrap extends Range {
     }
 
     @Override // me.mioclient.module.combat.Range
-    public boolean isValidRangeTarget(PlayerEntity playerEntity) {
-        if (playerEntity.getBoundingBox().getLengthY() > Double.longBitsToDouble(4607182418800017408L)) {
+    public boolean isValidRangeTarget(Player playerEntity) {
+        if (playerEntity.getBoundingBox().getYsize() > Double.longBitsToDouble(4607182418800017408L)) {
             return false;
         }
         return super.isValidRangeTarget(playerEntity);

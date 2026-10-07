@@ -7,10 +7,6 @@ import me.mioclient.mode.misc.KeybindMode;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.client.ChatUtils;
-
 import me.mioclient.event.EventBus;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -28,14 +24,10 @@ import me.mioclient.api.Keybind;
 import me.mioclient.event.events.input.KeyEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.command.EnumArgumentType;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import me.mioclient.mode.misc.KeybindMode;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_6.class */
 public final class MacroCommand extends CommandFeature {
     public boolean flag;
     public String string;
@@ -47,12 +39,12 @@ public final class MacroCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(withMacroArgument("delete", requiredArgumentBuilder -> {
             requiredArgumentBuilder.executes(commandContext -> {
                 KeybindFeature keybindFeature = (KeybindFeature) commandContext.getArgument("macro", KeybindFeature.class);
                 ClientServices.macroManager.unregister(keybindFeature);
-                ChatUtils.sendMessage(Text.literal(ClientTextRenderer.capitalize(keybindFeature.getName())).append(" has been deleted"), ChatUtils.createSignature(-1));
+                ChatUtils.sendMessage(Component.literal(ClientTextRenderer.capitalize(keybindFeature.getName())).append(" has been deleted"), ChatUtils.createSignature(-1));
                 return 1;
             });
         })).then(withMacroArgument("commands", this::buildCommandSubcommands)).then(CommandFeature.literal("new").then(CommandFeature.argument("name", StringArgumentType.word()).then(CommandFeature.argument("type", new EnumArgumentType(KeybindMode.class, "Macro")).then(CommandFeature.argument("key", new KeybindArgumentType()).then(commandArgument().executes(commandContext -> {
@@ -61,32 +53,32 @@ public final class MacroCommand extends CommandFeature {
             KeybindFeature keybindFeature832 = ((KeybindMode) commandContext.getArgument("type", KeybindMode.class)).createKeybindFeature(str, (Keybind) commandContext.getArgument("key", Keybind.class));
             keybindFeature832.getCommands().add(str2);
             ClientServices.macroManager.register(keybindFeature832);
-            ChatUtils.sendMessage(Text.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
             return 1;
         })).executes(commandContext2 -> {
             String str = (String) commandContext2.getArgument("name", String.class);
             KeybindFeature keybindFeature832 = ((KeybindMode) commandContext2.getArgument("type", KeybindMode.class)).createKeybindFeature(str, (Keybind) commandContext2.getArgument("key", Keybind.class));
             ClientServices.macroManager.register(keybindFeature832);
-            ChatUtils.sendMessage(Text.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
             return 1;
         })).executes(commandContext3 -> {
             this.string = (String) commandContext3.getArgument("name", String.class);
             this.mode_4 = (KeybindMode) commandContext3.getArgument("type", KeybindMode.class);
             this.flag = true;
-            ChatUtils.sendMessage(Text.literal("Press a key"), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal("Press a key"), ChatUtils.createSignature(-1));
             return 1;
         })))).then(CommandFeature.literal("list").executes(commandContext4 -> {
             int i = 0;
-            ChatUtils.sendMessage(Text.literal("Macro list:"), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal("Macro list:"), ChatUtils.createSignature(-1));
             for (KeybindFeature keybindFeature : ClientServices.macroManager.getRegistry()) {
-                ChatUtils.sendMessage(Text.literal("%s (%s)".formatted(keybindFeature.getName(), keybindFeature.getKeybind().getBindString())), ChatUtils.createSignature(i));
+                ChatUtils.sendMessage(Component.literal("%s (%s)".formatted(keybindFeature.getName(), keybindFeature.getKeybind().getBindString())), ChatUtils.createSignature(i));
                 i++;
             }
             return 0;
         }));
     }
 
-    public void buildCommandSubcommands(RequiredArgumentBuilder<CommandSource, KeybindFeature> requiredArgumentBuilder) {
+    public void buildCommandSubcommands(RequiredArgumentBuilder<CommandSourceStack, KeybindFeature> requiredArgumentBuilder) {
         requiredArgumentBuilder.then(CommandFeature.literal("add").then(commandArgument().executes(commandContext -> {
             KeybindFeature keybindFeature = (KeybindFeature) commandContext.getArgument("macro", KeybindFeature.class);
             String str = (String) commandContext.getArgument("command", String.class);
@@ -94,7 +86,7 @@ public final class MacroCommand extends CommandFeature {
                 keybindFeature.getCommands().add(str);
                 return 1;
             }
-            ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(String.valueOf(Formatting.RED)).format("\u0001You've reached the command limit of Hold Macro")), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(String.valueOf(ChatFormatting.RED)).format("\u0001You've reached the command limit of Hold Macro")), ChatUtils.createSignature(-1));
             return 1;
         }))).then(CommandFeature.literal("remove").then(CommandFeature.argument("index", IntegerArgumentType.integer(1)).executes(commandContext2 -> {
             KeybindFeature keybindFeature = (KeybindFeature) commandContext2.getArgument("macro", KeybindFeature.class);
@@ -103,7 +95,7 @@ public final class MacroCommand extends CommandFeature {
                 keybindFeature.getCommands().remove(intValue);
                 return 1;
             }
-            ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(formatCommandList(keybindFeature)).arg(String.valueOf(Formatting.WHITE)).arg(String.valueOf(Formatting.RED)).format("\u0001Invalid index\u0001\n\u0001")), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(formatCommandList(keybindFeature)).arg(String.valueOf(ChatFormatting.WHITE)).arg(String.valueOf(ChatFormatting.RED)).format("\u0001Invalid index\u0001\n\u0001")), ChatUtils.createSignature(-1));
             return 1;
         }))).then(CommandFeature.literal("clear").executes(commandContext3 -> {
             ((KeybindFeature) commandContext3.getArgument("macro", KeybindFeature.class)).getCommands().clear();
@@ -116,16 +108,16 @@ public final class MacroCommand extends CommandFeature {
                 keybindFeature.getCommands().set(intValue, str);
                 return 1;
             }
-            ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(formatCommandList(keybindFeature)).arg(String.valueOf(Formatting.WHITE)).arg(String.valueOf(Formatting.RED)).format("\u0001Invalid index\u0001\n\u0001")), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(formatCommandList(keybindFeature)).arg(String.valueOf(ChatFormatting.WHITE)).arg(String.valueOf(ChatFormatting.RED)).format("\u0001Invalid index\u0001\n\u0001")), ChatUtils.createSignature(-1));
             return 1;
         })))).executes(commandContext5 -> {
-            ChatUtils.sendMessage(Text.literal(formatCommandList((KeybindFeature) commandContext5.getArgument("macro", KeybindFeature.class))), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal(formatCommandList((KeybindFeature) commandContext5.getArgument("macro", KeybindFeature.class))), ChatUtils.createSignature(-1));
             return 1;
         });
     }
 
-    public com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> withMacroArgument(String str, Consumer<RequiredArgumentBuilder<CommandSource, KeybindFeature>> consumer) {
-        RequiredArgumentBuilder<CommandSource, KeybindFeature> argument = CommandFeature.argument("macro", new MacroArgumentType());
+    public com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> withMacroArgument(String str, Consumer<RequiredArgumentBuilder<CommandSourceStack, KeybindFeature>> consumer) {
+        RequiredArgumentBuilder<CommandSourceStack, KeybindFeature> argument = CommandFeature.argument("macro", new MacroArgumentType());
         consumer.accept(argument);
         return CommandFeature.literal(str).then(argument);
     }
@@ -143,11 +135,11 @@ public final class MacroCommand extends CommandFeature {
         return stringBuffer.toString();
     }
 
-    public RequiredArgumentBuilder<CommandSource, String> commandArgument() {
+    public RequiredArgumentBuilder<CommandSourceStack, String> commandArgument() {
         return CommandFeature.argument("command", StringArgumentType.greedyString()).suggests(this::suggestMacroCommands);
     }
 
-    public CompletableFuture<Suggestions> suggestMacroCommands(CommandContext<CommandSource> commandContext, SuggestionsBuilder suggestionsBuilder) {
+    public CompletableFuture<Suggestions> suggestMacroCommands(CommandContext<CommandSourceStack> commandContext, SuggestionsBuilder suggestionsBuilder) {
         try {
             int start = suggestionsBuilder.getStart();
             int i = 0;
@@ -163,7 +155,7 @@ public final class MacroCommand extends CommandFeature {
                 }
             }
             int i2 = start;
-            return ClientCommandRegistry.commandDispatcher.getCompletionSuggestions(ClientCommandRegistry.commandDispatcher.parse(sb.toString(), (CommandSource) null), i).thenApply(suggestions -> {
+            return ClientCommandRegistry.commandDispatcher.getCompletionSuggestions(ClientCommandRegistry.commandDispatcher.parse(sb.toString(), (CommandSourceStack) null), i).thenApply(suggestions -> {
                 StringRange range = suggestions.getRange();
                 return new Suggestions(new StringRange(range.getStart() + i2, range.getEnd() + i2), suggestions.getList().stream().map(suggestion -> {
                     return new Suggestion(new StringRange(suggestion.getRange().getStart() + i2, suggestion.getRange().getEnd() + i2), suggestion.getText(), suggestion.getTooltip());
@@ -181,7 +173,7 @@ public final class MacroCommand extends CommandFeature {
         }
         KeybindFeature keybindFeature832 = this.mode_4.createKeybindFeature(this.string, new Keybind(keyEvent.getKey(), Keybind.KeybindMode.TOGGLE, keyEvent.isPressed()));
         ClientServices.macroManager.register(keybindFeature832);
-        ChatUtils.sendMessage(Text.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
+        ChatUtils.sendMessage(Component.literal("Macro ").append(keybindFeature832.getAsText()).append(" has been created"), ChatUtils.createSignature(-1));
         this.flag = false;
     }
 }

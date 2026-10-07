@@ -4,11 +4,8 @@ import me.mioclient.mode.combat.KeyPearlMode;
 
 import me.mioclient.event.Event;
 
-import me.mioclient.mode.combat.KeyPearlMode;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/AttackHookPostEvent.class */
 public class AttackHookPostEvent extends Event {
     public final KeyPearlMode keyPearlMode;
     public Entity entity;

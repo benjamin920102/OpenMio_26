@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/RateLimiter.class */
 public final class RateLimiter {
     public final List<Long> list;
     public final int num;

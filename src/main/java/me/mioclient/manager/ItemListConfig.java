@@ -3,19 +3,14 @@ package me.mioclient.manager;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.JsonConfigurable;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import me.mioclient.setting.EntityListObjectSetting;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
+import net.minecraft.world.item.Item;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Items.class */
 public class ItemListConfig implements JsonConfigurable {
-    public final EntityListObjectSetting<Item> entityListObjectSetting = new EntityListObjectSetting<>("Items", Registries.ITEM, new Item[0]);
+    public final EntityListObjectSetting<Item> entityListObjectSetting = new EntityListObjectSetting<>("Items", BuiltInRegistries.ITEM, new Item[0]);
 
     @Override // me.mioclient.api.JsonConfigurable
     public JsonElement toJson() {

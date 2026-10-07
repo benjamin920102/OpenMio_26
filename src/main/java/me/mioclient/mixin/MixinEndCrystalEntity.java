@@ -1,18 +1,17 @@
 package me.mioclient.mixin;
 
 import me.mioclient.ducks.DuckEndCrystalEntity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
-@Mixin({EndCrystalEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinEndCrystalEntity.class */
+@Mixin({EndCrystal.class})
+
 public class MixinEndCrystalEntity implements DuckEndCrystalEntity {
 
     @Unique
@@ -21,8 +20,8 @@ public class MixinEndCrystalEntity implements DuckEndCrystalEntity {
     @Unique
     private boolean mioAttacked;
 
-    @Inject(method = {"<init>(Lnet/minecraft/entity/EntityType;Lnet/minecraft/world/World;)V"}, at = {@At("RETURN")})
-    private void init(EntityType<?> entityType, World world, CallbackInfo callbackInfo) {
+    @Inject(method = {"<init>(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/level/Level;)V"}, at = {@At("RETURN")})
+    private void init(EntityType<?> entityType, Level world, CallbackInfo callbackInfo) {
         this.spawnTime = System.currentTimeMillis();
         this.mioAttacked = false;
     }

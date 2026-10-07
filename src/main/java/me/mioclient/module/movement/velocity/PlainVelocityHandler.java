@@ -2,14 +2,11 @@ package me.mioclient.module.movement.velocity;
 
 import me.mioclient.event.events.network.PacketReceiveEvent;
 
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ExplosionVelocityEvent;
-import me.mioclient.mixin.ducks.DuckEntityVelocityUpdateS2CPacket;
 import me.mioclient.module.movement.Velocity;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlainVelocityHandler.class */
 public class PlainVelocityHandler extends VelocityModeHandler {
     public PlainVelocityHandler(Velocity velocity) {
         super(velocity);
@@ -20,17 +17,19 @@ public class PlainVelocityHandler extends VelocityModeHandler {
         int intValue = this.velocity.horizontal.getValue().intValue();
         int intValue2 = this.velocity.vertical.getValue().intValue();
         int i = this.velocity.inverse.getValue().booleanValue() ? -1 : 1;
-        EntityVelocityUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntityVelocityUpdateS2CPacket ? (EntityVelocityUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof EntityVelocityUpdateS2CPacket) {
-            EntityVelocityUpdateS2CPacket entityVelocityUpdateS2CPacket = packet904;
-            if (entityVelocityUpdateS2CPacket.getEntityId() == minecraftClient.player.getId()) {
-                DuckEntityVelocityUpdateS2CPacket duckEntityVelocityUpdateS2CPacket = (DuckEntityVelocityUpdateS2CPacket) entityVelocityUpdateS2CPacket;
-                duckEntityVelocityUpdateS2CPacket.setX((int) (entityVelocityUpdateS2CPacket.getVelocityX() * Double.longBitsToDouble(4665518107723300864L) * intValue * Float.intBitsToFloat(1008981770) * i));
-                duckEntityVelocityUpdateS2CPacket.setY((int) (entityVelocityUpdateS2CPacket.getVelocityY() * Double.longBitsToDouble(4665518107723300864L) * intValue2 * Float.intBitsToFloat(1008981770)));
-                duckEntityVelocityUpdateS2CPacket.setZ((int) (entityVelocityUpdateS2CPacket.getVelocityZ() * Double.longBitsToDouble(4665518107723300864L) * intValue * Float.intBitsToFloat(1008981770) * i));
-                if (intValue == 0 && intValue2 == 0) {
-                    channelRead0Event.cancel();
-                }
+        if (!(channelRead0Event.getPacket() instanceof ClientboundSetEntityMotionPacket entityVelocityUpdateS2CPacket)) {
+            return;
+        }
+        if (entityVelocityUpdateS2CPacket.id() == minecraftClient.player.getId()) {
+            // 26.2 port: record is immutable - cancel + apply scaled motion directly.
+            float hScale = intValue * Float.intBitsToFloat(1008981770) * i;
+            float vScale = intValue2 * Float.intBitsToFloat(1008981770);
+            Vec3 m = entityVelocityUpdateS2CPacket.movement();
+            if (intValue == 0 && intValue2 == 0) {
+                channelRead0Event.cancel();
+            } else {
+                channelRead0Event.cancel();
+                minecraftClient.player.setDeltaMovement(new Vec3(m.x * hScale, m.y * vScale, m.z * hScale));
             }
         }
     }

@@ -5,18 +5,13 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.player.MovementUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.movement.Speed;
-import net.minecraft.entity.Entity;
-import me.mioclient.mode.combat.KeyPearlMode;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/OnGroundSpeedHandler.class */
 public final class OnGroundSpeedHandler extends SpeedModeHandler {
     public OnGroundSpeedHandler(Speed speed) {
         super(speed);
@@ -33,8 +28,8 @@ public final class OnGroundSpeedHandler extends SpeedModeHandler {
         if (this.num == 4) {
             this.speed.reset();
         }
-        if (minecraftClient.player.isOnGround() || this.num == 3) {
-            if ((!minecraftClient.player.horizontalCollision && minecraftClient.player.forwardSpeed != 0.0f) || minecraftClient.player.sidewaysSpeed != 0.0f) {
+        if (minecraftClient.player.onGround() || this.num == 3) {
+            if ((!minecraftClient.player.horizontalCollision && ((minecraftClient.player.input.keyPresses.forward() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.backward() ? 1.0f : 0.0f)) != 0.0f) || ((minecraftClient.player.input.keyPresses.left() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.right() ? 1.0f : 0.0f)) != 0.0f) {
                 if (this.num == 2) {
                     this.val2 *= Double.longBitsToDouble(4612021536599627006L);
                     this.num = 3;
@@ -45,8 +40,9 @@ public final class OnGroundSpeedHandler extends SpeedModeHandler {
             }
             this.val2 = Math.min(this.val2, this.speed.speed.getValue().floatValue());
             this.val2 = Math.max(this.val2, MovementUtils.getBaseMoveSpeed(true));
-            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(RenderUtil.getPartialTick()), minecraftClient.player.input, this.val2);
-            if (!minecraftClient.world.isSpaceEmpty(minecraftClient.player.getBoundingBox().stretch(doubleArray2508[0], 0.0d, doubleArray2508[1]))) {
+            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, this.val2);
+            // 26.2: AABB.stretch -> expandTowards
+            if (!minecraftClient.level.noCollision(minecraftClient.player.getBoundingBox().expandTowards(doubleArray2508[0], 0.0d, doubleArray2508[1]))) {
                 this.speed.reset();
                 this.val2 = MovementUtils.getBaseMoveSpeed(true);
             }
@@ -67,13 +63,15 @@ public final class OnGroundSpeedHandler extends SpeedModeHandler {
 
     public boolean is594() {
         Entity entity = minecraftClient.player;
-        double x = entity.getX() - entity.prevX;
-        double y = entity.getY() - entity.prevY;
-        double z = entity.getZ() - entity.prevZ;
-        if (!minecraftClient.world.isSpaceEmpty(minecraftClient.player.getBoundingBox().offset(x, y, z))) {
+        double x = entity.getX() - entity.xo;
+        double y = entity.getY() - entity.yo;
+        double z = entity.getZ() - entity.zo;
+        // 26.2: AABB.offset -> move
+        if (!minecraftClient.level.noCollision(minecraftClient.player.getBoundingBox().move(x, y, z))) {
             return true;
         }
-        if (!minecraftClient.world.isSpaceEmpty(minecraftClient.player.getBoundingBox().stretch(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d)) && !minecraftClient.player.horizontalCollision && minecraftClient.player.getY() <= Math.floor(minecraftClient.player.getY()) && is1827()) {
+        // 26.2: AABB.stretch -> expandTowards
+        if (!minecraftClient.level.noCollision(minecraftClient.player.getBoundingBox().expandTowards(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d)) && !minecraftClient.player.horizontalCollision && minecraftClient.player.getY() <= Math.floor(minecraftClient.player.getY()) && is1827()) {
             if (ClientServices.mainhandHelper.getPredictedBox(minecraftClient.player, 3).minY >= minecraftClient.player.getY()) {
                 return false;
             }

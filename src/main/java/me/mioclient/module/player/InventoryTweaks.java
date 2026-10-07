@@ -2,22 +2,19 @@ package me.mioclient.module.player;
 
 import me.mioclient.event.events.render.HudRenderEvent;
 
-import me.mioclient.event.events.render.HudRenderEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ContainerInput;
 import org.lwjgl.glfw.GLFW;
 import me.mioclient.mixin.ducks.DuckHandledScreen;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/InventoryTweaks.class */
 public class InventoryTweaks extends Module {
     public Setting<Boolean> fastMove = add(new BooleanSetting("FastMove", true).setVisible());
     public Setting<Boolean> onlyContainer = add(new BooleanSetting("OnlyContainer", false).requiresSettings(this.fastMove));
@@ -32,19 +29,19 @@ public class InventoryTweaks extends Module {
     @Listen
     public void onHudRender(HudRenderEvent matrixStackEvent_2) {
         Slot mio$getFocusedSlot;
-        if (this.fastMove.getValue().booleanValue() && (minecraftClient.currentScreen instanceof HandledScreen)) {
-            if ((this.onlyContainer.getValue().booleanValue() && !(minecraftClient.currentScreen instanceof GenericContainerScreen) && !(minecraftClient.currentScreen instanceof ShulkerBoxScreen)) || !minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty() || (mio$getFocusedSlot = ((me.mioclient.mixin.ducks.DuckHandledScreen)(Object) minecraftClient.currentScreen).mio$getFocusedSlot()) == null || mio$getFocusedSlot.id == this.num || mio$getFocusedSlot.getStack().isEmpty()) {
+        if (this.fastMove.getValue().booleanValue() && (minecraftClient.gui.screen() instanceof AbstractContainerScreen)) {
+            if ((this.onlyContainer.getValue().booleanValue() && !(minecraftClient.gui.screen() instanceof ContainerScreen) && !(minecraftClient.gui.screen() instanceof ShulkerBoxScreen)) || !minecraftClient.player.containerMenu.getCarried().isEmpty() || (mio$getFocusedSlot = ((me.mioclient.mixin.ducks.DuckHandledScreen)(Object) minecraftClient.gui.screen()).mio$getFocusedSlot()) == null || mio$getFocusedSlot.index == this.num || mio$getFocusedSlot.getItem().isEmpty()) {
                 return;
             }
             int i = -1;
-            if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 0) == 1) {
+            if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().handle(), 0) == 1) {
                 i = 0;
             }
-            if (GLFW.glfwGetKey(minecraftClient.getWindow().getHandle(), 340) != 1 || i == -1) {
+            if (GLFW.glfwGetKey(minecraftClient.getWindow().handle(), 340) != 1 || i == -1) {
                 return;
             }
-            minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, mio$getFocusedSlot.id, i, SlotActionType.QUICK_MOVE, minecraftClient.player);
-            this.num = mio$getFocusedSlot.id;
+            minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, mio$getFocusedSlot.index, i, ContainerInput.QUICK_MOVE, minecraftClient.player);
+            this.num = mio$getFocusedSlot.index;
         }
     }
 }

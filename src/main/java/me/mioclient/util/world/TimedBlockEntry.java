@@ -3,10 +3,8 @@ package me.mioclient.util.world;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import net.minecraft.block.Block;
+import net.minecraft.world.level.block.Block;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TimedBlockEntry.class */
 public final class TimedBlockEntry {
     public final long num;
     public final Block block;
@@ -19,9 +17,6 @@ public final class TimedBlockEntry {
     public static TimedBlockEntry getBlockData2589(Block block) {
         return new TimedBlockEntry(System.currentTimeMillis(), block);
     }
-
-
-
 
     public long getTimestamp() {
         return this.num;

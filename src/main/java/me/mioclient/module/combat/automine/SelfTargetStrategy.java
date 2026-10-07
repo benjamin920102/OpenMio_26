@@ -3,18 +3,11 @@ package me.mioclient.module.combat.automine;
 import me.mioclient.util.math.BoxMath;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.module.combat.automine.MineStrategyBase;
-import me.mioclient.module.combat.automine.MineTargetState;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.player.PlayerUtils;
-
 import me.mioclient.module.combat.AutoMine;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AutoMineSearchHelper42_5.class */
 public final class SelfTargetStrategy extends MineStrategyBase {
     public SelfTargetStrategy(AutoMine autoMine) {
         super(autoMine);
@@ -26,7 +19,7 @@ public final class SelfTargetStrategy extends MineStrategyBase {
         if ((this.autoMine.autoMineSearchHelper4.getTargetPlayer() == null && blockPos2156 == null) || minecraftClient.player.isFallFlying()) {
             return;
         }
-        Box boundingBox = minecraftClient.player.getBoundingBox();
+        AABB boundingBox = minecraftClient.player.getBoundingBox();
         if (this.autoMine.onlyCrawl.getValue().booleanValue() && !isSmallBoundingBox() && blockPos2156 == null) {
             return;
         }
@@ -40,13 +33,13 @@ public final class SelfTargetStrategy extends MineStrategyBase {
         });
     }
 
-    public BlockPos findMineTargetPos(Box box) {
-        BlockPos down = BlockPos.ofFloored(minecraftClient.player.getPos()).down();
+    public BlockPos findMineTargetPos(AABB box) {
+        BlockPos down = BlockPos.containing(minecraftClient.player.position()).below();
         BlockPos blockPos2156 = getEyeLevelSolidBlock();
         if (isValidMineTarget(down) && ((isSpeedMineTarget(down) || isSmallBoundingBox()) && hasSolidGroundBelow())) {
             return down;
         }
-        BlockPos up = BlockPos.ofFloored(minecraftClient.player.getPos().add(0.0d, box.getLengthY() - BoxMath.val, 0.0d)).up();
+        BlockPos up = BlockPos.containing(minecraftClient.player.position().add(0.0d, box.getYsize() - BoxMath.val, 0.0d)).above();
         if (blockPos2156 != null) {
             up = blockPos2156;
         }
@@ -60,28 +53,28 @@ public final class SelfTargetStrategy extends MineStrategyBase {
         if (!this.autoMine.face.getValue().booleanValue()) {
             return null;
         }
-        BlockPos ofFloored = BlockPos.ofFloored(minecraftClient.player.getEyePos());
-        BlockState blockState = minecraftClient.world.getBlockState(ofFloored);
-        if (blockState.isAir() || blockState.getBlock().getBlastResistance() < Float.intBitsToFloat(1142292480) || isSmallBoundingBox() || !isValidMineTarget(ofFloored)) {
+        BlockPos ofFloored = BlockPos.containing(minecraftClient.player.getEyePosition());
+        BlockState blockState = minecraftClient.level.getBlockState(ofFloored);
+        if (blockState.isAir() || blockState.getBlock().getExplosionResistance() < Float.intBitsToFloat(1142292480) || isSmallBoundingBox() || !isValidMineTarget(ofFloored)) {
             return null;
         }
         return ofFloored;
     }
 
     public boolean isSmallBoundingBox() {
-        return minecraftClient.player.getBoundingBox().getLengthY() <= Double.longBitsToDouble(4607182418800017408L);
+        return minecraftClient.player.getBoundingBox().getYsize() <= Double.longBitsToDouble(4607182418800017408L);
     }
 
     public boolean hasSolidGroundBelow() {
         if (this.autoMine.downPriority.getValue().booleanValue()) {
             return true;
         }
-        if (minecraftClient.world.isAir(PlayerUtils.getRoundedBlockPos().down(2))) {
+        if (minecraftClient.level.isEmptyBlock(PlayerUtils.getRoundedBlockPos().below(2))) {
             return false;
         }
         for (BlockPos blockPos : PlayerUtils.getSurroundPositions(minecraftClient.player)) {
-            BlockState blockState = minecraftClient.world.getBlockState(blockPos.down());
-            if (blockState.isAir() || blockState.getBlock().getBlastResistance() < Float.intBitsToFloat(1142292480)) {
+            BlockState blockState = minecraftClient.level.getBlockState(blockPos.below());
+            if (blockState.isAir() || blockState.getBlock().getExplosionResistance() < Float.intBitsToFloat(1142292480)) {
                 return false;
             }
         }

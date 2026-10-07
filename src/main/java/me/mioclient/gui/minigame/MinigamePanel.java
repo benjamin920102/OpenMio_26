@@ -4,21 +4,16 @@ import me.mioclient.gui.widget.PanelComponent;
 
 import me.mioclient.gui.panel.ClickGuiPanel;
 
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.GuiComponent;
 
 import java.util.function.Supplier;
 import me.mioclient.setting.GameStopwatchPresetSettingButton;
 import me.mioclient.setting.PresetPresetSettingButton;
-import me.mioclient.gui.widget.PanelComponent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Game.class */
 public class MinigamePanel extends ClickGuiPanel {
     public GameMode gameMode;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/feature/Game$Inner_2.class */
+    
     class Inner_2 extends PresetPresetSettingButton {
         public Inner_2(ClickGuiPanel presetEnumSettingHelper, Supplier supplier) {
             super(presetEnumSettingHelper, (Supplier<String>) supplier);

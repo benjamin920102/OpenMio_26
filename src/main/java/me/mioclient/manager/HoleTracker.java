@@ -4,8 +4,6 @@ import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.world.HoleData;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.world.HoleData;
-import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.event.EventBus;
 
@@ -14,18 +12,16 @@ import java.util.List;
 import java.util.concurrent.Future;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ButtonBlock;
-import net.minecraft.block.RailBlock;
-import net.minecraft.block.TorchBlock;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.RailBlock;
+import net.minecraft.world.level.block.TorchBlock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HoleTracker.class */
 public final class HoleTracker implements ClientAccessor {
     public List<HoleData> list = new ArrayList();
     public boolean flag;
@@ -38,37 +34,37 @@ public final class HoleTracker implements ClientAccessor {
 
     public boolean isHoleAt(BlockPos blockPos) {
         return this.list.stream().anyMatch(holeSnapData -> {
-            return holeSnapData.getBox().intersects(new Box(blockPos));
+            return holeSnapData.getBox().intersects(new AABB(blockPos));
         });
     }
 
     public static HoleData detectHole(BlockPos blockPos, Direction direction) {
         HoleData holeSnapData2724;
-        if (isSolidBlock(blockPos) || !isSolidBlock(blockPos.down()) || isSolidBlock(blockPos.up())) {
+        if (isSolidBlock(blockPos) || !isSolidBlock(blockPos.below()) || isSolidBlock(blockPos.above())) {
             return null;
         }
-        if (minecraftClient.world.getBlockState(blockPos.down()).isOf(Blocks.END_PORTAL)) {
+        if (minecraftClient.level.getBlockState(blockPos.below()).getBlock() == Blocks.END_PORTAL) {
             return null;
         }
-        boolean isSolidBlock = isSolidBlock(blockPos.up(2));
+        boolean isSolidBlock = isSolidBlock(blockPos.above(2));
         HoleData.HoleSnapDataMode holeSnapDataMode = HoleData.HoleSnapDataMode.SAFE;
         Direction direction2 = null;
         for (Direction direction3 : Direction.values()) {
             if (direction != direction3.getOpposite() && direction3 != Direction.UP) {
-                BlockPos offset = blockPos.offset(direction3);
-                Block block = minecraftClient.world.getBlockState(offset).getBlock();
+                BlockPos offset = blockPos.relative(direction3);
+                Block block = minecraftClient.level.getBlockState(offset).getBlock();
                 if (isSolidBlock(offset)) {
                     if (block == Blocks.RESPAWN_ANCHOR) {
                         return null;
                     }
-                    if ((block.getBlastResistance() < Float.intBitsToFloat(1142292480) && block.getBlastResistance() >= 0.0f) || block.getHardness() == 0.0f) {
+                    if ((block.getExplosionResistance() < Float.intBitsToFloat(1142292480) && block.getExplosionResistance() >= 0.0f) || block.defaultDestroyTime() == 0.0f) {
                         return null;
                     }
-                    if (block.getBlastResistance() >= Float.intBitsToFloat(1142292480) && block.getHardness() >= 0.0f) {
+                    if (block.getExplosionResistance() >= Float.intBitsToFloat(1142292480) && block.defaultDestroyTime() >= 0.0f) {
                         holeSnapDataMode = HoleData.HoleSnapDataMode.UNSAFE;
                     }
                 } else {
-                    if (direction2 != null || direction != null || (holeSnapData2724 = detectHole(blockPos.offset(direction3), direction3)) == null) {
+                    if (direction2 != null || direction != null || (holeSnapData2724 = detectHole(blockPos.relative(direction3), direction3)) == null) {
                         return null;
                     }
                     if (!holeSnapData2724.isTrapped()) {
@@ -81,7 +77,7 @@ public final class HoleTracker implements ClientAccessor {
                 }
             }
         }
-        return new HoleData(holeSnapDataMode, blockPos.toImmutable(), direction2 == null ? new Box(blockPos) : new Box(blockPos).stretch(direction2.getVector().getX(), 0.0d, direction2.getVector().getZ()), isSolidBlock);
+        return new HoleData(holeSnapDataMode, blockPos.immutable(), direction2 == null ? new AABB(blockPos) : new AABB(blockPos).expandTowards(direction2.getUnitVec3i().getX(), 0.0d, direction2.getUnitVec3i().getZ()), isSolidBlock);
     }
 
     @Listen
@@ -93,8 +89,8 @@ public final class HoleTracker implements ClientAccessor {
     }
 
     public static boolean isSolidBlock(BlockPos blockPos) {
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        return (blockState.isAir() || blockState.isOf(Blocks.FIRE) || blockState.isOf(Blocks.SOUL_FIRE) || (blockState.getBlock() instanceof ButtonBlock) || (blockState.getBlock() instanceof TorchBlock) || (blockState.getBlock() instanceof RailBlock) || blockState.isOf(Blocks.LIGHT)) ? false : true;
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        return (blockState.isAir() || blockState.getBlock() == Blocks.FIRE || blockState.getBlock() == Blocks.SOUL_FIRE || (blockState.getBlock() instanceof ButtonBlock) || (blockState.getBlock() instanceof TorchBlock) || (blockState.getBlock() instanceof RailBlock) || blockState.getBlock() == Blocks.LIGHT) ? false : true;
     }
 
     public List<HoleData> getHoles() {

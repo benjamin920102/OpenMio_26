@@ -4,16 +4,11 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.render.shape.BlockHighlightRenderer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-
 import java.awt.Color;
-import net.minecraft.command.CommandSource;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_38.class */
 public class HighlightCommand extends CommandFeature {
     public static final Color color = new Color(255, 0, 0, 120);
     public static final Color color2 = new Color(0, 0, 0, 0);
@@ -36,12 +31,12 @@ public class HighlightCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("pos", new ExamplesArgumentType()).then(CommandFeature.literal("beam").executes(commandContext -> {
-            ClientServices.antiPhaseBlockHelper.addHighlight(this, Box.of((Vec3d) commandContext.getArgument("pos", Vec3d.class), Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L)).withMaxY(minecraftClient.world.getTopY()).withMinY(minecraftClient.world.getBottomY()));
+            ClientServices.antiPhaseBlockHelper.addHighlight(this, AABB.ofSize((Vec3) commandContext.getArgument("pos", Vec3.class), 0.25d, 0.25d, 0.25d).setMaxY(minecraftClient.level.getMaxY()).setMinY(minecraftClient.level.getMinY()));
             return 1;
         })).executes(commandContext2 -> {
-            ClientServices.antiPhaseBlockHelper.addHighlight(this, Box.of((Vec3d) commandContext2.getArgument("pos", Vec3d.class), Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L)));
+            ClientServices.antiPhaseBlockHelper.addHighlight(this, AABB.ofSize((Vec3) commandContext2.getArgument("pos", Vec3.class), 0.25d, 0.25d, 0.25d));
             return 1;
         }));
     }

@@ -7,9 +7,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import me.mioclient.module.client.Fonts;
 
-/* compiled from: 0.java */
 @Mixin({Main.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinMain.class */
+
 public class MixinMain {
     @Inject(method = {"main*"}, at = {@At("HEAD")}, remap = false)
     private static void mainHook(CallbackInfo callbackInfo) {

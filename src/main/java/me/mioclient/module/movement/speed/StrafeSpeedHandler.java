@@ -6,20 +6,26 @@ import me.mioclient.util.math.Vec3dUtils;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
-import me.mioclient.util.math.Vec3dUtils;
 
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.module.movement.LongJump;
 import me.mioclient.module.movement.Speed;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StrafeSpeedHandler.class */
 public class StrafeSpeedHandler extends SpeedModeHandler {
-    public static LongJump longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static LongJump longJump;
+
+    public static LongJump getLongJump() {
+        if (longJump == null && ClientServices.moduleInjector != null) {
+            try {
+                longJump = (LongJump) ClientServices.moduleInjector.getModule(LongJump.class);
+            } catch (Exception e) {
+            }
+        }
+        return longJump;
+    }
 
     public StrafeSpeedHandler(Speed speed) {
         super(speed);
@@ -30,7 +36,8 @@ public class StrafeSpeedHandler extends SpeedModeHandler {
     public void applyMovement(MoveEvent moveEvent) {
         double d;
         double d2;
-        if (this.speed.hasHeadCollision() || this.speed.isInLiquidBlocked() || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.isSpectator() || longJump.isToggled()) {
+        LongJump longJump_lcl = getLongJump();
+        if (this.speed.hasHeadCollision() || this.speed.isInLiquidBlocked() || PlayerUtils.isHungry() || minecraftClient.player.isFallFlying() || minecraftClient.player.isSpectator() || (longJump_lcl != null && longJump_lcl.isToggled())) {
             return;
         }
         double d3 = moveEvent.getY();
@@ -42,7 +49,7 @@ public class StrafeSpeedHandler extends SpeedModeHandler {
         float intBitsToFloat = (this.speed.stopwatch.hasElapsedMs(1000L) || !this.speed.boost.getValue().booleanValue()) ? Float.intBitsToFloat(1065353216) : Float.intBitsToFloat(1067030938);
         if (this.num == 1 && MovementUtils.is2181()) {
             this.val2 = (Double.longBitsToDouble(4608758678669597082L) * MovementUtils.computeMoveSpeed(false, (Double.longBitsToDouble(4598847156609680094L) * this.speed.speed.getValue().floatValue()) * intBitsToFloat)) - Double.longBitsToDouble(4576918229304087675L);
-        } else if (this.num == 2 && MovementUtils.is2181() && minecraftClient.player.groundCollision) {
+        } else if (this.num == 2 && MovementUtils.is2181() && minecraftClient.player.onGround()) {
             d3 = Double.longBitsToDouble(4601237667291888353L) + MovementUtils.getJumpBoostBonus();
             this.val2 *= Double.longBitsToDouble(4609591844600660623L);
         } else if (this.num == 3) {
@@ -55,14 +62,14 @@ public class StrafeSpeedHandler extends SpeedModeHandler {
         }
         this.val2 = Math.max(this.val2, MovementUtils.computeMoveSpeed(false, Double.longBitsToDouble(4598847156609680094L) * this.speed.speed.getValue().floatValue() * intBitsToFloat));
         if (MovementUtils.is2181()) {
-            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(RenderUtil.getPartialTick()), minecraftClient.player.input, this.val2);
+            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, this.val2);
             d = doubleArray2508[0];
             d2 = doubleArray2508[1];
         } else {
             d = 0.0d;
             d2 = 0.0d;
         }
-        Vec3dUtils.setVectorComponents(moveEvent.getMovement(), d, d3, d2);
+        moveEvent.setMovement(new Vec3(d, d3, d2));
         if (MovementUtils.is2181()) {
             this.num++;
         }

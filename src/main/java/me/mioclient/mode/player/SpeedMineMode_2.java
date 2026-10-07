@@ -2,12 +2,6 @@ package me.mioclient.mode.player;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedMineMode_2.class */
 public enum SpeedMineMode_2 implements NamedValue {
     NONE("None"),
     FAST("Fast"),

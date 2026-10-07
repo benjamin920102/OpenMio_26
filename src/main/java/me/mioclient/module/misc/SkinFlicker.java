@@ -2,10 +2,7 @@ package me.mioclient.module.misc;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.time.Stopwatch;
-
-import me.mioclient.api.NamedValue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,16 +13,13 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.entity.player.PlayerModelPart;
+import net.minecraft.client.Options;
+import net.minecraft.world.entity.player.PlayerModelPart;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/SkinFlicker.class */
 public class SkinFlicker extends Module {
     public static final PlayerModelPart[] playerModelPartArr = {PlayerModelPart.LEFT_SLEEVE, PlayerModelPart.JACKET, PlayerModelPart.HAT, PlayerModelPart.LEFT_PANTS_LEG, PlayerModelPart.RIGHT_PANTS_LEG, PlayerModelPart.RIGHT_SLEEVE};
     public static final PlayerModelPart[] playerModelPartArr2 = {PlayerModelPart.HAT, PlayerModelPart.JACKET, PlayerModelPart.LEFT_SLEEVE, PlayerModelPart.RIGHT_SLEEVE, PlayerModelPart.LEFT_PANTS_LEG, PlayerModelPart.RIGHT_PANTS_LEG};
@@ -37,8 +31,7 @@ public class SkinFlicker extends Module {
     public final Stopwatch stopwatch;
     public int num2;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/SkinFlicker$SkinFlickerMode.class */
+    
     public enum SkinFlickerMode implements NamedValue {
         FULL("Full"),
         VERTICAL("Vertical"),
@@ -67,17 +60,17 @@ public class SkinFlicker extends Module {
     @Override // me.mioclient.module.Module
     public void onEnable() {
         for (PlayerModelPart playerModelPart : PlayerModelPart.values()) {
-            this.map.put(playerModelPart, Boolean.valueOf(minecraftClient.options.isPlayerModelPartEnabled(playerModelPart)));
+            this.map.put(playerModelPart, Boolean.valueOf(minecraftClient.options.isModelPartEnabled(playerModelPart)));
         }
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
         Map<PlayerModelPart, Boolean> map = this.map;
-        GameOptions gameOptions = minecraftClient.options;
+        Options gameOptions = minecraftClient.options;
         Objects.requireNonNull(gameOptions);
         map.forEach((v1, v2) -> {
-            gameOptions.togglePlayerModelPart(v1, v2);
+            gameOptions.setModelPart(v1, v2);
         });
     }
 
@@ -114,7 +107,7 @@ public class SkinFlicker extends Module {
     }
 
     public void toggleSkinPart(PlayerModelPart playerModelPart) {
-        minecraftClient.options.togglePlayerModelPart(playerModelPart, !minecraftClient.options.isPlayerModelPartEnabled(playerModelPart));
+        minecraftClient.options.setModelPart(playerModelPart, !minecraftClient.options.isModelPartEnabled(playerModelPart));
     }
 
     public boolean shouldFlickPart(PlayerModelPart playerModelPart) {

@@ -14,12 +14,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModuleSettingArgumentType.class */
 public class ModuleSettingArgumentType implements com.mojang.brigadier.arguments.ArgumentType<String>, ClientAccessor {
     public final Module module;
 
@@ -33,7 +31,7 @@ public class ModuleSettingArgumentType implements com.mojang.brigadier.arguments
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> commandContext, SuggestionsBuilder suggestionsBuilder) {
-        return CommandSource.suggestMatching(this.module.getRegistry().stream().filter(setting -> {
+        return SharedSuggestionProvider.suggest(this.module.getRegistry().stream().filter(setting -> {
             return !setting.isDependent();
         }).map((v0) -> {
             return v0.getConfigName();
@@ -47,7 +45,7 @@ public class ModuleSettingArgumentType implements com.mojang.brigadier.arguments
         }).findFirst();
         if (findFirst.isEmpty()) {
             throw new DynamicCommandExceptionType(obj -> {
-                return Text.literal(new StringTemplate().arg(String.valueOf(obj)).format("Setting not found \u0001"));
+                return Component.literal(new StringTemplate().arg(String.valueOf(obj)).format("Setting not found \u0001"));
             }).create(str2);
         }
         return findFirst.get();

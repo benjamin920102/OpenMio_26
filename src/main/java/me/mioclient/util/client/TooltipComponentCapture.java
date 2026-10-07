@@ -5,13 +5,11 @@ import me.mioclient.api.ClientAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.item.tooltip.TooltipData;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TooltipComponentCapture.class */
 public final class TooltipComponentCapture implements ClientAccessor {
     public static boolean flag = false;
     public static List<TooltipComponent> list;
@@ -20,11 +18,33 @@ public final class TooltipComponentCapture implements ClientAccessor {
         throw new AssertionError();
     }
 
-    public static List<TooltipComponent> captureTooltipComponents(DrawContext drawContext, List<Text> list2, Optional<TooltipData> optional) {
+    // 26.2: TooltipData removed; tooltips render via setTooltipForNextFrame(Font, lines, Optional<TooltipComponent>).
+    // Capture keeps the data-layer image component so callers can build ClientTooltipComponents from it.
+    public static List<TooltipComponent> captureTooltipComponents(GuiGraphicsExtractor drawContext, List<Component> list2, Optional<TooltipComponent> optional) {
         flag = true;
-        drawContext.drawTooltip(minecraftClient.textRenderer, list2, optional, 0, 0);
-        flag = false;
-        return list == null ? new ArrayList() : new ArrayList(list);
+        try {
+            List<TooltipComponent> out = new ArrayList<>();
+            optional.ifPresent(out::add);
+            setComponents(out);
+            return new ArrayList<>(out);
+        } finally {
+            flag = false;
+        }
+    }
+
+    // 26.2: ItemStack#getTooltipImage() supplies the data-layer image (bundle/shulker/map) for the capture above.
+    public static List<TooltipComponent> captureForStack(net.minecraft.world.item.ItemStack stack) {
+        flag = true;
+        try {
+            List<TooltipComponent> out = new ArrayList<>();
+            if (stack != null && !stack.isEmpty()) {
+                stack.getTooltipImage().ifPresent(out::add);
+            }
+            setComponents(out);
+            return new ArrayList<>(out);
+        } finally {
+            flag = false;
+        }
     }
 
     public static boolean is1129() {

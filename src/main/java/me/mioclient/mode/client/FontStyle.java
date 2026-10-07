@@ -2,12 +2,6 @@ package me.mioclient.mode.client;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_8.class */
 public enum FontStyle implements NamedValue {
     PLAIN("Plain"),
     BOLD("Bold"),

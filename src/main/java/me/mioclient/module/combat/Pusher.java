@@ -13,48 +13,36 @@ import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.combat.pusher.FacingDirectionResolver;
 import me.mioclient.module.combat.pusher.PusherTargetSelector;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
 import java.util.Iterator;
-import me.mioclient.mode.player.AutoCraftMode;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.FacingBlock;
-import net.minecraft.block.PistonBlock;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DirectionalBlock;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Pusher.class */
 public class Pusher extends Module {
     public Setting<Float> range = add(new NumberSetting<>("Range", 5.0f, 1.0f, 6.0f).setSuffix("m"));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 200, 0, 500).setSuffix("ms"));
@@ -74,29 +62,25 @@ public class Pusher extends Module {
     public Setting<Boolean> fade = add(new BooleanSetting("Fade", true).setVisible().requiresSettings(this.render));
     public Setting<Float> fadeTime = add(new NumberSetting<>("FadeTime", 1.0f, 0.1f, 1.0f).setSuffix("s").requiresSettings(this.render, this.fade));
     public final Stopwatch stopwatch;
-    public PlayerEntity playerEntity;
+    public Player playerEntity;
     public boolean flag;
     public BlockPos blockPos;
     public boolean flag2;
     public final FacingDirectionResolver pusherHelper;
     public final PusherTargetSelector pusherSearchHelper4;
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Pusher$Record.class */
+    
+    
     public static final class Record {
         public final Direction direction;
         public final BlockPos blockPos;
-        public final Vec3d vec3d;
+        public final Vec3 vec3d;
 
-        public Record(Direction direction, BlockPos blockPos, Vec3d vec3d) {
+        public Record(Direction direction, BlockPos blockPos, Vec3 vec3d) {
             this.direction = direction;
             this.blockPos = blockPos;
             this.vec3d = vec3d;
         }
-
-
-
 
         public Direction getDirection() {
             return this.direction;
@@ -106,14 +90,13 @@ public class Pusher extends Module {
             return this.blockPos;
         }
 
-        public Vec3d getPlacementTarget() {
+        public Vec3 getPlacementTarget() {
             return this.vec3d;
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Pusher$Record_2.class */
+    
+    
     public static final class Record_2 {
         public final Direction direction;
         public final BlockPos blockPos;
@@ -122,9 +105,6 @@ public class Pusher extends Module {
             this.direction = direction;
             this.blockPos = blockPos;
         }
-
-
-
 
         public Direction getDirection() {
             return this.direction;
@@ -152,17 +132,17 @@ public class Pusher extends Module {
 
     @Override // me.mioclient.module.Module
     public String getInfo() {
-        return this.playerEntity != null ? this.playerEntity.getGameProfile().getName() : super.getInfo();
+        return this.playerEntity != null ? this.playerEntity.getGameProfile().name() : super.getInfo();
     }
 
     @Listen
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
-        if (minecraftClient.isInSingleplayer()) {
+        if (minecraftClient.hasSingleplayerServer()) {
             if (this.flag2) {
                 return;
             }
             ClientServices.tooltipsHelper.schedule(() -> {
-                ChatUtils.sendPrefixedMessage(Text.literal("Pusher doesn't work in singleplayer."), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+                ChatUtils.sendPrefixedMessage(Component.literal("Pusher doesn't work in singleplayer."), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
             }, 1);
             this.flag2 = true;
             return;
@@ -173,9 +153,9 @@ public class Pusher extends Module {
                 return;
             }
             if (this.autoDisable.getValue().booleanValue()) {
-                if (BlockPos.stream(this.playerEntity.getBoundingBox()).anyMatch(blockPos -> {
-                    if (!minecraftClient.world.getBlockState(blockPos).isOf(Blocks.PISTON_HEAD)) {
-                        if (!minecraftClient.world.getBlockState(blockPos).isOf(Blocks.PISTON)) {
+                if (BlockPos.betweenClosedStream(this.playerEntity.getBoundingBox()).anyMatch(blockPos -> {
+                    if (!minecraftClient.level.getBlockState(blockPos).is(Blocks.PISTON_HEAD)) {
+                        if (!minecraftClient.level.getBlockState(blockPos).is(Blocks.PISTON)) {
                             return false;
                         }
                     }
@@ -201,16 +181,16 @@ public class Pusher extends Module {
             i = InventoryUtils.findInHotbar(Items.REDSTONE_TORCH);
             z = true;
         }
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         if (i == -1) {
             return;
         }
         Record_2 record_2 = null;
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (it.hasNext()) {
             Direction direction = (Direction) it.next();
-            BlockPos offset = this.playerEntity.getBlockPos().up().offset(direction);
-            if ((WorldUtils.getBlock(offset) instanceof PistonBlock) && !isPistonBlocked(this.playerEntity, offset, direction)) {
+            BlockPos offset = this.playerEntity.blockPosition().above().relative(direction);
+            if ((WorldUtils.getBlock(offset) instanceof PistonBaseBlock) && !isPistonBlocked(this.playerEntity, offset, direction)) {
                 record_2 = findRedstonePlacement(z, offset);
             }
         }
@@ -219,11 +199,11 @@ public class Pusher extends Module {
         }
         this.flag = true;
         if (this.rotate.getValue().booleanValue()) {
-            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsToSide(record_2.getBlockPos().toCenterPos(), record_2.getDirection()), 500);
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsToSide(Vec3.atCenterOf(record_2.getBlockPos()), record_2.getDirection()), 500);
         }
         InventoryUtils.selectSlot(i);
-        BlockPlacer.placeBlockPacket(record_2.getBlockPos(), record_2.getDirection(), false, Hand.MAIN_HAND);
-        PacketSender.sendHandSwing(Hand.MAIN_HAND);
+        BlockPlacer.placeBlockPacket(record_2.getBlockPos(), record_2.getDirection(), false, InteractionHand.MAIN_HAND);
+        PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
         InventoryUtils.selectSlot(i2);
         if (this.render.getValue().booleanValue()) {
             ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, record_2.getBlockPos());
@@ -236,18 +216,18 @@ public class Pusher extends Module {
             return;
         }
         int i = InventoryUtils.findInHotbarAny(Items.PISTON, Items.STICKY_PISTON);
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         if (i == -1) {
             return;
         }
         Record record = null;
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (true) {
             if (!it.hasNext()) {
                 break;
             }
             Direction direction = (Direction) it.next();
-            BlockPos offset = this.playerEntity.getBlockPos().up().offset(direction);
+            BlockPos offset = this.playerEntity.blockPosition().above().relative(direction);
             if (!isPistonBlocked(this.playerEntity, offset, direction)) {
                 if (getPistonFacing(offset) == direction.getOpposite()) {
                     record = null;
@@ -263,8 +243,8 @@ public class Pusher extends Module {
         this.blockPos = record.getBlockPos();
         ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(record.getPlacementTarget()), 500);
         InventoryUtils.selectSlot(i);
-        BlockPlacer.placeBlockPacket(record.getBlockPos(), record.getDirection(), false, Hand.MAIN_HAND);
-        PacketSender.sendHandSwing(Hand.MAIN_HAND);
+        BlockPlacer.placeBlockPacket(record.getBlockPos(), record.getDirection(), false, InteractionHand.MAIN_HAND);
+        PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
         InventoryUtils.selectSlot(i2);
         if (this.render.getValue().booleanValue()) {
             ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, record.getBlockPos());
@@ -274,8 +254,8 @@ public class Pusher extends Module {
     public Record_2 findRedstonePlacement(boolean z, BlockPos blockPos) {
         Record_2 record_2 = null;
         for (Direction direction : Direction.values()) {
-            BlockPos offset = blockPos.offset(direction);
-            if (minecraftClient.world.getBlockState(offset).isOf(Blocks.REDSTONE_BLOCK)) {
+            BlockPos offset = blockPos.relative(direction);
+            if (minecraftClient.level.getBlockState(offset).is(Blocks.REDSTONE_BLOCK)) {
                 return null;
             }
             if (BlockPlacer.isSpaceFree(offset, true)) {
@@ -293,7 +273,7 @@ public class Pusher extends Module {
             return BlockPlacer.findSupportSide(blockPos, this.strictDirection.getValue().booleanValue());
         }
         for (Direction direction2 : Direction.values()) {
-            BlockPos offset = blockPos.offset(direction2);
+            BlockPos offset = blockPos.relative(direction2);
             if (direction != direction2 && ClientServices.stashFinderHelper.isBlockSolid(offset)) {
                 if (this.strictDirection.getValue().booleanValue()) {
                     if (!BlockPlacer.getInteractableSides(offset).contains(direction2.getOpposite())) {
@@ -307,7 +287,7 @@ public class Pusher extends Module {
 
     public Record findPistonPlacement(BlockPos blockPos, Direction direction) {
         for (Direction direction2 : Direction.values()) {
-            BlockPos offset = blockPos.offset(direction2);
+            BlockPos offset = blockPos.relative(direction2);
             if (ClientServices.stashFinderHelper.isBlockSolid(offset)) {
                 if (this.strictDirection.getValue().booleanValue()) {
                     if (!BlockPlacer.getInteractableSides(offset).contains(direction2.getOpposite())) {
@@ -316,9 +296,9 @@ public class Pusher extends Module {
                 }
                 if (!this.raytrace.getValue().booleanValue() || WorldUtils.isAnyPositionVisible(AutoCraftMode.X8.getWorldCorners(offset))) {
                     if (!this.rotate.getValue().booleanValue()) {
-                        return new Record(direction2, blockPos, minecraftClient.player.getEyePos().offset(direction.getOpposite(), Double.longBitsToDouble(4607182418800017408L)));
+                        return new Record(direction2, blockPos, minecraftClient.player.getEyePosition().relative(direction.getOpposite(), Double.longBitsToDouble(4607182418800017408L)));
                     }
-                    for (Vec3d vec3d : AutoCraftMode.X8.getVisibleFaceCorners(offset, direction2.getOpposite())) {
+                    for (Vec3 vec3d : AutoCraftMode.X8.getVisibleFaceCorners(offset, direction2.getOpposite())) {
                         if (this.pusherHelper.resolveFacingDirection(RotationManager.getRotationsTo(vec3d)) == direction.getOpposite()) {
                             return new Record(direction2, blockPos, vec3d);
                         }
@@ -330,10 +310,10 @@ public class Pusher extends Module {
     }
 
     public boolean isPistonBlocked(LivingEntity livingEntity, BlockPos blockPos, Direction direction) {
-        if (minecraftClient.player.getEyePos().distanceTo(blockPos.toCenterPos()) > getRange()) {
+        if (minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(blockPos)) > getRange()) {
             return true;
         }
-        BlockPos offset = blockPos.offset(direction.getOpposite(), 2);
+        BlockPos offset = blockPos.relative(direction.getOpposite(), 2);
         int i = 0;
         Iterator<BlockPos> it = PlayerUtils.getSurroundPositions(livingEntity).iterator();
         while (it.hasNext()) {
@@ -341,13 +321,13 @@ public class Pusher extends Module {
                 i++;
             }
         }
-        return (i > 2 && minecraftClient.world.getBlockState(offset.down()).isReplaceable()) || !minecraftClient.world.getBlockState(offset).isReplaceable();
+        return (i > 2 && minecraftClient.level.getBlockState(offset.below()).canBeReplaced()) || !minecraftClient.level.getBlockState(offset).canBeReplaced();
     }
 
     public Direction getPistonFacing(BlockPos blockPos) {
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        if (blockState.getBlock() instanceof PistonBlock) {
-            return blockState.get(FacingBlock.FACING);
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        if (blockState.getBlock() instanceof PistonBaseBlock) {
+            return blockState.getValue(DirectionalBlock.FACING);
         }
         return null;
     }

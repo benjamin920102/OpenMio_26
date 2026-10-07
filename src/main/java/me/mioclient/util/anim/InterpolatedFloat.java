@@ -4,12 +4,8 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.function.Supplier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/InterpolatedFloat.class */
 public class InterpolatedFloat {
     public float val;
     public float val2;

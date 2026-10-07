@@ -4,9 +4,6 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.util.world.Waypoint;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.Waypoint;
-
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
@@ -15,11 +12,10 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/WaypointArgumentType.class */
 public class WaypointArgumentType implements com.mojang.brigadier.arguments.ArgumentType<Waypoint> {
     /* renamed from: parse, reason: merged with bridge method [inline-methods] */
     public Waypoint parse(StringReader stringReader) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -30,7 +26,7 @@ public class WaypointArgumentType implements com.mojang.brigadier.arguments.Argu
             }
         }
         throw new DynamicCommandExceptionType(obj -> {
-            return Text.literal(String.format("Waypoint %s doesn't exists", obj));
+            return Component.literal(String.format("Waypoint %s doesn't exists", obj));
         }).create(readString);
     }
 
@@ -45,7 +41,7 @@ public class WaypointArgumentType implements com.mojang.brigadier.arguments.Argu
         while (it.hasNext()) {
             ClientServices.waypointsManager.unregister((Waypoint) it.next());
         }
-        return CommandSource.suggestMatching(ClientServices.waypointsManager.getRegistry().stream().map((v0) -> {
+        return SharedSuggestionProvider.suggest(ClientServices.waypointsManager.getRegistry().stream().map((v0) -> {
             return v0.getName();
         }), suggestionsBuilder);
     }

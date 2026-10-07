@@ -2,31 +2,29 @@ package me.mioclient.event.events.render;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/DrawBlockOutlineEvent.class */
 public class DrawBlockOutlineEvent extends Event {
-    public MatrixStack matrixStack;
+    public PoseStack matrixStack;
     public VertexConsumer vertexConsumer;
     public BlockPos blockPos;
     public BlockState blockState;
 
-    public DrawBlockOutlineEvent(MatrixStack matrixStack, VertexConsumer vertexConsumer, BlockPos blockPos, BlockState blockState) {
+    public DrawBlockOutlineEvent(PoseStack matrixStack, VertexConsumer vertexConsumer, BlockPos blockPos, BlockState blockState) {
         this.matrixStack = matrixStack;
         this.vertexConsumer = vertexConsumer;
         this.blockPos = blockPos;
         this.blockState = blockState;
     }
 
-    public MatrixStack getMatrixStack() {
+    public PoseStack getMatrixStack() {
         return this.matrixStack;
     }
 
-    public void setMatrixStack(MatrixStack matrixStack) {
+    public void setMatrixStack(PoseStack matrixStack) {
         this.matrixStack = matrixStack;
     }
 

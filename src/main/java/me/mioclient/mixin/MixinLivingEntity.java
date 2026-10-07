@@ -1,60 +1,78 @@
 package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
+import net.minecraft.world.entity.MoverType;
 
-import me.mioclient.util.math.Vec3dUtils;
 import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerTickDriver;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerTickDriver;
-import me.mioclient.util.math.Vec3dUtils;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import me.mioclient.ducks.DuckLivingEntityServerDead;
-import me.mioclient.command.FakePlayerCommand;
+import me.mioclient.ducks.DuckLivingEntity;
 import me.mioclient.event.events.player.GetStatusEffectEvent;
 import me.mioclient.event.events.player.TickPreEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.module.misc.Swing;
 import me.mioclient.module.movement.ElytraFly;
-import me.mioclient.module.movement.FastLadder;
 import me.mioclient.module.movement.Fireworks;
 import me.mioclient.module.movement.Jesus;
 import me.mioclient.module.movement.NoJumpDelay;
 import me.mioclient.module.movement.Speed;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffectUtil;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffectUtil;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.core.Holder;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
 @Mixin({LivingEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinLivingEntity.class */
-public abstract class MixinLivingEntity extends Entity implements DuckLivingEntityServerDead {
+
+public abstract class MixinLivingEntity implements DuckLivingEntityServerDead, DuckLivingEntity {
+
+    @Accessor("useItemRemaining")
+    public abstract void setItemUseTimeLeft(int i);
+
+    @Override
+    public double mio$getServerX() {
+        return ((LivingEntity)(Object) this).getPositionCodec().getBase().x;
+    }
+
+    @Override
+    public double mio$getServerY() {
+        return ((LivingEntity)(Object) this).getPositionCodec().getBase().y;
+    }
+
+    @Override
+    public double mio$getServerZ() {
+        return ((LivingEntity)(Object) this).getPositionCodec().getBase().z;
+    }
+
+    @Override
+    public Vec3 mio$getServerPos() {
+        return ((LivingEntity)(Object) this).getPositionCodec().getBase();
+    }
+
+    @Invoker("getCurrentSwingDuration")
+    public abstract int getSwingDuration();
 
     @Shadow
-    private int field_6228;
+    private int noJumpDelay;
 
     @Unique
     private TickPreEvent mio$moveEvent;
@@ -130,7 +148,7 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
     }
     private static Speed speed;
 
-    private static Speed getSpeed() {
+    private static Speed getSpeedModule() {
 
         if (speed == null && ClientServices.moduleInjector != null) {
 
@@ -154,38 +172,11 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         return fireworks;
 
     }
-    private static FastLadder fastladder;
 
-    private static FastLadder getFastladder() {
-
-        if (fastladder == null && ClientServices.moduleInjector != null) {
-
-            try { fastladder = (FastLadder) ClientServices.moduleInjector.getModule(FastLadder.class); } catch (Exception e) {}
-
-        }
-
-        return fastladder;
-
-    }
-
-    public MixinLivingEntity(EntityType<?> entityType, World world) {
-        super(entityType, world);
-        this.prevTime = 0L;
-    }
-
-    @Shadow
-    public abstract float getYaw(float f);
-
-    @Shadow
-    public abstract void setBodyYaw(float f);
-
-    @Shadow
-    public abstract boolean damage(DamageSource damageSource, float f);
-
-    @Inject(method = {"getHandSwingDuration"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"getCurrentSwingDuration"}, at = {@At("HEAD")}, cancellable = true)
     private void getHandSwingDurationHook(CallbackInfoReturnable<Integer> callbackInfoReturnable) {
         Swing swing_lcl = getSwing();
-        Speed speed_lcl = getSpeed();
+        Speed speed_lcl = getSpeedModule();
 
         if (swing_lcl == null) return;
 
@@ -195,10 +186,10 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
             LivingEntity livingEntity = (LivingEntity)(Object) this;
             callbackInfoReturnable.cancel();
             int doubleValue = (int) ((swing_lcl.type.getValue() == Swing.MixinLivingEntityMode.ONE_EIGHT ? 7 : 6) / swing_lcl.speed.getValue().doubleValue());
-            if (StatusEffectUtil.hasHaste(livingEntity)) {
-                callbackInfoReturnable.setReturnValue(Integer.valueOf(doubleValue - (1 + StatusEffectUtil.getHasteAmplifier(livingEntity))));
+            if (MobEffectUtil.hasDigSpeed(livingEntity)) {
+                callbackInfoReturnable.setReturnValue(Integer.valueOf(doubleValue - (1 + MobEffectUtil.getDigSpeedAmplification(livingEntity))));
             } else {
-                callbackInfoReturnable.setReturnValue(Integer.valueOf(livingEntity.hasStatusEffect(StatusEffects.MINING_FATIGUE) ? doubleValue + ((1 + livingEntity.getStatusEffect(StatusEffects.MINING_FATIGUE).getAmplifier()) * 2) : doubleValue));
+                callbackInfoReturnable.setReturnValue(Integer.valueOf(livingEntity.hasEffect(MobEffects.MINING_FATIGUE) ? doubleValue + ((1 + livingEntity.getEffect(MobEffects.MINING_FATIGUE).getAmplifier()) * 2) : doubleValue));
             }
         }
     }
@@ -224,65 +215,50 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         }
     }
 
-    @Inject(method = {"canWalkOnFluid"}, at = {@At("HEAD")}, cancellable = true)
-    private void canWalkOnFluidHook(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
+    @Inject(method = {"canStandOnFluid"}, at = {@At("HEAD")}, cancellable = true)
+    private void canWalkOnFluidHook(net.minecraft.world.level.material.FluidState fluidState, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         Jesus jesus_lcl = getJesus();
 
         if (jesus_lcl == null) return;
 
-        if (((Object) this) == MinecraftClient.getInstance().player && jesus_lcl.isToggled() && jesus_lcl.canJesus() && !MinecraftClient.getInstance().player.isTouchingWater()) {
+        if (((Object) this) == Minecraft.getInstance().player && jesus_lcl.isToggled() && jesus_lcl.canJesus() && !Minecraft.getInstance().player.isInWater()) {
             callbackInfoReturnable.setReturnValue(true);
         }
     }
 
     @Inject(method = {"travel"}, at = {@At("HEAD")})
-    private void travelPreHook(Vec3d vec3d, CallbackInfo callbackInfo) {
-        if (((Object) this) != MinecraftClient.getInstance().player) {
+    private void travelPreHook(Vec3 vec3d, CallbackInfo callbackInfo) {
+        if (((Object) this) != Minecraft.getInstance().player) {
             return;
         }
         ElytraFly.flag = true;
-        this.prevLookYaw = getYaw(1.0f);
-        this.prevLookPitch = getPitch();
+        this.prevLookYaw = ((LivingEntity)(Object) this).getYRot();
+        this.prevLookPitch = ((LivingEntity)(Object) this).getXRot();
         this.event = new RotationEvent(this.prevLookYaw, this.prevLookPitch, false);
         ClientAccessor.eventBus.fireEvent(this.event);
         if (this.event.isCancelled()) {
-            setYaw(this.event.getYaw());
-            setPitch(this.event.getPitch());
+            ((LivingEntity)(Object) this).setYRot(this.event.getYaw());
+            ((LivingEntity)(Object) this).setXRot(this.event.getPitch());
         }
     }
 
     @Inject(method = {"travel"}, at = {@At("TAIL")})
-    private void travelPostHook(Vec3d vec3d, CallbackInfo callbackInfo) {
-        if (((Object) this) != MinecraftClient.getInstance().player) {
+    private void travelPostHook(Vec3 vec3d, CallbackInfo callbackInfo) {
+        if (((Object) this) != Minecraft.getInstance().player) {
             return;
         }
         ElytraFly.flag = false;
         if (this.event.isCancelled()) {
-            setYaw(this.prevLookYaw);
-            setPitch(this.prevLookPitch);
+            ((LivingEntity)(Object) this).setYRot(this.prevLookYaw);
+            ((LivingEntity)(Object) this).setXRot(this.prevLookPitch);
         }
     }
 
-    @ModifyExpressionValue(method = {"jump"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;getYaw()F")})
+    @ModifyExpressionValue(method = {"jumpFromGround"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F")})
     private float jumpFix(float f) {
-        this.event = new RotationEvent(getYaw(), getPitch(), true);
+        this.event = new RotationEvent(((LivingEntity)(Object) this).getYRot(), ((LivingEntity)(Object) this).getXRot(), true);
         ClientAccessor.eventBus.fireEvent(this.event);
         return this.event.isCancelled() ? this.event.getYaw() : f;
-    }
-
-    @Inject(method = {"shouldSpawnConsumptionEffects"}, at = {@At("HEAD")}, cancellable = true)
-    private void shouldSpawnConsumptionEffects(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (PlayerTickDriver.is870()) {
-            callbackInfoReturnable.setReturnValue(false);
-        }
-    }
-
-    @ModifyExpressionValue(method = {"damage"}, at = {@At(value = "FIELD", target = "Lnet/minecraft/world/World;isClient:Z")})
-    private boolean damageHook(boolean z) {
-        if (((Object) this) instanceof FakePlayerCommand.OtherClientPlayerEntity) {
-            return false;
-        }
-        return z;
     }
 
     @Override // me.mioclient.ducks.DuckLivingEntityServerDead
@@ -295,7 +271,7 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         return this.serverDead;
     }
 
-    @Inject(method = {"tickMovement"}, at = {@At("HEAD")})
+    @Inject(method = {"aiStep"}, at = {@At("HEAD")})
     public void reduceCooldown(CallbackInfo callbackInfo) {
         NoJumpDelay njd_lcl = getNjd();
         ElytraFly efly_lcl = getEfly();
@@ -304,11 +280,11 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
 
         if (efly_lcl == null) return;
 
-        MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        if (efly_lcl.isToggled() && efly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && equals(minecraftClient.player) && this.field_6228 > 2) {
-            this.field_6228 = 2;
-        } else if (njd_lcl.isToggled() && equals(minecraftClient.player) && !minecraftClient.player.isFallFlying()) {
-            this.field_6228 = 0;
+        Minecraft minecraftClient = Minecraft.getInstance();
+        if (efly_lcl.isToggled() && efly_lcl.mode.getValue() == ElytraFly.ElytraFlyPredicateMode.BOUNCE && ((Object) this) == minecraftClient.player && this.noJumpDelay > 2) {
+            this.noJumpDelay = 2;
+        } else if (njd_lcl.isToggled() && ((Object) this) == minecraftClient.player && !minecraftClient.player.isFallFlying()) {
+            this.noJumpDelay = 0;
         }
     }
 
@@ -318,7 +294,7 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
 
         if (efly_lcl == null) return;
 
-        if (((Object) this) != MinecraftClient.getInstance().player) {
+        if (((Object) this) != Minecraft.getInstance().player) {
             return;
         }
         if (efly_lcl.shouldSwapElytra()) {
@@ -341,9 +317,9 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         }
     }
 
-    @Inject(method = {"hasStatusEffect"}, at = {@At("HEAD")}, cancellable = true)
-    private void hasStatusEffectHook(RegistryEntry<StatusEffect> registryEntry, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (equals(MinecraftClient.getInstance().player)) {
+    @Inject(method = {"hasEffect"}, at = {@At("HEAD")}, cancellable = true)
+    private void hasStatusEffectHook(Holder<MobEffect> registryEntry, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
+        if (((Object) this) == Minecraft.getInstance().player) {
             GetStatusEffectEvent getStatusEffectEvent = new GetStatusEffectEvent(registryEntry);
             ClientAccessor.eventBus.fireEvent(getStatusEffectEvent);
             if (getStatusEffectEvent.isCancelled()) {
@@ -353,9 +329,9 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         }
     }
 
-    @Inject(method = {"getStatusEffect"}, at = {@At("HEAD")}, cancellable = true)
-    private void getStatusEffectHook(RegistryEntry<StatusEffect> registryEntry, CallbackInfoReturnable<StatusEffectInstance> callbackInfoReturnable) {
-        if (equals(MinecraftClient.getInstance().player)) {
+    @Inject(method = {"getEffect"}, at = {@At("HEAD")}, cancellable = true)
+    private void getStatusEffectHook(Holder<MobEffect> registryEntry, CallbackInfoReturnable<MobEffectInstance> callbackInfoReturnable) {
+        if (((Object) this) == Minecraft.getInstance().player) {
             GetStatusEffectEvent getStatusEffectEvent = new GetStatusEffectEvent(registryEntry);
             ClientAccessor.eventBus.fireEvent(getStatusEffectEvent);
             if (getStatusEffectEvent.isCancelled()) {
@@ -365,9 +341,9 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         }
     }
 
-    @Inject(method = {"jump"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"jumpFromGround"}, at = {@At("HEAD")}, cancellable = true)
     private void jumpHook(CallbackInfo callbackInfo) {
-        Speed speed_lcl = getSpeed();
+        Speed speed_lcl = getSpeedModule();
 
         if (speed_lcl == null) return;
 
@@ -376,33 +352,15 @@ public abstract class MixinLivingEntity extends Entity implements DuckLivingEnti
         }
     }
 
-    @ModifyConstant(method = {"applyMovementInput"}, constant = {@Constant(doubleValue = 0.2d)})
-    private double applyMovementInputHook(double d) {
-        FastLadder fastladder_lcl = getFastladder();
-        Speed speed_lcl = getSpeed();
-
-        if (fastladder_lcl == null) return d;
-
-        if (speed_lcl == null) return d;
-
-        return fastladder_lcl.isToggled() ? fastladder_lcl.speed.getValue().floatValue() : d;
-    }
-
-    @Inject(method = {"applyMovementInput"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.BEFORE)})
-    private void tickPre(Vec3d vec3d, float f, CallbackInfoReturnable<Vec3d> callbackInfoReturnable) {
+    /* 26.2 port: travel no longer invokes move(MoverType, Vec3) — it dispatches
+       to travelInFluid/travelFallFlying/travelInAir. Hook HEAD instead; same
+       pre-movement timing for the TickPreEvent. */
+    @Inject(method = {"travel"}, at = {@At("HEAD")})
+    private void tickPre(Vec3 vec3d, CallbackInfo callbackInfo) {
         if (TickPreEvent.isPlayerVehicle(this)) {
-            this.mio$moveEvent = new TickPreEvent(getVelocity());
+            this.mio$moveEvent = new TickPreEvent(((LivingEntity)(Object) this).getDeltaMovement());
             ClientAccessor.eventBus.fireEvent(this.mio$moveEvent);
-            Vec3dUtils.setVectorComponents(getVelocity(), this.mio$moveEvent.getX(), this.mio$moveEvent.getY(), this.mio$moveEvent.getZ());
-        }
-    }
-
-    @Inject(method = {"travel"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.BEFORE)})
-    private void tickPre(Vec3d vec3d, CallbackInfo callbackInfo) {
-        if (TickPreEvent.isPlayerVehicle(this)) {
-            this.mio$moveEvent = new TickPreEvent(getVelocity());
-            ClientAccessor.eventBus.fireEvent(this.mio$moveEvent);
-            Vec3dUtils.setVectorComponents(getVelocity(), this.mio$moveEvent.getX(), this.mio$moveEvent.getY(), this.mio$moveEvent.getZ());
+            ((LivingEntity)(Object) this).setDeltaMovement(new Vec3(this.mio$moveEvent.getX(), this.mio$moveEvent.getY(), this.mio$moveEvent.getZ()));
         }
     }
 }

@@ -4,8 +4,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Data_4.class */
 public final class SlotPair {
     public final int num;
     public final int num2;
@@ -19,9 +17,6 @@ public final class SlotPair {
     public boolean isInvalid() {
         return this.num == -1 || this.num2 == -1;
     }
-
-
-
 
     public int getFirstSlot() {
         return this.num;

@@ -6,19 +6,12 @@ import me.mioclient.api.ValueProvider;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.math.MathConstants;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.awt.Color;
 import me.mioclient.api.Setting;
 import me.mioclient.module.client.Colors;
-import me.mioclient.api.ValueProvider;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ColorSetting.class */
 public final class ColorSetting extends Setting<Color> {
     public static Colors colors = (Colors) ClientServices.moduleInjector.getModule(Colors.class);
     public final ColorJsonConverter converter;

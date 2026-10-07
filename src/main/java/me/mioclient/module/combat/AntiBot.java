@@ -2,21 +2,17 @@ package me.mioclient.module.combat;
 
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.render.font.ClientTextRenderer;
-
 import me.mioclient.command.FakePlayerCommand;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AntiBot.class */
 public class AntiBot extends Module {
     public Setting<Boolean> illegalChars = add(new BooleanSetting("IllegalChars", false));
     public Setting<Boolean> illegalNames = add(new BooleanSetting("IllegalNames", false));
@@ -27,9 +23,9 @@ public class AntiBot extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        PlayerEntity playerEntity = null;
-        synchronized (minecraftClient.world.getPlayers()) {
-            for (PlayerEntity playerEntity2 : minecraftClient.world.getPlayers()) {
+        Player playerEntity = null;
+        synchronized (minecraftClient.level.players()) {
+            for (Player playerEntity2 : minecraftClient.level.players()) {
                 if (isBot(playerEntity2)) {
                     playerEntity = playerEntity2;
                 }
@@ -40,8 +36,8 @@ public class AntiBot extends Module {
         }
     }
 
-    public boolean isBot(PlayerEntity playerEntity) {
-        if (minecraftClient.player == playerEntity || (playerEntity instanceof FakePlayerCommand.OtherClientPlayerEntity)) {
+    public boolean isBot(Player playerEntity) {
+        if (minecraftClient.player == playerEntity || (playerEntity instanceof FakePlayerCommand.RemotePlayer)) {
             return false;
         }
         String string = playerEntity.getName().getString();
@@ -55,8 +51,8 @@ public class AntiBot extends Module {
                 }
             }
         }
-        PlayerListEntry playerListEntry = minecraftClient.player.networkHandler.getPlayerListEntry(playerEntity.getGameProfile().getId());
-        if (!minecraftClient.player.networkHandler.getPlayerList().contains(playerListEntry) || playerListEntry == null) {
+        PlayerInfo playerListEntry = minecraftClient.player.connection.getPlayerInfo(playerEntity.getGameProfile().id());
+        if (!minecraftClient.player.connection.getOnlinePlayers().contains(playerListEntry) || playerListEntry == null) {
             return true;
         }
         return playerListEntry.getProfile() == null && playerEntity.hasCustomName();

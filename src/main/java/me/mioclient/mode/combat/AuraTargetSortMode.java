@@ -3,17 +3,14 @@ package me.mioclient.mode.combat;
 import me.mioclient.util.player.EntityUtil;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.player.EntityUtil;
 
 import java.util.function.Function;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AuraTargetSortMode.class */
 public enum AuraTargetSortMode implements ClientAccessor {
     DISTANCE(livingEntity -> {
-        return Double.valueOf(livingEntity.squaredDistanceTo(ClientAccessor.minecraftClient.player));
+        return Double.valueOf(livingEntity.distanceToSqr(ClientAccessor.minecraftClient.player));
     }),
     HEALTH(livingEntity2 -> {
         return Double.valueOf(EntityUtil.getEntityHealth((Entity) livingEntity2));

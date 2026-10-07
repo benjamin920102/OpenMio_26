@@ -3,40 +3,30 @@ package me.mioclient.module.player;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.EntityUtil;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.inventory.InventoryUtils;
-
 import java.util.Iterator;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.Hand;
-import me.mioclient.mode.setting.HoleSnapMode;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.InteractionHand;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoEat.class */
 public class AutoEat extends Module {
     public Setting<Integer> health = add(new NumberSetting<>("Health", 16, 0, 36).setHoleSnapConfig("Off", HoleSnapMode.MIN));
     public Setting<Integer> hunger = add(new NumberSetting<>("Hunger", 6, -1, 20).setHoleSnapConfig("Off", HoleSnapMode.MIN));
@@ -50,34 +40,25 @@ public class AutoEat extends Module {
     public boolean flag;
     public int num2;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoEat$AutoEatMode.class */
+    
+
+    
     public static enum AutoEatMode implements NamedValue {
         autoEatMode("Hunger") {
             @Override
-            public double scoreFood(FoodComponent foodComponent) {
+            public double scoreFood(FoodProperties foodComponent) {
                 return foodComponent.nutrition();
             }
         },
         autoEatMode2("Saturation") {
             @Override
-            public double scoreFood(FoodComponent foodComponent) {
+            public double scoreFood(FoodProperties foodComponent) {
                 return foodComponent.saturation();
             }
         },
         autoEatMode3("Health") {
             @Override
-            public double scoreFood(FoodComponent foodComponent) {
-                Iterator it = foodComponent.effects().iterator();
-                while (it.hasNext()) {
-                    FoodComponent.StatusEffectEntry statusEffectEntry = (FoodComponent.StatusEffectEntry) it.next();
-                    if (statusEffectEntry.effect().getEffectType() == StatusEffects.REGENERATION) {
-                        return statusEffectEntry.effect().getAmplifier();
-                    }
-                }
+            public double scoreFood(FoodProperties foodComponent) {
                 return 0.0d;
             }
         };
@@ -93,7 +74,7 @@ public class AutoEat extends Module {
             return this.name;
         }
 
-        public double scoreFood(FoodComponent foodComponent) {
+        public double scoreFood(FoodProperties foodComponent) {
             return 0.0d;
         }
     }
@@ -112,18 +93,12 @@ public class AutoEat extends Module {
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        minecraftClient.options.useKey.setPressed(false);
+        minecraftClient.options.keyUse.setDown(false);
         ClientServices.obstaclePasserHelper.removePauseRequest(this);
     }
 
-    /* JADX WARN: Code restructure failed: missing block: B:16:0x00e7, code lost:
-    
-        if (me.mioclient.module.player.AutoEat.minecraftClient.player.getInventory().getStack(r6).isOf(net.minecraft.item.Items.CHORUS_FRUIT) == false) goto L17;
-     */
     @Listen
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void onResetEvent(MotionEvent motionEvent) {
         int i;
         if (motionEvent.getPhase() == KeyPearlMode.Post) {
@@ -131,8 +106,8 @@ public class AutoEat extends Module {
         }
         ClientServices.obstaclePasserHelper.removePauseRequest(this);
         if (!this.autoSwap.getValue().booleanValue() && this.flag) {
-            if (!minecraftClient.player.getMainHandStack().contains(DataComponentTypes.FOOD)) {
-                minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
+            if (!minecraftClient.player.getMainHandItem().has(DataComponents.FOOD)) {
+                minecraftClient.gameMode.releaseUsingItem(minecraftClient.player);
                 setEating(false);
                 return;
             }
@@ -147,7 +122,7 @@ public class AutoEat extends Module {
         }
         if (is2088() && !isInDangerousProximity()) {
             if (this.flag) {
-                minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
+                minecraftClient.gameMode.releaseUsingItem(minecraftClient.player);
                 setEating(false);
                 if (this.autoSwap.getValue().booleanValue() && this.swapBack.getValue().booleanValue() && this.num != -1) {
                     InventoryUtils.selectSlot(this.num);
@@ -165,13 +140,13 @@ public class AutoEat extends Module {
             return;
         }
         boolean z = i2 == 40;
-        if (this.autoSwap.getValue().booleanValue() && !z && i2 != -1 && minecraftClient.player.getInventory().selectedSlot != i2) {
-            this.num = minecraftClient.player.getInventory().selectedSlot;
+        if (this.autoSwap.getValue().booleanValue() && !z && i2 != -1 && minecraftClient.player.getInventory().getSelectedSlot() != i2) {
+            this.num = minecraftClient.player.getInventory().getSelectedSlot();
             InventoryUtils.selectSlot(i2);
         }
-        ItemStack mainHandStack = minecraftClient.player.getMainHandStack();
-        if (!minecraftClient.player.isUsingItem() && (z || mainHandStack.contains(DataComponentTypes.FOOD))) {
-            minecraftClient.interactionManager.interactItem(minecraftClient.player, z ? Hand.OFF_HAND : Hand.MAIN_HAND);
+        ItemStack mainHandStack = minecraftClient.player.getMainHandItem();
+        if (!minecraftClient.player.isUsingItem() && (z || mainHandStack.has(DataComponents.FOOD))) {
+            minecraftClient.gameMode.useItem(minecraftClient.player, z ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
             setEating(true);
         }
         if (this.pauseBaritone.getValue().booleanValue() && minecraftClient.player.isUsingItem()) {
@@ -190,11 +165,11 @@ public class AutoEat extends Module {
             if (i2 == 9) {
                 i2 = 40;
             }
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i2);
-            FoodComponent foodComponent = (FoodComponent) stack.get(DataComponentTypes.FOOD);
-            if (foodComponent != null && (foodComponent.canAlwaysEat() || minecraftClient.player.getHungerManager().getFoodLevel() < 20)) {
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i2);
+            FoodProperties foodComponent = stack.get(DataComponents.FOOD);
+            if (foodComponent != null && (foodComponent.canAlwaysEat() || minecraftClient.player.getFoodData().getFoodLevel() < 20)) {
                 double d = this.sort.getValue().scoreFood(foodComponent);
-                if (d > longBitsToDouble || (d == longBitsToDouble && i2 == minecraftClient.player.getInventory().selectedSlot)) {
+                if (d > longBitsToDouble || (d == longBitsToDouble && i2 == minecraftClient.player.getInventory().getSelectedSlot())) {
                     longBitsToDouble = d;
                     i = i2;
                 }
@@ -216,23 +191,23 @@ public class AutoEat extends Module {
         if (!this.autoEscape.getValue().booleanValue()) {
             return false;
         }
-        ClientPlayerEntity clientPlayerEntity = null;
-        Iterator it = minecraftClient.world.getPlayers().iterator();
+        LocalPlayer clientPlayerEntity = null;
+        Iterator it = minecraftClient.level.players().iterator();
         while (true) {
             if (!it.hasNext()) {
                 break;
             }
-            ClientPlayerEntity clientPlayerEntity2 = (ClientPlayerEntity)((PlayerEntity) it.next());
-            if (((PlayerEntity) clientPlayerEntity2).distanceTo(minecraftClient.player) <= Float.intBitsToFloat(1094713344) && !ClientServices.socialManager.isFriendEntity((PlayerEntity) clientPlayerEntity2) && clientPlayerEntity2 != minecraftClient.player) {
+            LocalPlayer clientPlayerEntity2 = (LocalPlayer)((Player) it.next());
+            if (((Player) clientPlayerEntity2).distanceTo(minecraftClient.player) <= Float.intBitsToFloat(1094713344) && !ClientServices.socialManager.isFriendEntity((Player) clientPlayerEntity2) && clientPlayerEntity2 != minecraftClient.player) {
                 clientPlayerEntity = clientPlayerEntity2;
                 break;
             }
         }
-        return clientPlayerEntity != null && minecraftClient.player.age <= 50;
+        return clientPlayerEntity != null && minecraftClient.player.tickCount <= 50;
     }
 
     public boolean is2088() {
-        return (this.hunger.getValue().intValue() == -1 || minecraftClient.player.getHungerManager().getFoodLevel() > this.hunger.getValue().intValue()) && (this.health.getValue().intValue() == 0 || EntityUtil.getPlayerHealth() > ((float) this.health.getValue().intValue()));
+        return (this.hunger.getValue().intValue() == -1 || minecraftClient.player.getFoodData().getFoodLevel() > this.hunger.getValue().intValue()) && (this.health.getValue().intValue() == 0 || EntityUtil.getPlayerHealth() > ((float) this.health.getValue().intValue()));
     }
 
     public void setEating(boolean z) {
@@ -243,6 +218,6 @@ public class AutoEat extends Module {
     }
 
     public void do438(int i) {
-        minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, i, minecraftClient.player.getInventory().selectedSlot, SlotActionType.SWAP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, i, minecraftClient.player.getInventory().getSelectedSlot(), ContainerInput.SWAP, minecraftClient.player);
     }
 }

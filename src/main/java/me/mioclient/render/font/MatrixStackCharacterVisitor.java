@@ -1,31 +1,39 @@
 package me.mioclient.render.font;
 
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.CharacterVisitor;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
-import net.minecraft.text.TextColor;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MatrixStackCharacterVisitor.class */
-public class MatrixStackCharacterVisitor implements CharacterVisitor {
+public class MatrixStackCharacterVisitor {
     public final float val;
     public final FontGlyphAtlas fontHelper;
     public final int num;
-    public final MatrixStack matrixStack;
+    public final PoseStack matrixStack;
+    public final GuiGraphicsExtractor graphics;
     public float val2;
     public float val3;
 
-    public MatrixStackCharacterVisitor(MatrixStack matrixStack, int i, float f, FontGlyphAtlas fontHelper) {
+    public MatrixStackCharacterVisitor(PoseStack matrixStack, int i, float f, FontGlyphAtlas fontHelper) {
         this.num = i;
         this.val = f;
         this.fontHelper = fontHelper;
         this.matrixStack = matrixStack;
+        this.graphics = null;
     }
 
-    public int renderText(OrderedText orderedText, float f, float f2) {
+    public MatrixStackCharacterVisitor(int i, float f, FontGlyphAtlas fontHelper) {
+        this.num = i;
+        this.val = f;
+        this.fontHelper = fontHelper;
+        this.matrixStack = new PoseStack();
+        this.graphics = null;
+    }
+
+    public int renderText(FormattedCharSequence orderedText, float f, float f2) {
         if (orderedText == null) {
             return 0;
         }
@@ -35,15 +43,15 @@ public class MatrixStackCharacterVisitor implements CharacterVisitor {
         return (int) (this.val2 / Float.intBitsToFloat(1082130432));
     }
 
-    public void visitCharacters(MatrixStack matrixStack, OrderedText orderedText) {
-        matrixStack.push();
+    public void visitCharacters(PoseStack matrixStack, FormattedCharSequence orderedText) {
+        matrixStack.pushPose();
         matrixStack.translate(ClientTextRenderer.getTranslateOffset(), ClientTextRenderer.getShiftOffset(), 0.0f);
         matrixStack.scale(Float.intBitsToFloat(1056964608), Float.intBitsToFloat(1056964608), Float.intBitsToFloat(1065353216));
         if (!AdvanceGlyph.trajectoriesVertexConsumer.isBuilding()) {
-            AdvanceGlyph.trajectoriesVertexConsumer.beginBuffer(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+            AdvanceGlyph.trajectoriesVertexConsumer.beginBuffer(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         }
-        orderedText.accept(this);
-        matrixStack.pop();
+        orderedText.accept(this::accept);
+        matrixStack.popPose();
     }
 
     public boolean accept(int i, Style style, int i2) {
@@ -53,7 +61,7 @@ public class MatrixStackCharacterVisitor implements CharacterVisitor {
         TextColor color = style.getColor();
         float intBitsToFloat4 = ((this.num >> 24) & 255) / Float.intBitsToFloat(1132396544);
         if (color != null) {
-            int rgb = color.getRgb();
+            int rgb = color.getValue();
             intBitsToFloat = ((rgb >> 16) & 255) / Float.intBitsToFloat(1132396544);
             intBitsToFloat2 = ((rgb >> 8) & 255) / Float.intBitsToFloat(1132396544);
             intBitsToFloat3 = (rgb & 255) / Float.intBitsToFloat(1132396544);

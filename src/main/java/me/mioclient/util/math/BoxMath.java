@@ -7,83 +7,81 @@ import java.util.Comparator;
 import java.util.List;
 import me.mioclient.command.FakePlayerCommand;
 import me.mioclient.api.Setting;
-import me.mioclient.mixin.ducks.DuckLivingEntity;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
+import me.mioclient.ducks.DuckLivingEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BoxMath.class */
 public class BoxMath implements ClientAccessor {
     public static double val = Double.longBitsToDouble(4589168020290535424L);
 
-    public static Vec3d getBottomCenter(Box box) {
-        return new Vec3d(MathHelper.lerp(MathConstants.val2, box.minX, box.maxX), box.minY, MathHelper.lerp(MathConstants.val2, box.minZ, box.maxZ));
+    public static Vec3 getBottomCenter(AABB box) {
+        return new Vec3(Mth.lerp(MathConstants.val2, box.minX, box.maxX), box.minY, Mth.lerp(MathConstants.val2, box.minZ, box.maxZ));
     }
 
-    public static Vec3d getCenter(Box box) {
-        return getBottomCenter(box).add(0.0d, box.getLengthY() * Double.longBitsToDouble(4598175219545276416L), 0.0d);
+    public static Vec3 getCenter(AABB box) {
+        return getBottomCenter(box).add(0.0d, box.getYsize() * Double.longBitsToDouble(4598175219545276416L), 0.0d);
     }
 
-    public static Vec3d getTopCenter(Box box) {
-        return new Vec3d(MathHelper.lerp(MathConstants.val2, box.minX, box.maxX), box.maxY, MathHelper.lerp(MathConstants.val2, box.minZ, box.maxZ));
+    public static Vec3 getTopCenter(AABB box) {
+        return new Vec3(Mth.lerp(MathConstants.val2, box.minX, box.maxX), box.maxY, Mth.lerp(MathConstants.val2, box.minZ, box.maxZ));
     }
 
-    public static Box getBoxAround(Box box, Vec3d vec3d) {
-        double lengthX = box.getLengthX() * MathConstants.val2;
-        double lengthY = box.getLengthY() * MathConstants.val2;
-        double lengthZ = box.getLengthZ() * MathConstants.val2;
-        return new Box(vec3d.x - lengthX, vec3d.y - lengthY, vec3d.z - lengthZ, vec3d.x + lengthX, vec3d.y + lengthY, vec3d.z + lengthZ);
+    public static AABB getBoxAround(AABB box, Vec3 vec3d) {
+        double lengthX = box.getXsize() * MathConstants.val2;
+        double lengthY = box.getYsize() * MathConstants.val2;
+        double lengthZ = box.getZsize() * MathConstants.val2;
+        return new AABB(vec3d.x - lengthX, vec3d.y - lengthY, vec3d.z - lengthZ, vec3d.x + lengthX, vec3d.y + lengthY, vec3d.z + lengthZ);
     }
 
-    public static Box getBoxAroundBlock(Box box, BlockPos blockPos) {
-        return getBoxAround(box, new Vec3d(blockPos.getX() + MathConstants.val2, blockPos.getY() + (box.getLengthY() * MathConstants.val2), blockPos.getZ() + MathConstants.val2));
+    public static AABB getBoxAroundBlock(AABB box, BlockPos blockPos) {
+        return getBoxAround(box, new Vec3(blockPos.getX() + MathConstants.val2, blockPos.getY() + (box.getYsize() * MathConstants.val2), blockPos.getZ() + MathConstants.val2));
     }
 
-    public static Box getBlockOutlineBox(BlockPos blockPos) {
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        if (blockState.isAir() || blockState.isOf(Blocks.AIR)) {
-            return new Box(blockPos);
+    public static AABB getBlockOutlineBox(BlockPos blockPos) {
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        if (blockState.isAir() || blockState.getBlock() == Blocks.AIR) {
+            return new AABB(blockPos);
         }
-        VoxelShape outlineShape = blockState.getOutlineShape(minecraftClient.world, blockPos);
+        VoxelShape outlineShape = blockState.getShape(minecraftClient.level, blockPos);
         if (outlineShape.isEmpty()) {
-            outlineShape = VoxelShapes.cuboid(0.0d, 0.0d, 0.0d, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L));
+            outlineShape = Shapes.box(0.0d, 0.0d, 0.0d, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4607182418800017408L));
         }
-        return outlineShape.getBoundingBox().offset(blockPos);
+        return outlineShape.bounds().move(blockPos);
     }
 
-    public static List<Vec3d> getCornersSortedByDistance(Box box, double d) {
-        ArrayList<Vec3d> arrayList = new ArrayList<Vec3d>(List.of(new Vec3d(box.minX, d, box.minZ), new Vec3d(box.maxX, d, box.minZ), new Vec3d(box.minX, d, box.maxZ), new Vec3d(box.maxX, d, box.maxZ)));
+    public static List<Vec3> getCornersSortedByDistance(AABB box, double d) {
+        ArrayList<Vec3> arrayList = new ArrayList<Vec3>(List.of(new Vec3(box.minX, d, box.minZ), new Vec3(box.maxX, d, box.minZ), new Vec3(box.minX, d, box.maxZ), new Vec3(box.maxX, d, box.maxZ)));
         arrayList.sort(Comparator.comparing(vec3d -> {
-            return Double.valueOf(minecraftClient.player.getEyePos().squaredDistanceTo(vec3d));
+            return Double.valueOf(minecraftClient.player.getEyePosition().distanceToSqr(vec3d));
         }));
         return arrayList;
     }
 
-    public static boolean isFullBlockBox(Box box) {
-        return box.getLengthZ() == Double.longBitsToDouble(4607182418800017408L) && box.getLengthY() == Double.longBitsToDouble(4607182418800017408L) && box.getLengthX() == Double.longBitsToDouble(4607182418800017408L);
+    public static boolean isFullBlockBox(AABB box) {
+        return box.getZsize() == Double.longBitsToDouble(4607182418800017408L) && box.getYsize() == Double.longBitsToDouble(4607182418800017408L) && box.getXsize() == Double.longBitsToDouble(4607182418800017408L);
     }
 
     public static boolean isFullBlockShape(VoxelShape voxelShape) {
         if (voxelShape.isEmpty()) {
             return false;
         }
-        return isFullBlockBox(voxelShape.getBoundingBox());
+        return isFullBlockBox(voxelShape.bounds());
     }
 
-    public static int getSnapDivisions(PlayerEntity playerEntity, Setting<Integer> setting) {
+    public static int getSnapDivisions(Player playerEntity, Setting<Integer> setting) {
         if (!setting.isHoleSnapConfigured()) {
             return setting.getValue().intValue();
         }
-        double hypot = Math.hypot(playerEntity.getX() - playerEntity.prevX, playerEntity.getZ() - playerEntity.prevZ) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L);
+        double hypot = Math.hypot(playerEntity.getX() - playerEntity.xo, playerEntity.getZ() - playerEntity.zo) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L);
         if (hypot < Double.longBitsToDouble(4613937818241073152L)) {
             return 0;
         }
@@ -96,31 +94,31 @@ public class BoxMath implements ClientAccessor {
         return hypot <= Double.longBitsToDouble(4629137466983448576L) ? 4 : 5;
     }
 
-    public static Vec3d getClosestPointInBox(Vec3d vec3d, Box box) {
-        return new Vec3d(MathHelper.clamp(vec3d.getX(), box.minX, box.maxX), MathHelper.clamp(vec3d.getY(), box.minY, box.maxY), MathHelper.clamp(vec3d.getZ(), box.minZ, box.maxZ));
+    public static Vec3 getClosestPointInBox(Vec3 vec3d, AABB box) {
+        return new Vec3(Mth.clamp(vec3d.x, box.minX, box.maxX), Mth.clamp(vec3d.y, box.minY, box.maxY), Mth.clamp(vec3d.z, box.minZ, box.maxZ));
     }
 
-    public static Box getInterpolatedBox(Entity entity, float f) {
-        return entity.getBoundingBox().offset(MathHelper.lerp(f, entity.lastRenderX, entity.getX()) - entity.getX(), MathHelper.lerp(f, entity.lastRenderY, entity.getY()) - entity.getY(), MathHelper.lerp(f, entity.lastRenderZ, entity.getZ()) - entity.getZ());
+    public static AABB getInterpolatedBox(Entity entity, float f) {
+        return entity.getBoundingBox().move(Mth.lerp(f, (float) entity.xo, (float) entity.getX()) - entity.getX(), Mth.lerp(f, (float) entity.yo, (float) entity.getY()) - entity.getY(), Mth.lerp(f, (float) entity.zo, (float) entity.getZ()) - entity.getZ());
     }
 
-    public static Box getServerBox(LivingEntity livingEntity) {
-        if (livingEntity instanceof FakePlayerCommand.OtherClientPlayerEntity) {
+    public static AABB getServerBox(LivingEntity livingEntity) {
+        if (livingEntity instanceof FakePlayerCommand.RemotePlayer) {
             return livingEntity.getBoundingBox();
         }
-        Box boundingBox = livingEntity.getBoundingBox();
+        AABB boundingBox = livingEntity.getBoundingBox();
         DuckLivingEntity duckLivingEntity = (DuckLivingEntity) livingEntity;
-        Vec3d vec3d = new Vec3d(duckLivingEntity.mio$getServerX(), duckLivingEntity.mio$getServerY(), duckLivingEntity.mio$getServerZ());
-        if (vec3d.lengthSquared() == 0.0d) {
+        Vec3 vec3d = new Vec3(duckLivingEntity.mio$getServerX(), duckLivingEntity.mio$getServerY(), duckLivingEntity.mio$getServerZ());
+        if (vec3d.lengthSqr() == 0.0d) {
             return livingEntity.getBoundingBox();
         }
-        double lengthX = boundingBox.getLengthX() / Double.longBitsToDouble(4611686018427387904L);
-        double lengthZ = boundingBox.getLengthZ() / Double.longBitsToDouble(4611686018427387904L);
-        return new Box(-lengthX, 0.0d, -lengthZ, lengthX, boundingBox.getLengthY(), lengthZ).offset(vec3d);
+        double lengthX = boundingBox.getXsize() / Double.longBitsToDouble(4611686018427387904L);
+        double lengthZ = boundingBox.getZsize() / Double.longBitsToDouble(4611686018427387904L);
+        return new AABB(-lengthX, 0.0d, -lengthZ, lengthX, boundingBox.getYsize(), lengthZ).move(vec3d);
     }
 
-    public static boolean hasSignificantIntersection(Box box, Box box2) {
-        Box intersection = box.intersection(box2);
-        return ((double) ((float) Math.min(intersection.getLengthX(), Math.min(intersection.getLengthY(), intersection.getLengthZ())))) > Double.longBitsToDouble(4502148214488346440L);
+    public static boolean hasSignificantIntersection(AABB box, AABB box2) {
+        AABB intersection = box.intersect(box2);
+        return ((double) ((float) Math.min(intersection.getXsize(), Math.min(intersection.getYsize(), intersection.getZsize())))) > Double.longBitsToDouble(4502148214488346440L);
     }
 }

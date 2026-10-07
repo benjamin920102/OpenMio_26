@@ -1,30 +1,25 @@
 package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
-
-import me.mioclient.util.math.Vec3dUtils;
+import net.minecraft.world.entity.MoverType;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.Vec3dUtils;
-
-import me.mioclient.event.EventBus;
 
 import me.mioclient.event.events.player.TickPreEvent;
 import me.mioclient.module.movement.EntityControl;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
-@Mixin({BoatEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinBoat.class */
+@Mixin({AbstractBoat.class})
+
 public abstract class MixinBoat extends Entity implements ClientAccessor {
     private static EntityControl entitycontrol;
 
@@ -43,11 +38,12 @@ public abstract class MixinBoat extends Entity implements ClientAccessor {
     @Unique
     private TickPreEvent mio$event;
 
-    public MixinBoat(EntityType<?> entityType, World world) {
+    public MixinBoat(EntityType<?> entityType, Level world) {
         super(entityType, world);
     }
 
-    @Inject(method = {"clampPassengerYaw"}, at = {@At("HEAD")}, cancellable = true)
+    /* 26.2 port: clampPassengerYaw -> clampRotation (bytecode-verified). */
+    @Inject(method = {"clampRotation"}, at = {@At("HEAD")}, cancellable = true)
     public void clampPassengerYawHook(Entity entity, CallbackInfo callbackInfo) {
         EntityControl entitycontrol_lcl = getEntitycontrol();
 
@@ -58,8 +54,11 @@ public abstract class MixinBoat extends Entity implements ClientAccessor {
         }
     }
 
-    @Inject(method = {"updatePaddles"}, at = {@At("HEAD")}, cancellable = true)
-    private void updatePaddles(CallbackInfo callbackInfo) {
+    /* 26.2 port: updatePaddles() removed — paddle state now set inline in tick
+       via setPaddleState. Cancelling the setter freezes paddles under EntityControl
+       override, same effect as before. */
+    @Inject(method = {"setPaddleState"}, at = {@At("HEAD")}, cancellable = true)
+    private void updatePaddles(boolean bl, boolean bl2, CallbackInfo callbackInfo) {
         EntityControl entitycontrol_lcl = getEntitycontrol();
 
         if (entitycontrol_lcl == null) return;
@@ -69,12 +68,12 @@ public abstract class MixinBoat extends Entity implements ClientAccessor {
         }
     }
 
-    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/vehicle/BoatEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.BEFORE)})
+    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/vehicle/boat/AbstractBoat;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V", shift = At.Shift.BEFORE)})
     private void tickPre(CallbackInfo callbackInfo) {
         if (TickPreEvent.isPlayerVehicle(this)) {
-            this.mio$event = new TickPreEvent(getVelocity());
+            this.mio$event = new TickPreEvent(getDeltaMovement());
             eventBus.fireEvent(this.mio$event);
-            Vec3dUtils.setVectorComponents(getVelocity(), this.mio$event.getX(), this.mio$event.getY(), this.mio$event.getZ());
+            setDeltaMovement(new Vec3(this.mio$event.getX(), this.mio$event.getY(), this.mio$event.getZ()));
         }
     }
 }

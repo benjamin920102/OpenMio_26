@@ -9,43 +9,34 @@ import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.inventory.PotionResolver;
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.inventory.PotionResolver;
-
 import java.util.Iterator;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.interaction.InteractItemPacketEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.mob.EndermanEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArrowItem;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.RangedWeaponItem;
-import net.minecraft.item.TridentItem;
-import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
-import net.minecraft.potion.Potion;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.TridentItem;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.core.Holder;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/BowAim.class */
 public class BowAim extends Module {
     public Setting<Boolean> targets = add(new BooleanSetting("Targets", true).setDependent());
     public Setting<Boolean> players = add(new BooleanSetting("Players", true, v -> this.targets.isShown()).setVisible());
@@ -61,29 +52,29 @@ public class BowAim extends Module {
 
     @Listen
     public void onMotion(MotionEvent motionEvent) {
-        Item item = minecraftClient.player.getMainHandStack().getItem();
-        boolean z = (item instanceof RangedWeaponItem) || (item instanceof TridentItem);
+        Item item = minecraftClient.player.getMainHandItem().getItem();
+        boolean z = (item instanceof ProjectileWeaponItem) || (item instanceof TridentItem);
         boolean isUsingItem = minecraftClient.player.isUsingItem();
-        if (CrossbowItem.isCharged(minecraftClient.player.getMainHandStack())) {
+        if (CrossbowItem.isCharged(minecraftClient.player.getMainHandItem())) {
             isUsingItem = true;
         }
         if (z && isUsingItem && motionEvent.getPhase() == KeyPearlMode.Pre) {
             Iterator it = getPotion1955().getEffects().iterator();
             while (it.hasNext()) {
-                RegistryEntry effectType = ((StatusEffectInstance) it.next()).getEffectType();
-                if (((StatusEffect) effectType.value()).isBeneficial() && effectType != StatusEffects.SLOW_FALLING && effectType != StatusEffects.JUMP_BOOST) {
+                Holder effectType = ((MobEffectInstance) it.next()).getEffect();
+                if (((MobEffect) effectType.value()).isBeneficial() && effectType != MobEffects.SLOW_FALLING && effectType != MobEffects.JUMP_BOOST) {
                     return;
                 }
             }
             Entity entity2440 = WorldUtils.getNearestEntity(this.players.getValue().booleanValue(), this.neutrals.getValue().booleanValue(), this.animals.getValue().booleanValue(), this.hostiles.getValue().booleanValue(), false, false, 0.0f, Float.intBitsToFloat(1124073472), false, this.ignoreNakeds.getValue().booleanValue());
-            if (entity2440 == null || (entity2440 instanceof EndermanEntity)) {
+            if (entity2440 == null || (entity2440 instanceof EnderMan)) {
                 return;
             }
-            Box boundingBox = ((Entity) entity2440).getBoundingBox();
-            if (entity2440 instanceof PlayerEntity) {
-                boundingBox = ClientServices.mainhandHelper.getPredictedBox((PlayerEntity) entity2440, 5);
+            AABB boundingBox = ((Entity) entity2440).getBoundingBox();
+            if (entity2440 instanceof Player) {
+                boundingBox = ClientServices.mainhandHelper.getPredictedBox((Player) entity2440, 5);
             }
-            Vec3d center = boundingBox.getCenter();
+            Vec3 center = boundingBox.getCenter();
             if (RotationManager.isInFrustum(boundingBox) && WorldUtils.isPositionVisible(center)) {
                 float[] floatArray1956 = getFloatArray1956((Entity) entity2440, true, Float.intBitsToFloat(1073741824));
                 if (Float.isNaN(floatArray1956[0]) || Float.isNaN(floatArray1956[1])) {
@@ -97,16 +88,16 @@ public class BowAim extends Module {
 
     @Listen
     public void onInteractItemPacket(InteractItemPacketEvent interactItemEvent_2) {
-        PlayerInteractItemC2SPacket playerInteractItemC2SPacket1816 = interactItemEvent_2.getInteractPacket();
-        if (!minecraftClient.player.getStackInHand(playerInteractItemC2SPacket1816.getHand()).isOf(Items.CROSSBOW) || this.floatArr == null) {
+        ServerboundUseItemPacket playerInteractItemC2SPacket1816 = interactItemEvent_2.getInteractPacket();
+        if (!minecraftClient.player.getItemInHand(playerInteractItemC2SPacket1816.getHand()).is(Items.CROSSBOW) || this.floatArr == null) {
             return;
         }
         interactItemEvent_2.setRotation(this.floatArr);
     }
 
     public Potion getPotion1955() {
-        for (int i = 0; i < minecraftClient.player.getInventory().size(); i++) {
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i);
+        for (int i = 0; i < minecraftClient.player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i);
             if (stack.getItem() instanceof ArrowItem) {
                 return PotionResolver.resolvePotion(stack);
             }
@@ -115,12 +106,12 @@ public class BowAim extends Module {
     }
 
     public static float[] getFloatArray1956(Entity entity, boolean z, float f) {
-        ClientPlayerEntity clientPlayerEntity = minecraftClient.player;
-        double x = (entity.getX() + (z ? (entity.getX() - entity.prevX) * f : 0.0d)) - (clientPlayerEntity.getX() + (z ? clientPlayerEntity.getX() - clientPlayerEntity.prevX : 0.0d));
-        double eyeHeight = ((((entity.getBoundingBox().minY + (z ? (entity.getBoundingBox().minY - entity.prevY) * f : 0.0d)) + entity.getEyeHeight(entity.getPose())) - Double.longBitsToDouble(4594572339843380019L)) - (clientPlayerEntity.getBoundingBox().minY + (z ? clientPlayerEntity.getY() - clientPlayerEntity.prevY : 0.0d))) - clientPlayerEntity.getEyeHeight(clientPlayerEntity.getPose());
-        double z2 = (entity.getZ() + (z ? (entity.getZ() - entity.prevZ) * f : 0.0d)) - (clientPlayerEntity.getZ() + (z ? clientPlayerEntity.getZ() - clientPlayerEntity.prevZ : 0.0d));
+        LocalPlayer clientPlayerEntity = minecraftClient.player;
+        double x = (entity.getX() + (z ? (entity.getX() - entity.xo) * f : 0.0d)) - (clientPlayerEntity.getX() + (z ? clientPlayerEntity.getX() - clientPlayerEntity.xo : 0.0d));
+        double eyeHeight = ((((entity.getBoundingBox().minY + (z ? (entity.getBoundingBox().minY - entity.yo) * f : 0.0d)) + entity.getEyeHeight(entity.getPose())) - Double.longBitsToDouble(4594572339843380019L)) - (clientPlayerEntity.getBoundingBox().minY + (z ? clientPlayerEntity.getY() - clientPlayerEntity.yo : 0.0d))) - clientPlayerEntity.getEyeHeight(clientPlayerEntity.getPose());
+        double z2 = (entity.getZ() + (z ? (entity.getZ() - entity.zo) * f : 0.0d)) - (clientPlayerEntity.getZ() + (z ? clientPlayerEntity.getZ() - clientPlayerEntity.zo : 0.0d));
         double hypot = Math.hypot(x, z2);
-        float itemUseTime = clientPlayerEntity.getItemUseTime() / Float.intBitsToFloat(1101004800);
+        float itemUseTime = clientPlayerEntity.getTicksUsingItem() / Float.intBitsToFloat(1101004800);
         if (clientPlayerEntity.isHolding(Items.CROSSBOW)) {
             itemUseTime = Float.intBitsToFloat(1065353216);
         }

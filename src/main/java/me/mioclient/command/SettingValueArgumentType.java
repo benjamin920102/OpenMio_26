@@ -8,9 +8,6 @@ import me.mioclient.util.text.StringTemplate;
 import me.mioclient.util.registry.EnumSettingRegistry;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.registry.RegistrySuggestionProvider;
-import me.mioclient.util.registry.EnumSettingRegistry;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -24,17 +21,14 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.setting.ObjectSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SettingValueArgumentType.class */
 public class SettingValueArgumentType implements com.mojang.brigadier.arguments.ArgumentType<String>, ClientAccessor {
     public final String string;
     public final Module module;
@@ -46,7 +40,6 @@ public class SettingValueArgumentType implements com.mojang.brigadier.arguments.
         return remaining;
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> commandContext, SuggestionsBuilder suggestionsBuilder) {
         RegistrySuggestionProvider helper56;
         try {
@@ -55,7 +48,7 @@ public class SettingValueArgumentType implements com.mojang.brigadier.arguments.
                 return ExamplesArgumentType_2.bool((BooleanSetting) option).listSuggestions(commandContext, suggestionsBuilder);
             }
             if (option instanceof EnumSetting) {
-                return CommandSource.suggestMatching(Arrays.stream((Enum[]) ((Enum) ((EnumSetting) option).getDefaultValue()).getDeclaringClass().getEnumConstants()).filter(r2 -> {
+                return SharedSuggestionProvider.suggest(Arrays.stream((Enum[]) ((Enum) ((EnumSetting) option).getDefaultValue()).getDeclaringClass().getEnumConstants()).filter(r2 -> {
                     return !EnumSettingRegistry.isExperimentalEnumValue(r2);
                 }).map(r22 -> {
                     return r22.name().toLowerCase();
@@ -70,7 +63,7 @@ public class SettingValueArgumentType implements com.mojang.brigadier.arguments.
                 if (!(option instanceof SoundIdentifierSetting)) {
                     return com.mojang.brigadier.arguments.ArgumentType.super.listSuggestions(commandContext, suggestionsBuilder);
                 }
-                return CommandSource.suggestMatching(ClientServices.killstreakSoundManager.getSoundIdentifiers().stream().map(searchIdentifier -> {
+                return SharedSuggestionProvider.suggest(ClientServices.killstreakSoundManager.getSoundIdentifiers().stream().map(searchIdentifier -> {
                     return new StringTemplate().arg(searchIdentifier.getName()).arg(searchIdentifier.getSoundSource()).format("\u0001:\u0001");
                 }), suggestionsBuilder);
             }
@@ -78,7 +71,7 @@ public class SettingValueArgumentType implements com.mojang.brigadier.arguments.
             if ((option instanceof EntityListObjectSetting) && (helper56 = RegistrySuggestionProvider.getProvider(((EntityListObjectSetting) option).getRegistry())) != RegistrySuggestionProvider.helper_24) {
                 collection3127.addAll(helper56.getGroupNames());
             }
-            return CommandSource.suggestMatching(collection3127, suggestionsBuilder);
+            return SharedSuggestionProvider.suggest(collection3127, suggestionsBuilder);
         } catch (Exception e) {
             return Suggestions.empty();
         }

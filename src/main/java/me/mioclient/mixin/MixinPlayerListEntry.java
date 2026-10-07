@@ -2,16 +2,15 @@ package me.mioclient.mixin;
 
 import com.mojang.authlib.GameProfile;
 import me.mioclient.ducks.DuckPlayerListEntry;
-import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
-@Mixin({PlayerListEntry.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinPlayerListEntry.class */
+@Mixin({PlayerInfo.class})
+
 public class MixinPlayerListEntry implements DuckPlayerListEntry {
 
     @Unique

@@ -3,30 +3,32 @@ package me.mioclient.mixin;
 import me.mioclient.api.ClientServices;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import me.mioclient.event.events.network.ConnectEvent;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
-import net.minecraft.client.network.CookieStorage;
-import net.minecraft.client.network.ServerAddress;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.client.multiplayer.ServerData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified via JDK25 javap): ConnectScreen.connect(Minecraft,
+   ServerAddress, ServerData, CookieStorage) gone; now
+   startConnecting(Screen, Minecraft, ServerAddress, ServerData, boolean, TransferState)
+   and connect(Minecraft, ServerAddress, ServerData, TransferState). Hook the
+   public entry point, require = 0. */
 @Mixin({ConnectScreen.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinConnectScreen.class */
+
 public class MixinConnectScreen {
-    @Inject(method = {"connect(Lnet/minecraft/client/MinecraftClient;Lnet/minecraft/client/network/ServerAddress;Lnet/minecraft/client/network/ServerInfo;Lnet/minecraft/client/network/CookieStorage;)V"}, at = {@At("HEAD")})
-    private void connectHook(MinecraftClient minecraftClient, ServerAddress serverAddress, ServerInfo serverInfo, CookieStorage cookieStorage, CallbackInfo callbackInfo) {
-        ServerInfo serverInfo2 = serverInfo;
+    @Inject(method = {"startConnecting"}, at = {@At("HEAD")}, require = 0)
+    private static void connectHook(net.minecraft.client.gui.screens.Screen screen, Minecraft minecraftClient, ServerAddress serverAddress, ServerData serverInfo, boolean bl, net.minecraft.client.multiplayer.TransferState transferState, CallbackInfo callbackInfo) {
+        ServerData serverInfo2 = serverInfo;
         if (serverInfo2 == null) {
-            serverInfo2 = new ServerInfo("mioclient", serverAddress.getAddress(), ServerInfo.ServerType.OTHER);
+            serverInfo2 = new ServerData("mioclient", serverAddress.getHost(), ServerData.Type.OTHER);
         }
-        ClientAccessor.eventBus.fireEvent(new ConnectEvent(serverInfo2.address));
+        ClientAccessor.eventBus.fireEvent(new ConnectEvent(serverInfo2.ip));
         ClientServices.holeSnapRenderHelper.setServerInfo(serverInfo2);
     }
 }

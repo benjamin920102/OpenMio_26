@@ -2,8 +2,6 @@ package me.mioclient.gui.minigame;
 
 import java.util.Random;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TetrominoPiece.class */
 public class TetrominoPiece {
     public TetrominoShape mode_7;
     public int[][] intArr;
@@ -14,8 +12,7 @@ public class TetrominoPiece {
         initShapeTemplates();
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
-    /* JADX WARN: Type inference failed for: r1v3, types: [int[][], int[][][]] */
+    
     public void initShapeTemplates() {
         this.intArr = new int[4][2];
         this.intArr2 = new int[][][]{new int[][]{new int[]{0, 0}, new int[]{0, 0}, new int[]{0, 0}, new int[]{0, 0}}, new int[][]{new int[]{0, -1}, new int[]{0, 0}, new int[]{-1, 0}, new int[]{-1, 1}}, new int[][]{new int[]{0, -1}, new int[]{0, 0}, new int[]{1, 0}, new int[]{1, 1}}, new int[][]{new int[]{0, -1}, new int[]{0, 0}, new int[]{0, 1}, new int[]{0, 2}}, new int[][]{new int[]{-1, 0}, new int[]{0, 0}, new int[]{1, 0}, new int[]{0, 1}}, new int[][]{new int[]{0, 0}, new int[]{1, 0}, new int[]{0, 1}, new int[]{1, 1}}, new int[][]{new int[]{-1, -1}, new int[]{0, -1}, new int[]{0, 0}, new int[]{0, 1}}, new int[][]{new int[]{1, -1}, new int[]{0, -1}, new int[]{0, 0}, new int[]{0, 1}}};

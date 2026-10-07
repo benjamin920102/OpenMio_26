@@ -5,29 +5,15 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.render.hud.ResizableHudElement;
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.ColorUtils;
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Graph.class */
 public class Graph extends me.mioclient.module.HudModule {
     public Setting<Float> setting;
     public Setting<Integer> setting2;
@@ -60,29 +46,42 @@ public class Graph extends me.mioclient.module.HudModule {
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
-        Tessellator tessellator = Tessellator.getInstance();
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        BufferBuilder begin = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
-        int i = 0;
-        Iterator<Double> it = this.list.iterator();
-        while (it.hasNext()) {
-            float intBitsToFloat = Float.intBitsToFloat(1065353216) + ((float) ((this.setting2.getValue().intValue() - 2) * (Double.longBitsToDouble(4607182418800017408L) - (Math.min(it.next().doubleValue(), this.setting.getValue().floatValue()) / this.setting.getValue().floatValue()))));
-            begin.vertex(drawContext.getMatrices().peek().getPositionMatrix(), i, intBitsToFloat, 0.0f).color(ColorUtils.withAlpha(getHudColor(intBitsToFloat + this.moduleListSearchHelper4.getY()), get2579(i)).hashCode());
-            i++;
+    public void renderContent(GuiGraphicsExtractor drawContext) {
+        // 26.2: immediate Tessellator/BufferRenderer removed (GpuBackend).
+        // Real behavior: draw speed line-strip as 1px fill segments in GUI space.
+        int w = this.setting3.getValue().intValue();
+        int h = this.setting2.getValue().intValue();
+        float ceil = this.setting.getValue().floatValue();
+        if (ceil <= 0.0f) {
+            ceil = 1.0f;
         }
-        BufferRenderer.drawWithGlobalProgram(begin.end());
-        RenderSystem.disableBlend();
+        int n = Math.min(this.list.size(), w);
+        for (int i = 1; i < n; i++) {
+            double v0 = Math.min(this.list.get(i - 1).doubleValue(), (double) ceil);
+            double v1 = Math.min(this.list.get(i).doubleValue(), (double) ceil);
+            int y0 = (int) (h - (v0 / ceil) * h);
+            int y1 = (int) (h - (v1 / ceil) * h);
+            y0 = (int) Mth.clamp(y0, 0, h - 1);
+            y1 = (int) Mth.clamp(y1, 0, h - 1);
+            int alpha = Math.min(get2579(i - 1), get2579(i));
+            int col = ((alpha & 255) << 24) | 0x00FF00;
+            int top = Math.min(y0, y1);
+            int bottom = Math.max(y0, y1);
+            if (bottom == top) {
+                bottom = top + 1;
+            } else {
+                bottom = bottom + 1;
+            }
+            drawContext.fill(i - 1, top, i, bottom, col);
+        }
     }
 
     public int get2579(int i) {
         if (i <= 10) {
-            return (int) MathHelper.clamp((i / Float.intBitsToFloat(1092616192)) * Float.intBitsToFloat(1132396544), 0.0f, Float.intBitsToFloat(1132396544));
+            return (int) Mth.clamp((i / Float.intBitsToFloat(1092616192)) * Float.intBitsToFloat(1132396544), 0.0f, Float.intBitsToFloat(1132396544));
         }
         if (i >= this.setting3.getValue().intValue() - 10) {
-            return (int) MathHelper.clamp((Float.intBitsToFloat(1065353216) - (((i - this.setting3.getValue().intValue()) + 10) / Float.intBitsToFloat(1092616192))) * Float.intBitsToFloat(1132396544), 0.0f, Float.intBitsToFloat(1132396544));
+            return (int) Mth.clamp((Float.intBitsToFloat(1065353216) - (((i - this.setting3.getValue().intValue()) + 10) / Float.intBitsToFloat(1092616192))) * Float.intBitsToFloat(1132396544), 0.0f, Float.intBitsToFloat(1132396544));
         }
         return 255;
     }

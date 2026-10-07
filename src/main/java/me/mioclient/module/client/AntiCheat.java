@@ -13,40 +13,39 @@ import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
 import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
 import me.mioclient.module.client.anticheat.YawSpoofHandler;
 import me.mioclient.module.movement.velocity.VelocityModeHandler;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.event.EventBus;
 
-import me.mioclient.mode.combat.CrystalRotationMode;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.module.KeybindModule;
-import me.mioclient.mode.client.AntiCheatMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.movement.Velocity;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.s2c.play.CloseScreenS2CPacket;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
+import net.minecraft.util.Mth;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/AntiCheat.class */
 public class AntiCheat extends KeybindModule {
-    public static final Velocity velocity = (Velocity) ClientServices.moduleInjector.getModule(Velocity.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving velocity null. */
+    private static Velocity velocity;
+
+    public static Velocity getVelocity() {
+        if (velocity == null && ClientServices.moduleInjector != null) {
+            try {
+                velocity = (Velocity) ClientServices.moduleInjector.getModule(Velocity.class);
+            } catch (Exception e) {
+            }
+        }
+        return velocity;
+    }
     public static final float val = (float) (((Math.pow(Double.longBitsToDouble(4596373779801702400L), Double.longBitsToDouble(4613937818241073152L)) * Double.longBitsToDouble(4620693217682128896L)) * Double.longBitsToDouble(4594572339843380019L)) - Double.longBitsToDouble(4562254508917369340L));
     public Setting<Boolean> f2b2t = add(new BooleanSetting("2b2t", false));
     public Setting<Float> yawStep = add(new NumberSetting<>("YawStep", 1.0f, 0.1f, 1.0f));
@@ -72,28 +71,29 @@ public class AntiCheat extends KeybindModule {
     public void onMotion(MotionEvent motionEvent) {
         this.flag2 = motionEvent.getPhase() == KeyPearlMode.Pre;
         if (motionEvent.getPhase() == KeyPearlMode.Pre && this.movementSync.getValue().booleanValue()) {
-            if ((isF2b2t() && (minecraftClient.currentScreen instanceof HandledScreen) && !this.baritoneSearchHelper4.isYawSpoofActive()) || PlayerUtils.isReallyFallFlying()) {
+            if ((isF2b2t() && (minecraftClient.gui.screen() instanceof AbstractContainerScreen) && !this.baritoneSearchHelper4.isYawSpoofActive()) || PlayerUtils.isReallyFallFlying()) {
                 return;
             }
-            if (velocity.isToggled()) {
-                VelocityModeHandler velocityHelper1894 = velocity.getVelocityHelper1894();
+            Velocity velocity_lcl = getVelocity();
+            if (velocity_lcl != null && velocity_lcl.isToggled()) {
+                VelocityModeHandler velocityHelper1894 = velocity_lcl.getVelocityHelper1894();
                 if ((velocityHelper1894 instanceof AntiCheatVelocityHandler) && ((AntiCheatVelocityHandler) velocityHelper1894).is951()) {
                     return;
                 }
             }
             float intBitsToFloat = val * Float.intBitsToFloat(1073741824) * (this.flag ? -1 : 1);
             this.flag = !this.flag;
-            motionEvent.setPitch(MathHelper.clamp(motionEvent.getPitch() + intBitsToFloat, -MathConstants.num2, MathConstants.num2));
+            motionEvent.setPitch(Mth.clamp(motionEvent.getPitch() + intBitsToFloat, -MathConstants.num2, MathConstants.num2));
         }
     }
 
     @Listen(get219= 999)
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        PlayerActionC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerActionC2SPacket ? (PlayerActionC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerActionC2SPacket) {
-            PlayerActionC2SPacket playerActionC2SPacket = packet904;
-            if (isF2b2t() && playerActionC2SPacket.getAction() == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK) {
-                PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, playerActionC2SPacket.getPos(), playerActionC2SPacket.getDirection());
+        ServerboundPlayerActionPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundPlayerActionPacket ? (ServerboundPlayerActionPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundPlayerActionPacket) {
+            ServerboundPlayerActionPacket playerActionC2SPacket = packet904;
+            if (isF2b2t() && playerActionC2SPacket.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
+                PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, playerActionC2SPacket.getPos(), playerActionC2SPacket.getDirection());
             }
         }
     }
@@ -101,8 +101,8 @@ public class AntiCheat extends KeybindModule {
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (isF2b2t()) {
-            CloseScreenS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof CloseScreenS2CPacket ? (CloseScreenS2CPacket) (channelRead0Event.getPacket()) : null;
-            if ((packet904 instanceof CloseScreenS2CPacket) && packet904.getSyncId() == 0) {
+            ClientboundContainerClosePacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundContainerClosePacket ? (ClientboundContainerClosePacket) (channelRead0Event.getPacket()) : null;
+            if ((packet904 instanceof ClientboundContainerClosePacket) && packet904.getContainerId() == 0) {
                 channelRead0Event.cancel();
             }
         }

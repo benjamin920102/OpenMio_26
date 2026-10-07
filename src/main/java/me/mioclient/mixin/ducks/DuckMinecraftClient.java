@@ -1,26 +1,16 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/* compiled from: 0.java */
-@Mixin({MinecraftClient.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckMinecraftClient.class */
+/* 26.2 port (verified): Yarn doAttack/doItemUse are MojMap startAttack/startUseItem.
+   itemUseCooldown is gone (FastPlace rework); disconnecting flag is gone. */
+@Mixin({Minecraft.class})
 public interface DuckMinecraftClient {
-    @Invoker("doAttack")
+    @Invoker("startAttack")
     boolean attack();
 
-    @Invoker("doItemUse")
+    @Invoker("startUseItem")
     void interact();
-
-    @Accessor("itemUseCooldown")
-    void setItemUseCooldown(int i);
-
-    @Accessor("itemUseCooldown")
-    int getItemUseCooldown();
-
-    @Accessor("disconnecting")
-    boolean mio$isDisconnecting();
 }

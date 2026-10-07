@@ -1,48 +1,45 @@
 package me.mioclient.util.world;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ClipContext;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CustomRaycastContext.class */
 public final class CustomRaycastContext {
-    public final Vec3d vec3d;
-    public final Vec3d vec3d2;
-    public final RaycastContext.ShapeType shapeType;
-    public final RaycastContext.FluidHandling fluidHandling;
-    public final ShapeContext shapeContext;
+    public final Vec3 vec3d;
+    public final Vec3 vec3d2;
+    public final ClipContext.Block shapeType;
+    public final ClipContext.Fluid fluidHandling;
+    public final CollisionContext shapeContext;
     public final BlockRaycastFilter holeSnapHelper;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/HoleSnapHelper_2$Inner.class */
+    
     public static class Inner {
-        public final Vec3d vec3d;
-        public final Vec3d vec3d2;
-        public RaycastContext.ShapeType shapeType = RaycastContext.ShapeType.COLLIDER;
-        public RaycastContext.FluidHandling fluidHandling = RaycastContext.FluidHandling.NONE;
-        public Entity entity = MinecraftClient.getInstance().player;
+        public final Vec3 vec3d;
+        public final Vec3 vec3d2;
+        public ClipContext.Block shapeType = ClipContext.Block.COLLIDER;
+        public ClipContext.Fluid fluidHandling = ClipContext.Fluid.NONE;
+        public Entity entity = Minecraft.getInstance().player;
         public BlockRaycastFilter holeSnapHelper = BlockRaycastFilter.holeSnapHelper;
 
-        public Inner(Vec3d vec3d, Vec3d vec3d2) {
+        public Inner(Vec3 vec3d, Vec3 vec3d2) {
             this.vec3d = vec3d;
             this.vec3d2 = vec3d2;
         }
 
-        public Inner setShapeType(RaycastContext.ShapeType shapeType) {
+        public Inner setShapeType(ClipContext.Block shapeType) {
             this.shapeType = shapeType;
             return this;
         }
 
-        public Inner setFluidHandling(RaycastContext.FluidHandling fluidHandling) {
+        public Inner setFluidHandling(ClipContext.Fluid fluidHandling) {
             this.fluidHandling = fluidHandling;
             return this;
         }
@@ -67,32 +64,32 @@ public final class CustomRaycastContext {
         }
     }
 
-    public CustomRaycastContext(Vec3d vec3d, Vec3d vec3d2, RaycastContext.ShapeType shapeType, RaycastContext.FluidHandling fluidHandling, Entity entity, BlockRaycastFilter holeSnapHelper) {
+    public CustomRaycastContext(Vec3 vec3d, Vec3 vec3d2, ClipContext.Block shapeType, ClipContext.Fluid fluidHandling, Entity entity, BlockRaycastFilter holeSnapHelper) {
         this.vec3d = vec3d;
         this.vec3d2 = vec3d2;
         this.shapeType = shapeType;
         this.fluidHandling = fluidHandling;
-        this.shapeContext = ShapeContext.of(entity);
+        this.shapeContext = CollisionContext.of(entity);
         this.holeSnapHelper = holeSnapHelper;
     }
 
-    public Vec3d getStart() {
+    public Vec3 getStart() {
         return this.vec3d;
     }
 
-    public Vec3d getEnd() {
+    public Vec3 getEnd() {
         return this.vec3d2;
     }
 
-    public RaycastContext.ShapeType getShapeType() {
+    public ClipContext.Block getShapeType() {
         return this.shapeType;
     }
 
-    public RaycastContext.FluidHandling getFluidHandling() {
+    public ClipContext.Fluid getFluidHandling() {
         return this.fluidHandling;
     }
 
-    public ShapeContext getShapeContext() {
+    public CollisionContext getShapeContext() {
         return this.shapeContext;
     }
 
@@ -100,11 +97,11 @@ public final class CustomRaycastContext {
         return this.holeSnapHelper;
     }
 
-    public VoxelShape getBlockShape(BlockState blockState, BlockView blockView, BlockPos blockPos) {
+    public VoxelShape getBlockShape(BlockState blockState, BlockGetter blockView, BlockPos blockPos) {
         return this.shapeType.get(blockState, blockView, blockPos, this.shapeContext);
     }
 
-    public VoxelShape getFluidShape(FluidState fluidState, BlockView blockView, BlockPos blockPos) {
-        return this.fluidHandling.handled(fluidState) ? fluidState.getShape(blockView, blockPos) : VoxelShapes.empty();
+    public VoxelShape getFluidShape(FluidState fluidState, BlockGetter blockView, BlockPos blockPos) {
+        return this.fluidHandling.canPick(fluidState) ? fluidState.getShape(blockView, blockPos) : Shapes.empty();
     }
 }

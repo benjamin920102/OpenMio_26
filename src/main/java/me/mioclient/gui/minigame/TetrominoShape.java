@@ -2,8 +2,6 @@ package me.mioclient.gui.minigame;
 
 import java.awt.Color;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_7.class */
 public enum TetrominoShape {
     NoShape(new Color(0, 0, 0)),
     ZShape(new Color(204, 102, 102)),

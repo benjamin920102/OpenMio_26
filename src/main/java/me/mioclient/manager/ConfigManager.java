@@ -8,9 +8,6 @@ import me.mioclient.mode.misc.PresetHelperMode;
 import me.mioclient.util.io.FileIO;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.io.FileIO;
 
 import com.google.gson.JsonParser;
 import java.nio.file.Path;
@@ -20,11 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.loader.api.FabricLoader;
-import me.mioclient.command.PanicCommand;
-import me.mioclient.mode.misc.PresetHelperMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ConfigManager.class */
 public final class ConfigManager implements ClientAccessor {
     public static final Path path = FabricLoader.getInstance().getGameDir().resolve("mio-fabric");
     public static final Path path2 = path.resolve("presets");

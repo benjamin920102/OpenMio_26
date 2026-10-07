@@ -6,10 +6,6 @@ import me.mioclient.util.text.StringTemplate;
 import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.io.HttpRequests;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.io.HttpRequests;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
@@ -25,21 +21,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CompletableFutureFeature.class */
 public class CompletableFutureFeature extends CommandFeature {
     public final String string = "https://api.mojang.com/users/profiles/minecraft/";
     public final String string2 = "https://laby.net/api/user/%s/get-names";
     public CompletableFuture<List<Record>> completableFuture;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/CompletableFutureFeature$Record.class */
+    
+    
     public static final class Record {
 
         @SerializedName("username")
@@ -75,9 +67,6 @@ public class CompletableFutureFeature extends CommandFeature {
             return this.flag ? "HIDDEN" : this.string;
         }
 
-
-
-
         @SerializedName("changed_at")
         public String getChangedAt() {
             return this.string2;
@@ -94,7 +83,7 @@ public class CompletableFutureFeature extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("name", new ExamplesArgumentType_3()).executes(commandContext -> {
             if (this.completableFuture != null && !this.completableFuture.isDone() && !this.completableFuture.isCompletedExceptionally()) {
                 return 1;
@@ -112,7 +101,7 @@ public class CompletableFutureFeature extends CommandFeature {
                 }, 0);
                 return null;
             });
-            ChatUtils.sendMessage(Text.literal("Loading name history for ").append(themedLiteral(str)), ChatUtils.createSignature(-3));
+            ChatUtils.sendMessage(Component.literal("Loading name history for ").append(themedLiteral(str)), ChatUtils.createSignature(-3));
             return 1;
         }));
         literalArgumentBuilder.then(CommandFeature.literal("open").then(CommandFeature.argument("name", new ExamplesArgumentType_3()).executes(commandContext2 -> {
@@ -150,9 +139,9 @@ public class CompletableFutureFeature extends CommandFeature {
             return;
         }
         try {
-            Text empty = Text.empty();
-            ((MutableText) empty).append(themedLiteral(list.get(list.size() - 1).getDisplayName()));
-            ((MutableText) empty).append("'s Name History: \n");
+            Component empty = Component.empty();
+            ((MutableComponent) empty).append(themedLiteral(list.get(list.size() - 1).getDisplayName()));
+            ((MutableComponent) empty).append("'s Name History: \n");
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < list.size(); i++) {
                 Record record = list.get(i);
@@ -161,7 +150,7 @@ public class CompletableFutureFeature extends CommandFeature {
                     sb.append('\n');
                 }
             }
-            ((MutableText) empty).append(sb.toString());
+            ((MutableComponent) empty).append(sb.toString());
             ChatUtils.sendMessage(empty, ChatUtils.createSignature(-3));
         } catch (Exception e) {
             e.printStackTrace();
@@ -169,6 +158,6 @@ public class CompletableFutureFeature extends CommandFeature {
     }
 
     public void do1182(Throwable th) {
-        ChatUtils.sendPrefixedMessage(Text.literal(th.getCause().getMessage()), ChatUtils.createSignature(-3), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+        ChatUtils.sendPrefixedMessage(Component.literal(th.getCause().getMessage()), ChatUtils.createSignature(-3), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
     }
 }

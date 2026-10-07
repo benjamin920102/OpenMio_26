@@ -1,13 +1,10 @@
 package me.mioclient.module.combat.holefill;
-
-import me.mioclient.util.world.HoleData;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.util.world.HoleData;
 
 import me.mioclient.module.combat.HoleFill;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/RangeHoleFilter.class */
 public class RangeHoleFilter implements HoleFilter {
     public final HoleFill holeFill;
 
@@ -17,8 +14,8 @@ public class RangeHoleFilter implements HoleFilter {
 
     @Override // me.mioclient.module.combat.holefill.HoleFilter
     public boolean isWithinRange(HoleData holeSnapData) {
-        if ((holeSnapData.getBox().getLengthX() == Double.longBitsToDouble(4607182418800017408L) && holeSnapData.getBox().getLengthZ() == Double.longBitsToDouble(4607182418800017408L)) || this.holeFill.doubles.getValue().booleanValue()) {
-            if (minecraftClient.player.getEyePos().distanceTo(holeSnapData.getBlockPos().toCenterPos()) <= this.holeFill.range.getValue().floatValue() && Math.abs(minecraftClient.player.getEyePos().y - holeSnapData.getBlockPos().toCenterPos().y) <= this.holeFill.verticalRange.getValue().floatValue()) {
+        if ((holeSnapData.getBox().getXsize() == Double.longBitsToDouble(4607182418800017408L) && holeSnapData.getBox().getZsize() == Double.longBitsToDouble(4607182418800017408L)) || this.holeFill.doubles.getValue().booleanValue()) {
+            if (minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(holeSnapData.getBlockPos())) <= this.holeFill.range.getValue().floatValue() && Math.abs(minecraftClient.player.getEyePosition().y - Vec3.atCenterOf(holeSnapData.getBlockPos()).y) <= this.holeFill.verticalRange.getValue().floatValue()) {
                 return true;
             }
         }

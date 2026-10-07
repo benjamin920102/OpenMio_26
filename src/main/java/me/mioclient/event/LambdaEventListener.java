@@ -10,8 +10,6 @@ import java.lang.reflect.Modifier;
 import java.util.function.Consumer;
 import me.mioclient.event.Listen;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/LambdaEventListener.class */
 public class LambdaEventListener implements EventListener {
     public static boolean isJava8;
     public static Constructor<MethodHandles.Lookup> lookupConstructor;
@@ -25,8 +23,7 @@ public class LambdaEventListener implements EventListener {
     /** Listener method name, retained for diagnostic logging. */
     private final String methodName;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/BaritoneHelper_2$Inner.class */
+    
     public interface Inner {
         MethodHandles.Lookup create(Method privateLookupInMethod, Class<?> cls);
     }

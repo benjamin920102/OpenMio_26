@@ -7,16 +7,11 @@ import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.util.io.ImageTransferable;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.client.ChatUtils;
 
 import com.google.gson.JsonObject;
 import java.awt.Graphics2D;
@@ -34,28 +29,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Base64;
 import javax.imageio.ImageIO;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.io.ImageTransferable;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/ExtraScreenshot.class */
 public class ExtraScreenshot extends Module {
     public Setting<ExtraScreenshotMode> mode = add(new EnumSetting<>("Mode", ExtraScreenshotMode.COPY));
+    public Setting<Integer> hiResScale = add(new NumberSetting<>("HiResScale", 1, 1, 4));
     public Setting<Boolean> deleteFile = add(new BooleanSetting("DeleteFile", false, v -> this.mode.getValue() != ExtraScreenshot.ExtraScreenshotMode.NONE));
     public Setting<Boolean> sound = add(new BooleanSetting("Sound", false).setVisible());
     public Setting<SoundIdentifier> path = add(new SoundIdentifierSetting("Path", new SoundIdentifier("system", "warning")).requiresSettings(this.sound));
@@ -66,8 +56,7 @@ public class ExtraScreenshot extends Module {
     public static final String string = "Client-ID e7c0b6a4c926098";
     public static final HttpClient httpClient = HttpClient.newHttpClient();
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/ExtraScreenshot$ExtraScreenshotMode.class */
+    
     public enum ExtraScreenshotMode implements NamedValue {
         NONE("None"),
         COPY("Copy"),
@@ -105,8 +94,8 @@ public class ExtraScreenshot extends Module {
         if (this.mode.getValue() == ExtraScreenshotMode.IMGUR && !this.stopwatch.hasElapsedMs(1500L)) {
             this.num2++;
             this.num2 %= 3;
-            ChatUtils.sendPrefixedMessage(Text.literal(String.format("Wait %dms before uploading a screenshot", Long.valueOf(1500 - this.stopwatch.getElapsedTime()))).styled(style -> {
-                return style.withColor(Formatting.YELLOW);
+            ChatUtils.sendPrefixedMessage(Component.literal(String.format("Wait %dms before uploading a screenshot", Long.valueOf(1500 - this.stopwatch.getElapsedTime()))).withStyle(style -> {
+                return style.withColor(ChatFormatting.YELLOW);
             }), ChatUtils.createSignature((-34596741) + this.num2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
             return;
         }
@@ -123,18 +112,18 @@ public class ExtraScreenshot extends Module {
                 createGraphics.drawImage(read, 0, 0, (ImageObserver) null);
                 createGraphics.dispose();
                 copyToClipboard(new ImageTransferable(bufferedImage));
-                ChatUtils.sendMessage(Text.of("Copied screenshot to clipboard"), ChatUtils.signatureOfModule(this));
+                ChatUtils.sendMessage(Component.literal("Copied screenshot to clipboard"), ChatUtils.signatureOfModule(this));
                 return;
             } catch (Exception e2) {
                 e2.printStackTrace();
-                ChatUtils.sendPrefixedMessage(Text.literal("Failed to copy the screenshot").styled(style2 -> {
-                    return style2.withColor(Formatting.RED);
+                ChatUtils.sendPrefixedMessage(Component.literal("Failed to copy the screenshot").withStyle(style2 -> {
+                    return style2.withColor(ChatFormatting.RED);
                 }), ChatUtils.signatureOfModule(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
                 return;
             }
         }
         if (this.mode.getValue() == ExtraScreenshotMode.IMGUR) {
-            ChatUtils.sendMessage(Text.of("Uploading screenshot..."), ChatUtils.signatureOfModule(this));
+            ChatUtils.sendMessage(Component.literal("Uploading screenshot..."), ChatUtils.signatureOfModule(this));
             try {
                 JsonObject jsonObject = (JsonObject) ClientAccessor.gson.fromJson((String) httpClient.send(HttpRequest.newBuilder().uri(new URI("https://api.imgur.com/3/image")).headers(new String[]{"Content-Type", "application/x-www-form-urlencoded"}).headers(new String[]{"Authorization", "Client-ID e7c0b6a4c926098"}).POST(HttpRequest.BodyPublishers.ofString(new StringTemplate().arg(URLEncoder.encode(Base64.getEncoder().encodeToString(bArr), StandardCharsets.UTF_8)).format("image=\u0001"))).timeout(Duration.ofSeconds(10L)).build(), HttpResponse.BodyHandlers.ofString()).body(), JsonObject.class);
                 if (!jsonObject.has("success") || !jsonObject.has("data")) {
@@ -148,11 +137,11 @@ public class ExtraScreenshot extends Module {
                     throw new IOException("Invalid server response");
                 }
                 Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(asJsonObject.get("link").getAsString()), (ClipboardOwner) null);
-                ChatUtils.sendMessage(Text.of("Copied screenshot link"), ChatUtils.createSignature(-43296436));
+                ChatUtils.sendMessage(Component.literal("Copied screenshot link"), ChatUtils.createSignature(-43296436));
             } catch (Exception e3) {
                 e3.printStackTrace();
-                ChatUtils.sendPrefixedMessage(Text.literal("Failed to upload screenshot to Imgur").styled(style3 -> {
-                    return style3.withColor(Formatting.RED);
+                ChatUtils.sendPrefixedMessage(Component.literal("Failed to upload screenshot to Imgur").withStyle(style3 -> {
+                    return style3.withColor(ChatFormatting.RED);
                 }), ChatUtils.createSignature(-43296435), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
             }
         }
@@ -161,7 +150,7 @@ public class ExtraScreenshot extends Module {
     public void processNativeImage(NativeImage nativeImage) {
         try {
             try {
-                byte[] bytes = nativeImage.getBytes();
+                byte[] bytes = nativeImageToPngBytes(nativeImage);
                 if (shouldDeleteFile()) {
                     nativeImage.close();
                 }
@@ -174,7 +163,7 @@ public class ExtraScreenshot extends Module {
                 });
             } catch (Exception e) {
                 e.printStackTrace();
-                ChatUtils.sendPrefixedMessage(Text.of("Failed to save the screenshot"), ChatUtils.signatureOfModule(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
+                ChatUtils.sendPrefixedMessage(Component.literal("Failed to save the screenshot"), ChatUtils.signatureOfModule(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
                 if (shouldDeleteFile()) {
                     nativeImage.close();
                 }
@@ -186,9 +175,22 @@ public class ExtraScreenshot extends Module {
             throw th;
         }
     }
-
     public void copyToClipboard(ImageTransferable transferDataFlavorsTransferable) {
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(transferDataFlavorsTransferable, (ClipboardOwner) null);
+    }
+
+    /** 26.2: NativeImage has no getBytes(); encode PNG via temp file for real upload bytes. */
+    private static byte[] nativeImageToPngBytes(NativeImage nativeImage) throws IOException {
+        java.nio.file.Path tmp = Files.createTempFile("mio-screenshot-", ".png");
+        try {
+            nativeImage.writeToFile(tmp);
+            return Files.readAllBytes(tmp);
+        } finally {
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (IOException ignored) {
+            }
+        }
     }
 
     public void do1016() {
@@ -203,5 +205,9 @@ public class ExtraScreenshot extends Module {
 
     public boolean isModeNone() {
         return this.mode.getValue() == ExtraScreenshotMode.NONE;
+    }
+
+    public boolean wantsHiRes() {
+        return isToggled() && !isModeNone() && this.hiResScale.getValue() > 1;
     }
 }

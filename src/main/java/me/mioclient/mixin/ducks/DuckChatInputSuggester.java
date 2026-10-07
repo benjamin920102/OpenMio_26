@@ -3,21 +3,21 @@ package me.mioclient.mixin.ducks;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.suggestion.Suggestions;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.gui.components.CommandSuggestions;
+import net.minecraft.client.multiplayer.ClientSuggestionProvider;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({ChatInputSuggestor.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckChatInputSuggester.class */
+/* 26.2 port (verified): window is now suggestions (SuggestionsList); parse is
+   now currentParse typed on ClientSuggestionProvider. */
+@Mixin({CommandSuggestions.class})
 public interface DuckChatInputSuggester {
     @Accessor("pendingSuggestions")
     CompletableFuture<Suggestions> getSuggestion();
 
-    @Accessor("window")
-    ChatInputSuggestor.SuggestionWindow getWindow();
+    @Accessor("suggestions")
+    CommandSuggestions.SuggestionsList getSuggestions();
 
-    @Accessor("parse")
-    ParseResults<CommandSource> getParse();
+    @Accessor("currentParse")
+    ParseResults<ClientSuggestionProvider> getParse();
 }

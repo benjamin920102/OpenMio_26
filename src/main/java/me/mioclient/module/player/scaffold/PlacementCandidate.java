@@ -3,11 +3,9 @@ package me.mioclient.module.player.scaffold;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlacementCandidate.class */
 public final class PlacementCandidate {
     public final BlockPos blockPos;
     public final Direction direction;
@@ -16,9 +14,6 @@ public final class PlacementCandidate {
         this.blockPos = blockPos;
         this.direction = direction;
     }
-
-
-
 
     public BlockPos getBlockPos() {
         return this.blockPos;

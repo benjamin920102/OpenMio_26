@@ -5,20 +5,17 @@ import me.mioclient.event.events.network.PacketSendPostEvent;
 import me.mioclient.api.ClientServices;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
 
 import me.mioclient.event.EventBus;
 
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendPostEvent;
 import me.mioclient.event.events.client.TickEvent;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SentMovementTracker.class */
 public final class SentMovementTracker implements ClientAccessor {
     public double val;
     public double val2;
@@ -39,7 +36,7 @@ public final class SentMovementTracker implements ClientAccessor {
     public void onTick(TickEvent tickEvent) {
         this.flag3 = this.flag2;
         this.flag2 = minecraftClient.player.isFallFlying();
-        if (minecraftClient.player.isOnGround() || this.flag) {
+        if (minecraftClient.player.onGround() || this.flag) {
             this.num2 = 0;
             this.num++;
         } else {
@@ -50,23 +47,19 @@ public final class SentMovementTracker implements ClientAccessor {
 
     @Listen
     public void onPacketSendPost(PacketSendPostEvent sendInternalEvent) {
-        PlayerMoveC2SPacket packet904 = (sendInternalEvent.getPacket()) instanceof PlayerMoveC2SPacket ? (PlayerMoveC2SPacket) (sendInternalEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerMoveC2SPacket) {
-            PlayerMoveC2SPacket playerMoveC2SPacket = packet904;
+        ServerboundMovePlayerPacket packet904 = (sendInternalEvent.getPacket()) instanceof ServerboundMovePlayerPacket ? (ServerboundMovePlayerPacket) (sendInternalEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundMovePlayerPacket) {
+            ServerboundMovePlayerPacket playerMoveC2SPacket = packet904;
             this.val = playerMoveC2SPacket.getX(minecraftClient.player.getX());
             this.val2 = playerMoveC2SPacket.getY(minecraftClient.player.getY());
             this.val3 = playerMoveC2SPacket.getZ(minecraftClient.player.getZ());
             this.flag = playerMoveC2SPacket.isOnGround();
-            this.floatArr = new float[]{playerMoveC2SPacket.getYaw(minecraftClient.player.getYaw()), playerMoveC2SPacket.getPitch(minecraftClient.player.getPitch())};
+            this.floatArr = new float[]{playerMoveC2SPacket.getYRot(minecraftClient.player.getYRot()), playerMoveC2SPacket.getXRot(minecraftClient.player.getXRot())};
         }
-        ClientCommandC2SPacket packet9042 = (sendInternalEvent.getPacket()) instanceof ClientCommandC2SPacket ? (ClientCommandC2SPacket) (sendInternalEvent.getPacket()) : null;
-        if (packet9042 instanceof ClientCommandC2SPacket) {
-            ClientCommandC2SPacket clientCommandC2SPacket = packet9042;
-            if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY) {
-                this.flag4 = true;
-            } else if (clientCommandC2SPacket.getMode() == ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY) {
-                this.flag4 = false;
-            }
+        ServerboundPlayerInputPacket packet9042 = (sendInternalEvent.getPacket()) instanceof ServerboundPlayerInputPacket ? (ServerboundPlayerInputPacket) (sendInternalEvent.getPacket()) : null;
+        if (packet9042 instanceof ServerboundPlayerInputPacket) {
+            ServerboundPlayerInputPacket playerInputC2SPacket = packet9042;
+            this.flag4 = playerInputC2SPacket.input().shift();
         }
     }
 
@@ -75,9 +68,11 @@ public final class SentMovementTracker implements ClientAccessor {
             runnable.run();
             return;
         }
-        PacketSender.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+        Input cur = minecraftClient.player.input.keyPresses;
+        PacketSender.sendPacket(new ServerboundPlayerInputPacket(new Input(cur.forward(), cur.backward(), cur.left(), cur.right(), cur.jump(), false, cur.sprint())));
         runnable.run();
-        PacketSender.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+        Input cur2 = minecraftClient.player.input.keyPresses;
+        PacketSender.sendPacket(new ServerboundPlayerInputPacket(new Input(cur2.forward(), cur2.backward(), cur2.left(), cur2.right(), cur2.jump(), true, cur2.sprint())));
     }
 
     public void withSneakPress(java.lang.Runnable runnable) {
@@ -85,9 +80,11 @@ public final class SentMovementTracker implements ClientAccessor {
             runnable.run();
             return;
         }
-        PacketSender.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+        Input cur = minecraftClient.player.input.keyPresses;
+        PacketSender.sendPacket(new ServerboundPlayerInputPacket(new Input(cur.forward(), cur.backward(), cur.left(), cur.right(), cur.jump(), true, cur.sprint())));
         runnable.run();
-        PacketSender.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+        Input cur2 = minecraftClient.player.input.keyPresses;
+        PacketSender.sendPacket(new ServerboundPlayerInputPacket(new Input(cur2.forward(), cur2.backward(), cur2.left(), cur2.right(), cur2.jump(), false, cur2.sprint())));
     }
 
     public double getX() {
@@ -102,8 +99,8 @@ public final class SentMovementTracker implements ClientAccessor {
         return this.val3;
     }
 
-    public Vec3d getPosition() {
-        return new Vec3d(this.val, this.val2, this.val3);
+    public Vec3 getPosition() {
+        return new Vec3(this.val, this.val2, this.val3);
     }
 
     public boolean isOnGround() {

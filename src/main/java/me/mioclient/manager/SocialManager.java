@@ -9,9 +9,6 @@ import me.mioclient.util.registry.NamedRegistryList;
 import me.mioclient.mode.render.NameTagsHelperMode;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.util.registry.NamedRegistryList;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -21,17 +18,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.module.client.Colors;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import me.mioclient.util.registry.CollectionRegistry;
-import me.mioclient.setting.EnumJsonConverter;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.player.Player;
 import me.mioclient.ducks.DuckPlayerEntity;
-import me.mioclient.mode.render.NameTagsHelperMode;
-import me.mioclient.setting.EnumJsonConverter;
-import me.mioclient.mode.render.NameTagsHelperMode;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchHelper4_14.class */
 public final class SocialManager extends NamedRegistryList<SocialEntry> implements ClientAccessor, JsonConfigurable {
     public static final Colors colors = (Colors) ClientServices.moduleInjector.getModule(Colors.class);
     public static final EnumJsonConverter enumSettingConverter = new EnumJsonConverter(NameTagsHelperMode.class);
@@ -40,7 +30,7 @@ public final class SocialManager extends NamedRegistryList<SocialEntry> implemen
         return getRole(str) == NameTagsHelperMode.FRIEND;
     }
 
-    public boolean isFriendEntity(PlayerEntity playerEntity) {
+    public boolean isFriendEntity(Player playerEntity) {
         return ((DuckPlayerEntity) playerEntity).mio$getRole() == NameTagsHelperMode.FRIEND;
     }
 
@@ -48,7 +38,7 @@ public final class SocialManager extends NamedRegistryList<SocialEntry> implemen
         return getRole(str) == NameTagsHelperMode.ENEMY;
     }
 
-    public boolean isEnemyEntity(PlayerEntity playerEntity) {
+    public boolean isEnemyEntity(Player playerEntity) {
         return ((DuckPlayerEntity) playerEntity).mio$getRole() == NameTagsHelperMode.ENEMY;
     }
 
@@ -105,8 +95,8 @@ public final class SocialManager extends NamedRegistryList<SocialEntry> implemen
         if (isNotInGame()) {
             return;
         }
-        for (AbstractClientPlayerEntity nameTagsHelper : minecraftClient.world.getPlayers()) {
-            if (nameTagsHelper.getGameProfile().getName().equalsIgnoreCase(str) && (nameTagsHelper instanceof DuckPlayerEntity)) {
+        for (AbstractClientPlayer nameTagsHelper : minecraftClient.level.players()) {
+            if (nameTagsHelper.getGameProfile().name().equalsIgnoreCase(str) && (nameTagsHelper instanceof DuckPlayerEntity)) {
                 ((DuckPlayerEntity) (Object) nameTagsHelper).mio$setRole(nameTagsHelperMode);
                 return;
             }

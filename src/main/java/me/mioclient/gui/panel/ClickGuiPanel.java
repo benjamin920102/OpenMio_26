@@ -6,16 +6,11 @@ import me.mioclient.util.registry.CollectionRegistry;
 
 import me.mioclient.gui.GuiComponent;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.anim.AnimationProgress;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -23,15 +18,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.client.UI;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.util.registry.CollectionRegistry;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.manager.ScissorStackManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ClickGuiPanel.class */
 public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegistry<GuiComponent, List<GuiComponent>> {
     public final String name;
     public int panelHeight = 14;
@@ -56,8 +47,8 @@ public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegist
     }
 
     @Override // me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
-        Shape2DRenderer.drawRect(drawContext.getMatrices(), this.x, this.y, this.x + getTotalWidth(), this.y + 14, UI.uI.color.getValue());
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
+        drawContext.fill(this.x, this.y, this.x + getTotalWidth(), this.y + 14, UI.uI.color.getValue().getRGB());
         ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, this.name, this.x + 2, (this.y + Float.intBitsToFloat(1088421888)) - (ClientTextRenderer.INSTANCE.getFontHeight() / Float.intBitsToFloat(1073741824)), Color.white);
         this.progress.animateToggle(this.flag);
         float f = this.progress.getValue();
@@ -66,7 +57,7 @@ public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegist
             ScissorStackManager.pushClipRegion(this.x - 1, this.y - 1, getTotalWidth() + 2, ((int) (Float.intBitsToFloat(1096810496) + (this.totalHeight * f))) + 3);
         }
         if (f > 0.0f && !this.registry.isEmpty()) {
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), this.x, this.y + 14, this.x + getTotalWidth(), this.y + this.totalHeight + Float.intBitsToFloat(1056964608), UI.uI.bgColor.getValue());
+            drawContext.fill(this.x, this.y + 14, this.x + getTotalWidth(), (int) (this.y + this.totalHeight + Float.intBitsToFloat(1056964608)), UI.uI.bgColor.getValue().getRGB());
             this.registry.forEach(presetHelper_5 -> {
                 if (shouldShowChild(presetHelper_5)) {
                     presetHelper_5.update(d, d2);
@@ -74,12 +65,15 @@ public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegist
                 }
             });
             if (UI.uI.windowShadow.getValue().booleanValue()) {
-                Shape2DRenderer.drawRect(drawContext.getMatrices(), this.x + UI.uI.shadowSize.getValue().floatValue(), this.y + this.totalHeight + Float.intBitsToFloat(1056964608), this.x + getTotalWidth(), this.y + this.totalHeight + Float.intBitsToFloat(1056964608) + UI.uI.shadowSize.getValue().floatValue(), UI.uI.shadowColor.getValue());
-                Shape2DRenderer.drawRect(drawContext.getMatrices(), this.x + getTotalWidth(), this.y + UI.uI.shadowSize.getValue().floatValue(), this.x + getTotalWidth() + UI.uI.shadowSize.getValue().floatValue(), this.y + this.totalHeight + Float.intBitsToFloat(1056964608) + UI.uI.shadowSize.getValue().floatValue(), UI.uI.shadowColor.getValue());
+                int shadow = (int) UI.uI.shadowSize.getValue().floatValue();
+                int shadowBottom = (int) (this.y + this.totalHeight + Float.intBitsToFloat(1056964608));
+                drawContext.fill(this.x + shadow, shadowBottom, this.x + getTotalWidth(), shadowBottom + shadow, UI.uI.shadowColor.getValue().getRGB());
+                drawContext.fill(this.x + getTotalWidth(), this.y + shadow, this.x + getTotalWidth() + shadow, shadowBottom + shadow, UI.uI.shadowColor.getValue().getRGB());
             }
         }
         if (UI.uI.line.getValue().booleanValue()) {
-            Shape2DRenderer.drawOutline(drawContext.getMatrices(), this.x - 1, this.y - 1, this.x + getTotalWidth(), this.y + (f == 0.0f ? Float.intBitsToFloat(1096810496) : this.totalHeight + Float.intBitsToFloat(1056964608)), UI.uI.color.getValue());
+            int bottom = this.y + (f == 0.0f ? 14 : (int) (this.totalHeight + Float.intBitsToFloat(1056964608)));
+            drawContext.outline(this.x - 1, this.y - 1, getTotalWidth() + 2, bottom - (this.y - 1), UI.uI.color.getValue().getRGB());
         }
         if (f != Float.intBitsToFloat(1065353216) && this.totalHeight != 0) {
             Shape2DRenderer.resetShadowOffset();
@@ -234,8 +228,8 @@ public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegist
 
     public void handleDrag(int i, int i2) {
         if (this.flag2) {
-            setX(Math.max(0, Math.min(ClientAccessor.minecraftClient.getWindow().getScaledWidth() - getTotalWidth(), i - this.dragOffsetY)));
-            setY(Math.max(0, Math.min(ClientAccessor.minecraftClient.getWindow().getScaledHeight() - getFontHeight(), i2 - this.dragOffsetX)));
+            setX(Math.max(0, Math.min(ClientAccessor.minecraftClient.getWindow().getGuiScaledWidth() - getTotalWidth(), i - this.dragOffsetY)));
+            setY(Math.max(0, Math.min(ClientAccessor.minecraftClient.getWindow().getGuiScaledHeight() - getFontHeight(), i2 - this.dragOffsetX)));
         }
     }
 
@@ -264,7 +258,6 @@ public class ClickGuiPanel implements NamedValue, GuiComponent, CollectionRegist
         return this.name;
     }
 
-    /* JADX WARN: Can't rename method to resolve collision */
     @Override // me.mioclient.util.registry.CollectionRegistry
     public List<GuiComponent> getRegistry() {
         return this.registry;

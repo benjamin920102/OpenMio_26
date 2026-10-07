@@ -2,21 +2,19 @@ package me.mioclient.event.events.render;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/RenderLabelEvent.class */
 public class RenderLabelEvent extends Event {
-    public final MatrixStack matrixStack;
+    public final PoseStack matrixStack;
     public final Entity entity;
 
-    public RenderLabelEvent(MatrixStack matrixStack, Entity entity) {
+    public RenderLabelEvent(PoseStack matrixStack, Entity entity) {
         this.matrixStack = matrixStack;
         this.entity = entity;
     }
 
-    public MatrixStack getMatrixStack() {
+    public PoseStack getMatrixStack() {
         return this.matrixStack;
     }
 

@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ObjectSetting.class */
 public abstract class ObjectSetting<T> extends Setting<Set<T>> {
     public T singleValue;
 
@@ -35,7 +33,6 @@ public abstract class ObjectSetting<T> extends Setting<Set<T>> {
 
     public abstract Collection<T> getAvailableValues();
 
-    /* JADX WARN: Multi-variable type inference failed */
     public Set<String> getValueStrings() {
         Set objectOpenHashSet = new ObjectOpenHashSet();
         Iterator it = ((Set) getValue()).iterator();
@@ -121,7 +118,6 @@ public abstract class ObjectSetting<T> extends Setting<Set<T>> {
         return this.singleValue;
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     @Override // me.mioclient.api.JsonConfigurable
     public JsonElement toJson() {
         JsonArray jsonArray = new JsonArray();

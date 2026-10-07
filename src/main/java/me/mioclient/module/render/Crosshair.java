@@ -5,22 +5,17 @@ import me.mioclient.event.events.render.HudRenderEvent;
 import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.anim.AnimationProgress;
 
-import me.mioclient.render.shape.Shape2DRenderer;
-
 import java.awt.Color;
-import me.mioclient.event.events.render.HudRenderEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.Module;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.CameraType;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Crosshair.class */
 public class Crosshair extends Module {
     public Setting<Boolean> thirdPerson = add(new BooleanSetting("ThirdPerson", true));
     public Setting<Boolean> dot = add(new BooleanSetting("Dot", true));
@@ -46,32 +41,34 @@ public class Crosshair extends Module {
         if (isNotInGame()) {
             return;
         }
-        if (!minecraftClient.gameRenderer.getCamera().isThirdPerson() || this.thirdPerson.getValue().booleanValue()) {
+        if (minecraftClient.options.getCameraType() != CameraType.FIRST_PERSON || this.thirdPerson.getValue().booleanValue()) {
             float intValue = this.gap.getValue().intValue();
             if (this.dynamic.getValue().booleanValue()) {
+                net.minecraft.world.entity.player.Input presses = minecraftClient.player.input.keyPresses;
+                boolean moving = presses.forward() || presses.backward() || presses.left() || presses.right() || presses.jump();
                 if (this.smooth.getValue().booleanValue()) {
-                    this.progress.animateToggle((minecraftClient.player.input.movementForward == 0.0f && minecraftClient.player.input.movementSideways == 0.0f && !minecraftClient.player.input.jumping) ? false : true);
+                    this.progress.animateToggle(moving);
                 } else {
-                    this.progress.setToggledImmediate((minecraftClient.player.input.movementForward == 0.0f && minecraftClient.player.input.movementSideways == 0.0f && !minecraftClient.player.input.jumping) ? false : true);
+                    this.progress.setToggledImmediate(moving);
                 }
                 intValue += this.amplitude.getValue().floatValue() * this.progress.getValue();
             }
-            float scaleFactor = (float) minecraftClient.getWindow().getScaleFactor();
-            matrixStackEvent_2.getMatrixStack().push();
+            float scaleFactor = (float) minecraftClient.getWindow().getGuiScale();
+            matrixStackEvent_2.getMatrixStack().pushPose();
             matrixStackEvent_2.getMatrixStack().scale(Float.intBitsToFloat(1065353216) / scaleFactor, Float.intBitsToFloat(1065353216) / scaleFactor, Float.intBitsToFloat(1065353216) / scaleFactor);
             if (this.shadow.getValue().booleanValue()) {
-                MatrixStack matrixStack472 = matrixStackEvent_2.getMatrixStack();
-                matrixStack472.push();
+                PoseStack matrixStack472 = matrixStackEvent_2.getMatrixStack();
+                matrixStack472.pushPose();
                 matrixStack472.translate(this.distance.getValue().intValue(), this.distance.getValue().intValue(), 0.0f);
                 drawCrosshairLines(matrixStackEvent_2.getMatrixStack(), this.length.getValue().intValue(), this.width.getValue().intValue() / Float.intBitsToFloat(1073741824), intValue, Color.BLACK);
-                matrixStack472.pop();
+                matrixStack472.popPose();
             }
             drawCrosshairLines(matrixStackEvent_2.getMatrixStack(), this.length.getValue().intValue(), this.width.getValue().intValue() / Float.intBitsToFloat(1073741824), intValue, this.color.getValue());
-            matrixStackEvent_2.getMatrixStack().pop();
+            matrixStackEvent_2.getMatrixStack().popPose();
         }
     }
 
-    public void drawCrosshairLines(MatrixStack matrixStack, float f, float f2, float f3, Color color) {
+    public void drawCrosshairLines(PoseStack matrixStack, float f, float f2, float f3, Color color) {
         int width = minecraftClient.getWindow().getWidth() / 2;
         int height = minecraftClient.getWindow().getHeight() / 2;
         if (Math.ceil(f2) - f2 != 0.0d) {

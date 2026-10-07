@@ -1,13 +1,13 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified): entity is FireworkRocketEntity; life stays; lifeTime is
+   now lifetime; shooter is now attachedToEntity. */
 @Mixin({FireworkRocketEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckFireworkEntity.class */
 public interface DuckFireworkEntity {
     @Accessor("life")
     void setLife(int i);
@@ -15,9 +15,9 @@ public interface DuckFireworkEntity {
     @Accessor("life")
     int getLife();
 
-    @Accessor("lifeTime")
+    @Accessor("lifetime")
     int getLifeTime();
 
-    @Accessor("shooter")
+    @Accessor("attachedToEntity")
     LivingEntity mio$getShooter();
 }

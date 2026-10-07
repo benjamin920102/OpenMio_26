@@ -5,29 +5,23 @@ import me.mioclient.util.world.WorldUtils;
 
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.util.client.ChatUtils;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import me.mioclient.util.world.WorldUtils;
-import me.mioclient.util.text.StringTemplate;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_11.class */
 public final class CoordsCommand extends CommandFeature {
     public CoordsCommand() {
         super("coords");
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("name", new ExamplesArgumentType_3()).executes(commandContext -> {
             do1387((String) commandContext.getArgument("name", String.class), getFormattedCoordinates());
             return 1;
         })).executes(commandContext2 -> {
             try {
-                minecraftClient.keyboard.setClipboard(getFormattedCoordinates());
-                ChatUtils.sendMessage(Text.literal("Your position has been copied to the clipboard."), ChatUtils.createSignature(-1));
+                minecraftClient.keyboardHandler.setClipboard(getFormattedCoordinates());
+                ChatUtils.sendMessage(Component.literal("Your position has been copied to the clipboard."), ChatUtils.createSignature(-1));
                 return 1;
             } catch (Exception e) {
                 return 1;
@@ -43,6 +37,6 @@ public final class CoordsCommand extends CommandFeature {
     }
 
     public void do1387(String str, String str2) {
-        minecraftClient.player.networkHandler.sendChatCommand(new StringTemplate().arg(str2).arg(str).format("w \u0001 \u0001"));
+        minecraftClient.player.connection.sendCommand(new StringTemplate().arg(str2).arg(str).format("w \u0001 \u0001"));
     }
 }

@@ -6,8 +6,6 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModeValueMap.class */
 public class ModeValueMap<E, T> {
     public final HashMap<E, T> hashMap = new HashMap<>();
     public final Supplier<E> supplier;

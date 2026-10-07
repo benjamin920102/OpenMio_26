@@ -1,12 +1,11 @@
 package me.mioclient.ducks;
 
 import java.util.List;
-import net.minecraft.client.gl.PostEffectPass;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.minecraft.client.renderer.PostChain;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckPostEffectProcessor.class */
 public interface DuckPostEffectProcessor {
-    void addFakeTarget(String str, net.minecraft.client.gl.Framebuffer framebuffer);
+    void addFakeTarget(String str, RenderTarget framebuffer);
 
-    List<PostEffectPass> getPasses();
+    List<PostChain> getPasses();
 }

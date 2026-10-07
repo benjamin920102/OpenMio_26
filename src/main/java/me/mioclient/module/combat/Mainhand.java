@@ -9,34 +9,35 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.combat.CrystalThreatDetector;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.client.InputState;
-
 import me.mioclient.render.RenderConstants;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.render.RenderEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.NoInteract;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.InteractionHand;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Mainhand.class */
 public class Mainhand extends Module {
-    public static final NoInteract noInteract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static NoInteract noInteract;
+
+    public static NoInteract getNoInteract() {
+        if (noInteract == null && ClientServices.moduleInjector != null) {
+            try {
+                noInteract = (NoInteract) ClientServices.moduleInjector.getModule(NoInteract.class);
+            } catch (Exception e) {
+            }
+        }
+        return noInteract;
+    }
     public Setting<Integer> slot = add(new NumberSetting<>("Slot", 1, 1, 9));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 25, 0, 500).setSuffix("ms"));
     public Setting<Boolean> autoSelect = add(new BooleanSetting("AutoSelect", false).setVisible());
@@ -52,8 +53,7 @@ public class Mainhand extends Module {
     public int num;
     public final CrystalThreatDetector mainhandHelper;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Mainhand$Inner.class */
+    
     class Inner extends CrystalThreatDetector {
         public Inner() {
         }
@@ -80,7 +80,7 @@ public class Mainhand extends Module {
 
     @Override // me.mioclient.module.Module
     public String getInfo() {
-        return String.valueOf(minecraftClient.player.getInventory().main.stream().filter(itemStack -> {
+        return String.valueOf(minecraftClient.player.getInventory().getNonEquipmentItems().stream().filter(itemStack -> {
             return itemStack.getItem() == getDesiredItem();
         }).mapToInt((v0) -> {
             return v0.getCount();
@@ -89,7 +89,8 @@ public class Mainhand extends Module {
 
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
-        if (!((!WorldUtils.isInteractableHit(interactBlockEvent.getHitResult()) || minecraftClient.player.isSneaking() || noInteract.isToggled()) ? false : true) || interactBlockEvent.isCancelled()) {
+        NoInteract noInteract_lcl = getNoInteract();
+        if (!((!WorldUtils.isInteractableHit(interactBlockEvent.getHitResult()) || minecraftClient.player.isShiftKeyDown() || (noInteract_lcl != null && noInteract_lcl.isToggled())) ? false : true) || interactBlockEvent.isCancelled()) {
             return;
         }
         this.stopwatch3.reset();
@@ -102,34 +103,34 @@ public class Mainhand extends Module {
         }
         this.flag = renderEvent.isThirdPerson();
         this.mainhandHelper.recalculateLayout();
-        if (minecraftClient.player.currentScreenHandler != minecraftClient.player.playerScreenHandler) {
+        if (minecraftClient.player.containerMenu != minecraftClient.player.inventoryMenu) {
             return;
         }
         tryAutoSelectMainhand();
         Item item581 = getDesiredItem();
-        if (item581 != minecraftClient.player.getInventory().getStack(getSelectedSlotIndex()).getItem() && minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+        if (item581 != minecraftClient.player.getInventory().getItem(getSelectedSlotIndex()).getItem() && minecraftClient.player.containerMenu.getCarried().isEmpty()) {
             swapItemToMainhand(item581);
         }
     }
 
     public void swapItemToMainhand(Item item) {
         int i = InventoryUtils.findInInventory(itemStack -> {
-            return itemStack.isOf(item);
+            return itemStack.is(item);
         }, true);
         if (this.num != -1) {
-            if (minecraftClient.player.getInventory().getStack(this.num).isOf(item) && i != -1) {
+            if (minecraftClient.player.getInventory().getItem(this.num).is(item) && i != -1) {
                 i = this.num;
             }
         }
-        if (i != -1 && i < minecraftClient.player.currentScreenHandler.slots.size()) {
-            ItemStack stack = minecraftClient.player.currentScreenHandler.getSlot(i).getStack();
-            if (!stack.contains(DataComponentTypes.FOOD) || this.flag) {
+        if (i != -1 && i < minecraftClient.player.containerMenu.slots.size()) {
+            ItemStack stack = minecraftClient.player.containerMenu.getSlot(i).getItem();
+            if (!stack.has(DataComponents.FOOD) || this.flag) {
                 if (this.stopwatch.hasElapsedAndResetMs(this.delay.getValue().intValue()) && this.stopwatch3.hasElapsedMs(200L)) {
                     InventoryUtils.swapSlots(i, getSelectedSlotIndex());
                     this.num = i;
                 }
-                if (InputState.isKeyBindingActive(minecraftClient.options.useKey) && stack.contains(DataComponentTypes.FOOD)) {
-                    minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.OFF_HAND);
+                if (InputState.isKeyBindingActive(minecraftClient.options.keyUse) && stack.has(DataComponents.FOOD)) {
+                    minecraftClient.gameMode.useItem(minecraftClient.player, InteractionHand.OFF_HAND);
                 }
             }
         }
@@ -137,8 +138,8 @@ public class Mainhand extends Module {
 
     public void tryAutoSelectMainhand() {
         if (this.autoSelect.getValue().booleanValue()) {
-            if (minecraftClient.player.getInventory().getStack(getSelectedSlotIndex()).getItem() == Items.TOTEM_OF_UNDYING) {
-                if (minecraftClient.player.isUsingItem() && minecraftClient.player.getActiveHand() == Hand.MAIN_HAND) {
+            if (minecraftClient.player.getInventory().getItem(getSelectedSlotIndex()).getItem() == Items.TOTEM_OF_UNDYING) {
+                if (minecraftClient.player.isUsingItem() && minecraftClient.player.getUsedItemHand() == InteractionHand.MAIN_HAND) {
                     return;
                 }
                 if (this.mainhandHelper.isThreatActive() || EntityUtil.getPlayerHealth() <= this.health.getValue().floatValue()) {
@@ -150,25 +151,20 @@ public class Mainhand extends Module {
         }
     }
 
-    /* JADX WARN: Code restructure failed: missing block: B:12:0x0075, code lost:
     
-        if (me.mioclient.module.combat.Mainhand.minecraftClient.player.getMainHandStack().contains(net.minecraft.component.DataComponentTypes.FOOD) == false) goto L14;
-     */
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
     public Item getDesiredItem() {
-        boolean z = WorldUtils.isInteractableHit(minecraftClient.crosshairTarget) && !minecraftClient.player.isSneaking() && !noInteract.isToggled()
-                && minecraftClient.player.isUsingItem() && minecraftClient.player.getActiveHand() == Hand.MAIN_HAND;
-        return (minecraftClient.player.getInventory().selectedSlot == getSelectedSlotIndex() || !this.gappleBind.getValue().booleanValue() || !minecraftClient.options.useKey.isPressed() || !mainhandHasTotemOrGapple() || z || EntityUtil.getPlayerHealth() < this.safe.getValue().floatValue()) ? Items.TOTEM_OF_UNDYING : Items.ENCHANTED_GOLDEN_APPLE;
+        NoInteract noInteract_lcl = getNoInteract();
+        boolean z = WorldUtils.isInteractableHit(minecraftClient.hitResult) && !minecraftClient.player.isShiftKeyDown() && (noInteract_lcl == null || !noInteract_lcl.isToggled())
+                && minecraftClient.player.isUsingItem() && minecraftClient.player.getUsedItemHand() == InteractionHand.MAIN_HAND;
+        return (minecraftClient.player.getInventory().getSelectedSlot() == getSelectedSlotIndex() || !this.gappleBind.getValue().booleanValue() || !minecraftClient.options.keyUse.isDown() || !mainhandHasTotemOrGapple() || z || EntityUtil.getPlayerHealth() < this.safe.getValue().floatValue()) ? Items.TOTEM_OF_UNDYING : Items.ENCHANTED_GOLDEN_APPLE;
     }
 
     public boolean mainhandHasTotemOrGapple() {
-        ItemStack mainHandStack = minecraftClient.player.getMainHandStack();
-        if (minecraftClient.player.getOffHandStack().contains(DataComponentTypes.FOOD)) {
+        ItemStack mainHandStack = minecraftClient.player.getMainHandItem();
+        if (minecraftClient.player.getOffhandItem().has(DataComponents.FOOD)) {
             return false;
         }
-        return mainHandStack.isOf(Items.TOTEM_OF_UNDYING) || mainHandStack.isOf(Items.ENCHANTED_GOLDEN_APPLE);
+        return mainHandStack.is(Items.TOTEM_OF_UNDYING) || mainHandStack.is(Items.ENCHANTED_GOLDEN_APPLE);
     }
 
     public int getSelectedSlotIndex() {

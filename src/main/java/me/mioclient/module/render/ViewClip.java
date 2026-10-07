@@ -6,13 +6,10 @@ import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.Module;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/ViewClip.class */
 public class ViewClip extends Module {
     public Setting<Double> range = add(new NumberSetting<>("Range", 4.5, 0.1, 30.0));
     public Setting<Boolean> smooth = add(new BooleanSetting("Smooth", true));
@@ -26,7 +23,7 @@ public class ViewClip extends Module {
 
     @Listen
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        if (minecraftClient.gameRenderer.getCamera().isThirdPerson()) {
+        if (!minecraftClient.options.getCameraType().isFirstPerson()) {
             this.progress.animateToggle(true);
             return;
         }

@@ -1,9 +1,7 @@
 package me.mioclient.api;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/NamedValue.class */
 public interface NamedValue {
     String getName();
 
@@ -13,8 +11,8 @@ public interface NamedValue {
         };
     }
 
-    default Text getAsText() {
-        return Text.literal(getName());
+    default Component getAsText() {
+        return Component.literal(getName());
     }
 
     static boolean isNamedValue(Object obj) {

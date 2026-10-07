@@ -12,14 +12,9 @@ import me.mioclient.util.inventory.ItemTypeUtils;
 import me.mioclient.util.math.GridPoint;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.GridPoint;
-import me.mioclient.module.player.cheststealer.ItemComponentKey;
-import me.mioclient.util.inventory.InventoryKit;
 import me.mioclient.module.player.cheststealer.ContainerButtonInjector;
 import me.mioclient.module.player.cheststealer.ItemTransferAnimation;
 import me.mioclient.module.player.cheststealer.SlotStackCount;
-import me.mioclient.util.inventory.ItemTypeUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,10 +25,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import me.mioclient.module.player.cheststealer.ChestStealerMode;
-import me.mioclient.module.player.cheststealer.ChestStealerMode_2;
-import me.mioclient.mode.player.ScaffoldMode_2;
-import me.mioclient.module.render.tooltips.ShulkerPreviewScreen;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.interaction.InsertItemEvent;
@@ -41,31 +32,40 @@ import me.mioclient.event.Listen;
 import me.mioclient.event.events.screen.SetScreenHookPostEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.screen.ScreenDrawEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.mixin.ducks.DuckHandledScreen;
 import me.mioclient.module.Module;
 import me.mioclient.module.misc.ChestSearchBar;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ShulkerBoxScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ContainerInput;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.setting.ObjectSetting_2;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/ChestStealer.class */
 public class ChestStealer extends Module {
-    public static ChestSearchBar chestSearchBar;
-    public Setting<Set<Item>> whitelist = add(new EntityListObjectSetting<>("Whitelist", Registries.ITEM));
+    /* 26.2 port: resolved lazily — static init ran before the module registry was ready, leaving chestSearchBar null. */
+    private static ChestSearchBar chestSearchBar;
+
+    public static ChestSearchBar getChestSearchBar() {
+        if (chestSearchBar == null && ClientServices.moduleInjector != null) {
+            try {
+                chestSearchBar = (ChestSearchBar) ClientServices.moduleInjector.getModule(ChestSearchBar.class);
+            } catch (Exception e) {
+            }
+        }
+        return chestSearchBar;
+    }
+    public Setting<Set<Item>> whitelist = add(new EntityListObjectSetting<>("Whitelist", BuiltInRegistries.ITEM));
     public Setting<Set<String>> names = add(new ObjectSetting_2("Names"));
     public Setting<ChestStealerMode> mode = add(new EnumSetting<>("Mode", ChestStealerMode.STEAL));
     public Setting<ScaffoldMode_2> select = add(new EnumSetting<>("Select", ScaffoldMode_2.ANY));
@@ -100,37 +100,30 @@ public class ChestStealer extends Module {
         ScreenEvents.AFTER_INIT.register(new ContainerButtonInjector(this));
     }
 
-    /* JADX WARN: Can't fix incorrect switch cases order, some code will duplicate */
-    /* JADX WARN: Failed to find 'out' block for switch in B:45:0x0301. Please report as an issue. */
-    /* JADX WARN: Removed duplicated region for block: B:101:0x0738 A[PHI: r16
-      0x0738: PHI (r16v3 int) = (r16v1 int), (r16v5 int), (r16v7 int), (r16v8 int), (r16v1 int), (r16v1 int), (r16v1 int) binds: [B:45:0x0301, B:89:0x0732, B:61:0x0443, B:57:0x041c, B:53:0x03cb, B:54:0x03ce, B:46:0x0324] A[DONT_GENERATE, DONT_INLINE]] */
-    /* JADX WARN: Removed duplicated region for block: B:103:0x0772 A[SYNTHETIC] */
-    /* JADX WARN: Removed duplicated region for block: B:105:0x076c A[SYNTHETIC] */
-    /* JADX WARN: Removed duplicated region for block: B:46:0x0324  */
-    /* JADX WARN: Removed duplicated region for block: B:47:0x035f  */
-    /* JADX WARN: Removed duplicated region for block: B:55:0x0414  */
-    /* JADX WARN: Removed duplicated region for block: B:59:0x043e  */
-    /* JADX WARN: Removed duplicated region for block: B:90:0x076c A[SYNTHETIC] */
+    
+
+    
+
+    
+
     @Listen
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void handleTick(TickEvent tickEvent) {
-        if ((minecraftClient.currentScreen instanceof GenericContainerScreen) || (minecraftClient.currentScreen instanceof ShulkerBoxScreen)) {
+        if ((minecraftClient.gui.screen() instanceof ContainerScreen) || (minecraftClient.gui.screen() instanceof ShulkerBoxScreen)) {
             if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
                 if (this.onlyButtons.getValue().booleanValue() && this.chestStealerMode == null) {
                     return;
                 }
-                if (!this.stopwatch2.hasElapsedMs(this.timeout.getValue().intValue()) || (minecraftClient.currentScreen instanceof ShulkerPreviewScreen)) {
+                if (!this.stopwatch2.hasElapsedMs(this.timeout.getValue().intValue()) || (minecraftClient.gui.screen() instanceof ShulkerPreviewScreen)) {
                     return;
                 }
                 ChestStealerMode value = this.onlyButtons.getValue().booleanValue() ? this.chestStealerMode : this.mode.getValue();
-                ScreenHandler screenHandler = minecraftClient.player.currentScreenHandler;
+                AbstractContainerMenu screenHandler = minecraftClient.player.containerMenu;
                 int i = 0;
-                int i2 = screenHandler.syncId;
-                GenericContainerScreen genericContainerScreen = (minecraftClient.currentScreen) instanceof GenericContainerScreen ? (GenericContainerScreen) (minecraftClient.currentScreen) : null;
-                int rows = genericContainerScreen instanceof GenericContainerScreen ? 9 * genericContainerScreen.getScreenHandler().getRows() : 27;
-                DuckHandledScreen duckHandledScreen = (DuckHandledScreen)(minecraftClient.currentScreen);
+                int i2 = screenHandler.containerId;
+                ContainerScreen genericContainerScreen = (minecraftClient.gui.screen()) instanceof ContainerScreen ? (ContainerScreen) (minecraftClient.gui.screen()) : null;
+                int rows = genericContainerScreen instanceof ContainerScreen ? 9 * genericContainerScreen.getMenu().getRowCount() : 27;
+                DuckHandledScreen duckHandledScreen = (DuckHandledScreen)(minecraftClient.gui.screen());
                 Map<ItemComponentKey, List<SlotStackCount>> map2360 = getMap2360(rows);
                 if (value == ChestStealerMode.FILL) {
                     i = rows;
@@ -138,14 +131,15 @@ public class ChestStealer extends Module {
                 }
                 int i3 = 0;
                 for (int i4 = i; i4 < i + rows; i4++) {
-                    ItemStack stack = screenHandler.getSlot(i4).getStack();
+                    ItemStack stack = screenHandler.getSlot(i4).getItem();
                     if (!stack.isEmpty()) {
-                        if (this.searchBarSync.getValue().booleanValue() && chestSearchBar.isToggled()) {
-                            if (!chestSearchBar.match(stack, this.onlyFull.getValue().booleanValue())) {
+                        ChestSearchBar chestSearchBar_lcl = getChestSearchBar();
+                        if (this.searchBarSync.getValue().booleanValue() && chestSearchBar_lcl != null && chestSearchBar_lcl.isToggled()) {
+                            if (!chestSearchBar_lcl.match(stack, this.onlyFull.getValue().booleanValue())) {
                                 continue;
                             }
                         }
-                        boolean z = minecraftClient.currentScreen instanceof ShulkerBoxScreen;
+                        boolean z = minecraftClient.gui.screen() instanceof ShulkerBoxScreen;
                         if (this.lookFor.getValue() == ChestStealerMode_2.ITEM) {
                             if (!this.select.getValue().isAllowedBySetting(stack.getItem(), this.whitelist)) {
                                 continue;
@@ -153,7 +147,7 @@ public class ChestStealer extends Module {
                             List<SlotStackCount> list = map2360.get(new ItemComponentKey(stack.getItem(), stack.getComponents()));
                             switch (value) {
                                 case DROP:
-                                    minecraftClient.interactionManager.clickSlot(i2, i4, 1, SlotActionType.THROW, minecraftClient.player);
+                                    minecraftClient.gameMode.handleContainerInput(i2, i4, 1, ContainerInput.THROW, minecraftClient.player);
                                     this.stopwatch.reset();
                                     i3++;
                                     if (i3 < this.frequency.getValue().intValue()) {
@@ -168,10 +162,10 @@ public class ChestStealer extends Module {
                                     } else {
                                         this.slot = null;
                                         this.flag = true;
-                                        minecraftClient.interactionManager.clickSlot(i2, i4, 0, SlotActionType.QUICK_MOVE, minecraftClient.player);
+                                        minecraftClient.gameMode.handleContainerInput(i2, i4, 0, ContainerInput.QUICK_MOVE, minecraftClient.player);
                                         this.flag = false;
                                         if (this.slot != null) {
-                                            addTransferAnimation(screenHandler.getSlot(i4), this.slot, this.slot.getStack());
+                                            addTransferAnimation(screenHandler.getSlot(i4), this.slot, this.slot.getItem());
                                         }
                                         this.stopwatch.reset();
                                         i3++;
@@ -206,15 +200,15 @@ public class ChestStealer extends Module {
                                                 if (entry.getValue().matchesItem(stack)) {
                                                     boolean z3 = entry.getKey().intValue() < 9;
                                                     int intValue = rows + (z3 ? entry.getKey().intValue() + 27 : entry.getKey().intValue() - 9);
-                                                    ItemStack stack2 = screenHandler.getSlot(intValue).getStack();
-                                                    if (!entry.getValue().matchesItem(stack2) && (!ItemTypeUtils.isShulkerBox(stack2.getItem()) || !(screenHandler instanceof ShulkerBoxScreenHandler))) {
-                                                        addTransferAnimation(slot, screenHandler.getSlot(intValue), slot.getStack());
+                                                    ItemStack stack2 = screenHandler.getSlot(intValue).getItem();
+                                                        if (!entry.getValue().matchesItem(stack2) && (!ItemTypeUtils.isShulkerBox(stack2.getItem()) || !(screenHandler instanceof ShulkerBoxMenu))) {
+                                                        addTransferAnimation(slot, screenHandler.getSlot(intValue), slot.getItem());
                                                         if (z3) {
-                                                            minecraftClient.interactionManager.clickSlot(i2, i4, entry.getKey().intValue(), SlotActionType.SWAP, minecraftClient.player);
+                                                            minecraftClient.gameMode.handleContainerInput(i2, i4, entry.getKey().intValue(), ContainerInput.SWAP, minecraftClient.player);
                                                         } else {
-                                                            minecraftClient.interactionManager.clickSlot(i2, i4, 0, SlotActionType.PICKUP, minecraftClient.player);
-                                                            minecraftClient.interactionManager.clickSlot(i2, intValue, 0, SlotActionType.PICKUP, minecraftClient.player);
-                                                            minecraftClient.interactionManager.clickSlot(i2, i4, 0, SlotActionType.PICKUP, minecraftClient.player);
+                                                            minecraftClient.gameMode.handleContainerInput(i2, i4, 0, ContainerInput.PICKUP, minecraftClient.player);
+                                                            minecraftClient.gameMode.handleContainerInput(i2, intValue, 0, ContainerInput.PICKUP, minecraftClient.player);
+                                                            minecraftClient.gameMode.handleContainerInput(i2, i4, 0, ContainerInput.PICKUP, minecraftClient.player);
                                                         }
                                                         i3 = 999;
                                                         z2 = true;
@@ -241,7 +235,7 @@ public class ChestStealer extends Module {
                                     break;
                             }
                         } else {
-                            if (!this.select.getValue().isAllowedBySetting(stack.getName().getString().toLowerCase(Locale.ROOT), this.names)) {
+                            if (!this.select.getValue().isAllowedBySetting(stack.getHoverName().getString().toLowerCase(Locale.ROOT), this.names)) {
                                 continue;
                             }
                             List<SlotStackCount> list2 = map2360.get(new ItemComponentKey(stack.getItem(), stack.getComponents()));
@@ -275,27 +269,27 @@ public class ChestStealer extends Module {
 
     @Listen
     public void onInsertItem(InsertItemEvent insertItemEvent) {
-        if (!this.flag || insertItemEvent.getSlot().getStack().isEmpty()) {
+        if (!this.flag || insertItemEvent.getSlot().getItem().isEmpty()) {
             return;
         }
         this.slot = insertItemEvent.getSlot();
     }
 
     public void refillToInventory(int i, List<SlotStackCount> list) {
-        Slot slot = minecraftClient.player.currentScreenHandler.getSlot(i);
-        if (slot.getStack().isStackable()) {
-            int i2 = minecraftClient.player.currentScreenHandler.syncId;
-            int count = slot.getStack().getCount();
+        Slot slot = minecraftClient.player.containerMenu.getSlot(i);
+        if (slot.getItem().isStackable()) {
+            int i2 = minecraftClient.player.containerMenu.containerId;
+            int count = slot.getItem().getCount();
             int i3 = 0;
-            minecraftClient.interactionManager.clickSlot(i2, i, 0, SlotActionType.PICKUP, minecraftClient.player);
+            minecraftClient.gameMode.handleContainerInput(i2, i, 0, ContainerInput.PICKUP, minecraftClient.player);
             for (SlotStackCount chestStealerHelper : list) {
-                Slot slot2 = minecraftClient.player.currentScreenHandler.getSlot(chestStealerHelper.getSlotIndex());
-                minecraftClient.interactionManager.clickSlot(i2, chestStealerHelper.getSlotIndex(), 0, SlotActionType.PICKUP, minecraftClient.player);
+                Slot slot2 = minecraftClient.player.containerMenu.getSlot(chestStealerHelper.getSlotIndex());
+                minecraftClient.gameMode.handleContainerInput(i2, chestStealerHelper.getSlotIndex(), 0, ContainerInput.PICKUP, minecraftClient.player);
                 int i4 = chestStealerHelper.getMaxCount() - chestStealerHelper.getCount();
                 chestStealerHelper.setCount(chestStealerHelper.getCount() + count);
                 count -= i4;
-                addTransferAnimation(minecraftClient.player.currentScreenHandler.getSlot(i), slot2, slot2.getStack().copyWithCount(i4));
-                if (minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+                addTransferAnimation(minecraftClient.player.containerMenu.getSlot(i), slot2, slot2.getItem().copyWithCount(i4));
+                if (minecraftClient.player.containerMenu.getCarried().isEmpty()) {
                     break;
                 }
                 i3++;
@@ -303,19 +297,19 @@ public class ChestStealer extends Module {
                     break;
                 }
             }
-            if (minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+            if (minecraftClient.player.containerMenu.getCarried().isEmpty()) {
                 return;
             }
-            minecraftClient.interactionManager.clickSlot(i2, i, 0, SlotActionType.PICKUP, minecraftClient.player);
+            minecraftClient.gameMode.handleContainerInput(i2, i, 0, ContainerInput.PICKUP, minecraftClient.player);
         }
     }
 
     public boolean canStealItem(ItemStack itemStack) {
-        return ((minecraftClient.player.currentScreenHandler instanceof ShulkerBoxScreenHandler) && ItemTypeUtils.isShulkerBox(itemStack.getItem())) ? false : true;
+        return ((minecraftClient.player.containerMenu instanceof ShulkerBoxMenu) && ItemTypeUtils.isShulkerBox(itemStack.getItem())) ? false : true;
     }
 
     public void addTransferAnimation(Slot slot, Slot slot2, ItemStack itemStack) {
-        DuckHandledScreen duckHandledScreen = (DuckHandledScreen)(minecraftClient.currentScreen);
+        DuckHandledScreen duckHandledScreen = (DuckHandledScreen)(minecraftClient.gui.screen());
         if (!flag2 && duckHandledScreen == null) {
             throw new AssertionError();
         }
@@ -327,12 +321,12 @@ public class ChestStealer extends Module {
     public Map<ItemComponentKey, List<SlotStackCount>> getMap2360(int i) {
         HashMap hashMap = new HashMap();
         for (int i2 = 0; i2 < 36; i2++) {
-            if (i2 + i < minecraftClient.player.currentScreenHandler.slots.size()) {
-                ItemStack stack = minecraftClient.player.currentScreenHandler.getSlot(i + i2).getStack();
-                if (stack.getCount() < stack.getMaxCount() && !stack.isEmpty() && stack.isStackable()) {
+            if (i2 + i < minecraftClient.player.containerMenu.slots.size()) {
+                ItemStack stack = minecraftClient.player.containerMenu.getSlot(i + i2).getItem();
+                if (stack.getCount() < stack.getMaxStackSize() && !stack.isEmpty() && stack.isStackable()) {
                     ItemComponentKey chestStealerData = new ItemComponentKey(stack.getItem(), stack.getComponents());
                     hashMap.putIfAbsent(chestStealerData, new ArrayList());
-                    ((List) hashMap.get(chestStealerData)).add(new SlotStackCount(i + i2, stack.getMaxCount(), stack.getCount()));
+                    ((List) hashMap.get(chestStealerData)).add(new SlotStackCount(i + i2, stack.getMaxStackSize(), stack.getCount()));
                 }
             }
         }
@@ -349,6 +343,5 @@ public class ChestStealer extends Module {
 
     static {
         flag2 = !ChestStealer.class.desiredAssertionStatus();
-        chestSearchBar = (ChestSearchBar) ClientServices.moduleInjector.getModule(ChestSearchBar.class);
     }
 }

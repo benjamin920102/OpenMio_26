@@ -10,10 +10,8 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ExamplesArgumentType_3.class */
 public class ExamplesArgumentType_3 implements com.mojang.brigadier.arguments.ArgumentType<String>, ClientAccessor {
     public static final List<String> list = List.of("cat", "fit", "asphyxia1337");
 
@@ -23,8 +21,8 @@ public class ExamplesArgumentType_3 implements com.mojang.brigadier.arguments.Ar
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> commandContext, SuggestionsBuilder suggestionsBuilder) {
-        return CommandSource.suggestMatching(minecraftClient.player.networkHandler.getPlayerList().stream().map(playerListEntry -> {
-            return playerListEntry.getProfile().getName();
+        return SharedSuggestionProvider.suggest(minecraftClient.player.connection.getOnlinePlayers().stream().map(playerListEntry -> {
+            return playerListEntry.getProfile().name();
         }), suggestionsBuilder);
     }
 

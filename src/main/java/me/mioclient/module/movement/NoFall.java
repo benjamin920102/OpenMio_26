@@ -5,69 +5,69 @@ import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.math.MathConstants;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.math.MathConstants;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.mixin.ducks.DuckPlayerMoveC2SPacket;
 import me.mioclient.module.Module;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/NoFall.class */
 public class NoFall extends Module {
     public Setting<NoFallMode> mode = add(new EnumSetting<>("Mode", NoFallMode.noFallMode));
     public Setting<Float> groundDistance = add(new NumberSetting<>("GroundDistance", 2.0f, 1.0f, 4.0f, v -> this.mode.getValue() == NoFall.NoFallMode.noFallMode3 || this.mode.getValue() == NoFall.NoFallMode.noFallMode4).setSuffix("m"));
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/NoFall$NoFallMode.class */
+    
     public static enum NoFallMode implements NamedValue {
         noFallMode("Packet") {
             @Override
             public void handlePacketSend(PacketSendEvent sendImmediatelyEvent) {
-                DuckPlayerMoveC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerMoveC2SPacket ? (DuckPlayerMoveC2SPacket)(sendImmediatelyEvent.getPacket()) : null;
-                if (packet904 instanceof PlayerMoveC2SPacket) {
-                    DuckPlayerMoveC2SPacket duckPlayerMoveC2SPacket = (DuckPlayerMoveC2SPacket)((PlayerMoveC2SPacket) packet904);
-                    if (ClientAccessor.minecraftClient.player.fallDistance <= 3.0f || ClientAccessor.minecraftClient.player.isFallFlying()) {
-                        return;
-                    }
-                    duckPlayerMoveC2SPacket.setOnGround(true);
+                if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket pkt)) {
+                    return;
+                }
+                if (ClientAccessor.minecraftClient.player.fallDistance <= 3.0f || ClientAccessor.minecraftClient.player.isFallFlying()) {
+                    return;
+                }
+                // 26.2 port: ServerboundMovePlayerPacket is immutable - cancel + send grounded replacement.
+                sendImmediatelyEvent.cancel();
+                boolean hc = pkt.horizontalCollision();
+                net.minecraft.client.player.LocalPlayer pl = ClientAccessor.minecraftClient.player;
+                if (pkt instanceof ServerboundMovePlayerPacket.PosRot) {
+                    pl.connection.send(new ServerboundMovePlayerPacket.PosRot(pkt.getX(pl.getX()), pkt.getY(pl.getY()), pkt.getZ(pl.getZ()), pkt.getYRot(pl.getYRot()), pkt.getXRot(pl.getXRot()), true, hc));
+                } else if (pkt instanceof ServerboundMovePlayerPacket.Pos) {
+                    pl.connection.send(new ServerboundMovePlayerPacket.Pos(pkt.getX(pl.getX()), pkt.getY(pl.getY()), pkt.getZ(pl.getZ()), true, hc));
+                } else if (pkt instanceof ServerboundMovePlayerPacket.Rot) {
+                    pl.connection.send(new ServerboundMovePlayerPacket.Rot(pkt.getYRot(pl.getYRot()), pkt.getXRot(pl.getXRot()), true, hc));
+                } else {
+                    pl.connection.send(new ServerboundMovePlayerPacket.StatusOnly(true, hc));
                 }
             }
         },
         noFallMode2("Anti") {
             @Override
             public void handlePacketSend(PacketSendEvent sendImmediatelyEvent) {
-                if (!(sendImmediatelyEvent.getPacket() instanceof PlayerMoveC2SPacket) || ClientAccessor.minecraftClient.player.fallDistance <= 3.0f) {
+                if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket) || ClientAccessor.minecraftClient.player.fallDistance <= 3.0f) {
                     return;
                 }
-                if (ClientAccessor.minecraftClient.world.isSpaceEmpty(ClientAccessor.minecraftClient.player.getBoundingBox().stretch(0.0d, ClientAccessor.minecraftClient.player.getVelocity().y * 1.1d, 0.0d))) {
+                if (ClientAccessor.minecraftClient.level.noCollision(ClientAccessor.minecraftClient.player.getBoundingBox().expandTowards(0.0d, ClientAccessor.minecraftClient.player.getDeltaMovement().y * 1.1d, 0.0d))) {
                     return;
                 }
                 ClientAccessor.minecraftClient.player.setPos(ClientAccessor.minecraftClient.player.getX(), ClientAccessor.minecraftClient.player.getY() + 2.0d, ClientAccessor.minecraftClient.player.getZ());
@@ -78,11 +78,11 @@ public class NoFall extends Module {
             public void executeFallMode(NoFall noFall) {
                 if (ClientAccessor.minecraftClient.player.fallDistance > 3.0f) {
                     HashSet<BlockPos> hashSet2372 = noFall.getBottomCorners(ClientAccessor.minecraftClient.player.getBoundingBox());
-                    hashSet2372.add(BlockPos.ofFloored(ClientAccessor.minecraftClient.player.getPos()));
+                    hashSet2372.add(BlockPos.containing(ClientAccessor.minecraftClient.player.position()));
                     for (int i = 0; i <= noFall.groundDistance.getValue().floatValue(); i++) {
                         Iterator<BlockPos> it = hashSet2372.iterator();
                         while (it.hasNext()) {
-                            if (ClientAccessor.minecraftClient.world.getBlockState(it.next().offset(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
+                            if (ClientAccessor.minecraftClient.level.getBlockState(it.next().relative(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
                                 if (WorldUtils.getDimension().isTheEnd()) {
                                     PacketSender.sendPosition(0.0d, 64.0d, 0.0d, false);
                                 } else {
@@ -100,21 +100,21 @@ public class NoFall extends Module {
             public void executeFallMode(NoFall noFall) {
                 if (ClientAccessor.minecraftClient.player.fallDistance > 3.0f) {
                     HashSet<BlockPos> hashSet2372 = noFall.getBottomCorners(ClientAccessor.minecraftClient.player.getBoundingBox());
-                    hashSet2372.add(BlockPos.ofFloored(ClientAccessor.minecraftClient.player.getPos()));
+                    hashSet2372.add(BlockPos.containing(ClientAccessor.minecraftClient.player.position()));
                     for (int i = 0; i <= noFall.groundDistance.getValue().floatValue(); i++) {
                         Iterator<BlockPos> it = hashSet2372.iterator();
                         while (it.hasNext()) {
-                            if (ClientAccessor.minecraftClient.world.getBlockState(it.next().offset(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
-                                boolean z = ClientAccessor.minecraftClient.player.getOffHandStack().getItem() == Items.WATER_BUCKET;
+                            if (ClientAccessor.minecraftClient.level.getBlockState(it.next().relative(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
+                                boolean z = ClientAccessor.minecraftClient.player.getOffhandItem().getItem() == Items.WATER_BUCKET;
                                 int i2 = InventoryUtils.findInHotbar(Items.WATER_BUCKET);
                                 if (i2 != -1 || z) {
-                                    ClientAccessor.minecraftClient.player.setPitch(MathConstants.num2);
+                                    ClientAccessor.minecraftClient.player.setXRot(MathConstants.num2);
                                     if (!z) {
                                         InventoryUtils.selectSlot(i2);
                                     }
-                                    Hand hand = z ? Hand.OFF_HAND : Hand.MAIN_HAND;
-                                    ClientAccessor.minecraftClient.interactionManager.interactItem(ClientAccessor.minecraftClient.player, hand);
-                                    ClientAccessor.minecraftClient.player.swingHand(hand);
+                                    InteractionHand hand = z ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+                                    ClientAccessor.minecraftClient.gameMode.useItem(ClientAccessor.minecraftClient.player, hand);
+                                    ClientAccessor.minecraftClient.player.swing(hand);
                                 }
                             }
                         }
@@ -125,16 +125,16 @@ public class NoFall extends Module {
         noFallMode5("Grim") {
             @Override
             public void executeFallMode(NoFall noFall) {
-                if (noFall.isNotInGame() || noFall.isFallFlyingWithElytra() || ClientAccessor.minecraftClient.player.isOnGround() || ClientAccessor.minecraftClient.player.fallDistance <= 3.0f) {
+                if (noFall.isNotInGame() || noFall.isFallFlyingWithElytra() || ClientAccessor.minecraftClient.player.onGround() || ClientAccessor.minecraftClient.player.fallDistance <= 3.0f) {
                     return;
                 }
                 HashSet<BlockPos> hashSet2372 = noFall.getBottomCorners(ClientAccessor.minecraftClient.player.getBoundingBox());
-                hashSet2372.add(BlockPos.ofFloored(ClientAccessor.minecraftClient.player.getPos()));
+                hashSet2372.add(BlockPos.containing(ClientAccessor.minecraftClient.player.position()));
                 for (int i = 0; i <= 3; i++) {
                     Iterator<BlockPos> it = hashSet2372.iterator();
                     while (it.hasNext()) {
-                        if (ClientAccessor.minecraftClient.world.getBlockState(it.next().offset(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
-                            PacketSender.sendFullMove(ClientAccessor.minecraftClient.player.getX(), ClientAccessor.minecraftClient.player.getY() + 1.0E-9d, ClientAccessor.minecraftClient.player.getZ(), ClientAccessor.minecraftClient.player.getYaw(), ClientAccessor.minecraftClient.player.getPitch(), false);
+                        if (ClientAccessor.minecraftClient.level.getBlockState(it.next().relative(Direction.DOWN, i)).getBlock() != Blocks.AIR) {
+                            PacketSender.sendFullMove(ClientAccessor.minecraftClient.player.getX(), ClientAccessor.minecraftClient.player.getY() + 1.0E-9d, ClientAccessor.minecraftClient.player.getZ(), ClientAccessor.minecraftClient.player.getYRot(), ClientAccessor.minecraftClient.player.getXRot(), false);
                         }
                     }
                 }
@@ -178,11 +178,11 @@ public class NoFall extends Module {
         this.mode.getValue().handlePacketSend(sendImmediatelyEvent);
     }
 
-    public HashSet<BlockPos> getBottomCorners(Box box) {
-        return new HashSet<>(List.of(BlockPos.ofFloored(box.maxX, box.minY, box.maxZ), BlockPos.ofFloored(box.maxX, box.minY, box.minZ), BlockPos.ofFloored(box.minX, box.minY, box.maxZ), BlockPos.ofFloored(box.minX, box.minY, box.minZ)));
+    public HashSet<BlockPos> getBottomCorners(AABB box) {
+        return new HashSet<>(List.of(BlockPos.containing(box.maxX, box.minY, box.maxZ), BlockPos.containing(box.maxX, box.minY, box.minZ), BlockPos.containing(box.minX, box.minY, box.maxZ), BlockPos.containing(box.minX, box.minY, box.minZ)));
     }
 
     public boolean isFallFlyingWithElytra() {
-        return minecraftClient.player.getInventory().getArmorStack(EquipmentSlot.CHEST.getEntitySlotId()).isOf(Items.ELYTRA) && minecraftClient.player.isFallFlying();
+        return minecraftClient.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA) && minecraftClient.player.isFallFlying();
     }
 }

@@ -1,9 +1,7 @@
 package me.mioclient.ducks;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/DuckClientPlayerInteractionManager.class */
 public interface DuckClientPlayerInteractionManager {
     boolean isBreakingBlock();
 

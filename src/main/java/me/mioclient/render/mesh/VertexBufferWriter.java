@@ -1,10 +1,8 @@
 package me.mioclient.render.mesh;
 
-import net.caffeinemc.mods.sodium.api.vertex.format.VertexFormatDescription;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import org.lwjgl.system.MemoryStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/VertexBufferWriter.class */
 public class VertexBufferWriter extends TrajectoriesVertexConsumer implements net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter {
     public final boolean flag;
 
@@ -13,12 +11,14 @@ public class VertexBufferWriter extends TrajectoriesVertexConsumer implements ne
         this.flag = this.bufferBuilder instanceof net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
     }
 
-    public void push(MemoryStack memoryStack, long j, int i, VertexFormatDescription vertexFormatDescription) {
-        if (this.flag) {
-            ((net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter)(Object) this.bufferBuilder).push(memoryStack, j, i, vertexFormatDescription);
+    @Override
+    public void push(MemoryStack memoryStack, long j, int i, VertexFormat vertexFormatDescription) {
+        if (this.flag && this.bufferBuilder != null) {
+            ((net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter) (Object) this.bufferBuilder).push(memoryStack, j, i, vertexFormatDescription);
         }
     }
 
+    @Override
     public boolean canUseIntrinsics() {
         return this.flag;
     }

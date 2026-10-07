@@ -1,7 +1,5 @@
 package me.mioclient.render.hud;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Helper_22.class */
 public class TextRenderState {
     public String text;
     public int num;

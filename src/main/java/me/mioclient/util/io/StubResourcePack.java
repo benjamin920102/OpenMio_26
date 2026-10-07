@@ -3,43 +3,42 @@ package me.mioclient.util.io;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.Set;
-import net.minecraft.resource.InputSupplier;
-import net.minecraft.resource.ResourcePack;
-import net.minecraft.resource.ResourcePackSource;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.resource.metadata.ResourceMetadataReader;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.metadata.MetadataSectionType;
+import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.server.packs.resources.IoSupplier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ResourcePackInfo.class */
-public class StubResourcePack implements ResourcePack {
-    public net.minecraft.resource.ResourcePackInfo info = new net.minecraft.resource.ResourcePackInfo("mio", Text.literal("mio"), ResourcePackSource.BUILTIN, Optional.empty());
+public class StubResourcePack implements PackResources {
+    public PackLocationInfo info = new PackLocationInfo("mio", Component.literal("mio"), PackSource.BUILT_IN, Optional.empty());
 
     @Nullable
-    public InputSupplier<InputStream> openRoot(String... strArr) {
+    public IoSupplier<InputStream> getRootResource(String... strArr) {
         return null;
     }
 
     @Nullable
-    public InputSupplier<InputStream> open(ResourceType resourceType, Identifier identifier) {
+    public IoSupplier<InputStream> getResource(PackType resourceType, Identifier identifier) {
         return null;
     }
 
-    public void findResources(ResourceType resourceType, String str, String str2, ResourcePack.ResultConsumer resultConsumer) {
+    public void listResources(PackType resourceType, String str, String str2, PackResources.ResourceOutput resultConsumer) {
     }
 
-    public Set<String> getNamespaces(ResourceType resourceType) {
-        return null;
+    public Set<String> getNamespaces(PackType resourceType) {
+        return Set.of();
     }
 
     @Nullable
-    public <T> T parseMetadata(ResourceMetadataReader<T> resourceMetadataReader) {
+    public <T> T getMetadataSection(MetadataSectionType<T> resourceMetadataReader) {
         return null;
     }
 
-    public net.minecraft.resource.ResourcePackInfo getInfo() {
+    public PackLocationInfo location() {
         return this.info;
     }
 

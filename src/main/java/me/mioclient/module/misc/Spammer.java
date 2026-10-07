@@ -8,10 +8,7 @@ import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.io.FileIO;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.io.FileIO;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -22,21 +19,17 @@ import java.util.concurrent.TimeUnit;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.IRC;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import org.apache.commons.io.FileUtils;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/Spammer.class */
 public class Spammer extends Module {
     public Setting<String> path = add(new StringSetting("Path", "spammer.txt"));
     public Setting<Float> delay = add(new NumberSetting<>("Delay", 5.0f, 0.0f, 300.0f).setSuffix("s"));
@@ -72,7 +65,7 @@ public class Spammer extends Module {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if ((sendImmediatelyEvent.getPacket() instanceof ChatMessageC2SPacket) && this.smartDelay.getValue().booleanValue()) {
+        if ((sendImmediatelyEvent.getPacket() instanceof ServerboundChatPacket) && this.smartDelay.getValue().booleanValue()) {
             this.stopwatch.reset();
         }
     }
@@ -113,8 +106,8 @@ public class Spammer extends Module {
             if (isNotInGame()) {
                 return;
             }
-            ChatUtils.sendPrefixedMessage(Text.literal("Failed to open spammer file").styled(style -> {
-                return style.withColor(Formatting.RED);
+            ChatUtils.sendPrefixedMessage(Component.literal("Failed to open spammer file").withStyle(style -> {
+                return style.withColor(ChatFormatting.RED);
             }), ChatUtils.createSignature(e.toString().hashCode()), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
         }
     }

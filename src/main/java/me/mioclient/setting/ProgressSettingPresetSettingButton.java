@@ -7,21 +7,14 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.anim.AnimationProgress;
 
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.ClosableElement;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
 
 import java.util.function.Supplier;
 import me.mioclient.api.Setting;
-import me.mioclient.util.anim.AnimationProgress;
 import me.mioclient.module.client.UI;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ProgressSettingPresetSettingButton.class */
 public class ProgressSettingPresetSettingButton extends SettingPresetSettingButton<Boolean> {
     public final AnimationProgress progress;
 
@@ -52,7 +45,7 @@ public class ProgressSettingPresetSettingButton extends SettingPresetSettingButt
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         if (isHidden()) {
             this.progress.reset();
             return;

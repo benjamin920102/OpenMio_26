@@ -5,16 +5,14 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.command.ClientCommandRegistry;
 
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 import me.mioclient.ducks.DuckChatHud;
 import me.mioclient.command.CommandFeature;
 import me.mioclient.ducks.DuckChatHudLineVisible;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetHelperFeature.class */
 public final class PanicCommand extends CommandFeature {
     public static final String string = "ㅤ";
     public static boolean flag = false;
@@ -24,15 +22,15 @@ public final class PanicCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.executes(commandContext -> {
             runLater(() -> {
-                minecraftClient.setScreen(new ConfirmScreen(z -> {
+                minecraftClient.setScreenAndShow(new ConfirmScreen(z -> {
                     if (z) {
                         do2977();
                     }
-                    minecraftClient.setScreen((Screen) null);
-                }, Text.literal("Unload the client."), Text.literal("Continue?")));
+                    minecraftClient.setScreenAndShow((Screen) null);
+                }, Component.literal("Unload the client."), Component.literal("Continue?")));
             });
             return 1;
         });
@@ -51,14 +49,14 @@ public final class PanicCommand extends CommandFeature {
                 module.toggle();
             }
         }
-        minecraftClient.inGameHud.getChatHud().getMessageHistory().removeIf(str -> {
+        minecraftClient.gui.hud.getChat().getRecentChat().removeIf(str -> {
             return str.startsWith(string2982);
         });
-        ((DuckChatHud) minecraftClient.inGameHud.getChatHud()).getVisible().removeIf(visible -> {
+        ((DuckChatHud) minecraftClient.gui.hud.getChat()).getVisible().removeIf(visible -> {
             DuckChatHudLineVisible signatureHelper = (DuckChatHudLineVisible)(Object) visible;
-            return signatureHelper.getSignature() != null && signatureHelper.getSignature().toByteBuffer().getInt() < 0;
+            return signatureHelper.getSignature() != null && signatureHelper.getSignature().asByteBuffer().getInt() < 0;
         });
-        minecraftClient.inGameHud.getChatHud().getMessageHistory().removeIf(str2 -> {
+        minecraftClient.gui.hud.getChat().getRecentChat().removeIf(str2 -> {
             return str2.startsWith(string2982);
         });
     }

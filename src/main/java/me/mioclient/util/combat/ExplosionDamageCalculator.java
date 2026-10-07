@@ -9,40 +9,35 @@ import me.mioclient.util.world.CustomRaycastContext;
 import me.mioclient.util.world.RaycastUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import me.mioclient.util.inventory.EnchantmentHelper;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.combat.AutoMine;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.DamageUtil;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.explosion.Explosion;
+import net.minecraft.world.level.Explosion;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ExplosionDamageCalculator.class */
 public class ExplosionDamageCalculator implements ClientAccessor {
     public static AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
     public static AutoMine autoMine = (AutoMine) ClientServices.moduleInjector.getModule(AutoMine.class);
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ArmorSearchHelper4$Inner.class */
+    
+    
     public static /* synthetic */ class Inner {
         public static final /* synthetic */ int[] intArr = new int[Difficulty.values().length];
 
@@ -62,31 +57,31 @@ public class ExplosionDamageCalculator implements ClientAccessor {
         }
     }
 
-    public static float getCrystalDamage(Vec3d vec3d, LivingEntity livingEntity) {
+    public static float getCrystalDamage(Vec3 vec3d, LivingEntity livingEntity) {
         return getExplosionDamage(vec3d, livingEntity, Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null);
     }
 
-    public static float getCrystalDamage(Vec3d vec3d, LivingEntity livingEntity, Box box) {
+    public static float getCrystalDamage(Vec3 vec3d, LivingEntity livingEntity, AABB box) {
         return getExplosionDamage(vec3d, livingEntity, box, Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, (BlockPos) null);
     }
 
-    public static float getBedDamage(Vec3d vec3d, LivingEntity livingEntity) {
+    public static float getBedDamage(Vec3 vec3d, LivingEntity livingEntity) {
         return getBedDamage(vec3d, livingEntity, livingEntity.getBoundingBox());
     }
 
-    public static float getBedDamage(Vec3d vec3d, LivingEntity livingEntity, Box box) {
+    public static float getBedDamage(Vec3 vec3d, LivingEntity livingEntity, AABB box) {
         return getExplosionDamage(vec3d, livingEntity, box, Double.longBitsToDouble(4617315517961601024L), true, (BlockPos) null, (BlockPos) null);
     }
 
-    public static float getExplosionDamage(Vec3d vec3d, LivingEntity livingEntity, double d, boolean z, BlockPos blockPos) {
+    public static float getExplosionDamage(Vec3 vec3d, LivingEntity livingEntity, double d, boolean z, BlockPos blockPos) {
         return getExplosionDamage(vec3d, livingEntity, livingEntity.getBoundingBox(), d, z, blockPos, (BlockPos) null);
     }
 
-    public static float getExplosionDamage(Vec3d vec3d, LivingEntity livingEntity, Box box, double d, boolean z, BlockPos blockPos, BlockPos blockPos2) {
+    public static float getExplosionDamage(Vec3 vec3d, LivingEntity livingEntity, AABB box, double d, boolean z, BlockPos blockPos, BlockPos blockPos2) {
         if (livingEntity.equals(minecraftClient.player) && minecraftClient.player.isCreative()) {
             return 0.0f;
         }
-        Vec3d vec3d2 = new Vec3d(MathHelper.lerp(MathConstants.val2, box.minX, box.maxX), box.minY, MathHelper.lerp(MathConstants.val2, box.minZ, box.maxZ));
+        Vec3 vec3d2 = new Vec3(Mth.lerp(MathConstants.val2, box.minX, box.maxX), box.minY, Mth.lerp(MathConstants.val2, box.minZ, box.maxZ));
         double longBitsToDouble = d * Double.longBitsToDouble(4611686018427387904L);
         double distanceTo = vec3d2.distanceTo(vec3d) / longBitsToDouble;
         if (distanceTo > Double.longBitsToDouble(4607182418800017408L)) {
@@ -96,11 +91,11 @@ public class ExplosionDamageCalculator implements ClientAccessor {
         return Math.max(getDamageAfterProtection(livingEntity, getDifficultyScaledDamage((float) (((((longBitsToDouble2 * longBitsToDouble2) + longBitsToDouble2) / Double.longBitsToDouble(4611686018427387904L)) * Double.longBitsToDouble(4619567317775286272L) * longBitsToDouble) + Double.longBitsToDouble(4607182418800017408L)))), 0.0f);
     }
 
-    public static float getExposure(Vec3d vec3d, Entity entity, BlockPos blockPos, boolean z) {
+    public static float getExposure(Vec3 vec3d, Entity entity, BlockPos blockPos, boolean z) {
         return getExposure(vec3d, entity, entity.getBoundingBox(), blockPos, (BlockPos) null, z);
     }
 
-    public static float getExposure(Vec3d vec3d, Entity entity, Box box, BlockPos blockPos, BlockPos blockPos2, boolean z) {
+    public static float getExposure(Vec3 vec3d, Entity entity, AABB box, BlockPos blockPos, BlockPos blockPos2, boolean z) {
         double longBitsToDouble = Double.longBitsToDouble(4607182418800017408L) / (((box.maxX - box.minX) * Double.longBitsToDouble(4611686018427387904L)) + Double.longBitsToDouble(4607182418800017408L));
         double longBitsToDouble2 = Double.longBitsToDouble(4607182418800017408L) / (((box.maxY - box.minY) * Double.longBitsToDouble(4611686018427387904L)) + Double.longBitsToDouble(4607182418800017408L));
         double longBitsToDouble3 = Double.longBitsToDouble(4607182418800017408L) / (((box.maxZ - box.minZ) * Double.longBitsToDouble(4611686018427387904L)) + Double.longBitsToDouble(4607182418800017408L));
@@ -125,7 +120,7 @@ public class ExplosionDamageCalculator implements ClientAccessor {
                     while (true) {
                         double d6 = d5;
                         if (d6 <= Double.longBitsToDouble(4607182418800017408L)) {
-                            CustomRaycastContext.Inner inner1603 = new CustomRaycastContext.Inner(new Vec3d(MathHelper.lerp(d2, box.minX, box.maxX) + longBitsToDouble4, MathHelper.lerp(d4, box.minY, box.maxY), MathHelper.lerp(d6, box.minZ, box.maxZ) + longBitsToDouble5), vec3d).setEntity(entity);
+                            CustomRaycastContext.Inner inner1603 = new CustomRaycastContext.Inner(new Vec3(Mth.lerp(d2, box.minX, box.maxX) + longBitsToDouble4, Mth.lerp(d4, box.minY, box.maxY), Mth.lerp(d6, box.minZ, box.maxZ) + longBitsToDouble5), vec3d).setEntity(entity);
                             BlockRaycastFilter[] holeSnapHelperArr = new BlockRaycastFilter[3];
                             BlockPos[] blockPosArr = new BlockPos[2];
                             blockPosArr[0] = blockPos;
@@ -152,14 +147,18 @@ public class ExplosionDamageCalculator implements ClientAccessor {
     }
 
     public static float getDamageAfterProtection(LivingEntity livingEntity, float f) {
-        float damageLeft = DamageUtil.getDamageLeft(livingEntity, f, minecraftClient.world.getDamageSources().explosion((Explosion) null), livingEntity.getArmor(), (float) livingEntity.getAttributeValue(EntityAttributes.GENERIC_ARMOR_TOUGHNESS));
-        if (livingEntity.hasStatusEffect(StatusEffects.RESISTANCE)) {
-            damageLeft = (damageLeft * (25 - ((livingEntity.getStatusEffect(StatusEffects.RESISTANCE).getAmplifier() + 1) * 5))) / Float.intBitsToFloat(1103626240);
+        // 26.2 port: DamageUtil removed; inline vanilla armor+toughness reduction.
+        float armor = (float) livingEntity.getArmorValue();
+        float toughness = (float) livingEntity.getAttributeValue(Attributes.ARMOR_TOUGHNESS);
+        float clamped = Mth.clamp(armor - f / (2.0f + toughness / 4.0f), armor * 0.2f, 20.0f);
+        float damageLeft = f * (1.0f - clamped / 25.0f);
+        if (livingEntity.hasEffect(MobEffects.RESISTANCE)) {
+            damageLeft = (damageLeft * (25 - ((livingEntity.getEffect(MobEffects.RESISTANCE).getAmplifier() + 1) * 5))) / Float.intBitsToFloat(1103626240);
         }
         int i = 0;
-        Iterator it = livingEntity.getArmorItems().iterator();
-        while (it.hasNext()) {
-            Map<RegistryKey<Enchantment>, Integer> map1419 = EnchantmentHelper.getEnchantmentMap((ItemStack) it.next());
+        // 26.2 port: iterate armor slots via getItemBySlot.
+        for (net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+            Map<ResourceKey<Enchantment>, Integer> map1419 = EnchantmentHelper.getEnchantmentMap(livingEntity.getItemBySlot(slot));
             i += (map1419.getOrDefault(Enchantments.BLAST_PROTECTION, 0).intValue() * 2) + map1419.getOrDefault(Enchantments.PROTECTION, 0).intValue();
         }
         if (i > 20 || (autoCrystal.isToggled() && autoCrystal.assumeBestArmor.getValue().booleanValue())) {
@@ -173,7 +172,7 @@ public class ExplosionDamageCalculator implements ClientAccessor {
     }
 
     public static float getDifficultyScaledDamage(float f) {
-        switch (Inner.intArr[minecraftClient.world.getDifficulty().ordinal()]) {
+        switch (Inner.intArr[minecraftClient.level.getDifficulty().ordinal()]) {
             case 1:
                 return 0.0f;
             case 2:
@@ -186,6 +185,6 @@ public class ExplosionDamageCalculator implements ClientAccessor {
     }
 
     public static int getClampedDurabilityPercent(ItemStack itemStack) {
-        return MathHelper.clamp(100 - ((int) Math.ceil((Float.intBitsToFloat(1065353216) - ((itemStack.getMaxDamage() - itemStack.getDamage()) / (float) itemStack.getMaxDamage())) * Float.intBitsToFloat(1120403456))), 1, 100);
+        return Mth.clamp(100 - ((int) Math.ceil((Float.intBitsToFloat(1065353216) - ((itemStack.getMaxDamage() - itemStack.getDamageValue()) / (float) itemStack.getMaxDamage())) * Float.intBitsToFloat(1120403456))), 1, 100);
     }
 }

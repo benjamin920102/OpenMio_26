@@ -2,38 +2,29 @@ package me.mioclient.module.player;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.time.Stopwatch;
-
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import java.util.Iterator;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickPostEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.ingame.SmithingScreen;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.ArmorMaterial;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.ToolItem;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.gui.screens.inventory.SmithingScreen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ContainerInput;
 import me.mioclient.module.Armor;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoUpgrade.class */
 public class AutoUpgrade extends Module {
     public Setting<AutoUpgradeMode> items = add(new EnumSetting<>("Items", AutoUpgradeMode.ANY));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 100, 0, 1000).setSuffix("ms"));
@@ -45,8 +36,7 @@ public class AutoUpgrade extends Module {
     public static final int num = 0;
     public static final Item item = Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoUpgrade$AutoUpgradeMode.class */
+    
     public enum AutoUpgradeMode implements NamedValue {
         ANY("Any"),
         TOOLS("Tools"),
@@ -71,19 +61,19 @@ public class AutoUpgrade extends Module {
 
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
-        ScreenHandler screenHandler = minecraftClient.player.currentScreenHandler;
-        if (minecraftClient.currentScreen instanceof SmithingScreen) {
+        AbstractContainerMenu screenHandler = minecraftClient.player.containerMenu;
+        if (minecraftClient.gui.screen() instanceof SmithingScreen) {
             if (this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
                 if (countItemInContainer(screenHandler, item) > 1 || !this.safe.getValue().booleanValue()) {
-                    if (!screenHandler.getSlot(3).getStack().isEmpty()) {
-                        minecraftClient.interactionManager.clickSlot(screenHandler.syncId, 3, 0, SlotActionType.QUICK_MOVE, minecraftClient.player);
+                    if (!screenHandler.getSlot(3).getItem().isEmpty()) {
+                        minecraftClient.gameMode.handleContainerInput(screenHandler.containerId, 3, 0, ContainerInput.QUICK_MOVE, minecraftClient.player);
                         this.stopwatch.reset();
                         return;
                     }
-                    ItemStack stack = screenHandler.getSlot(0).getStack();
-                    if (stack.isEmpty() || (stack.isOf(item) && stack.getCount() == 1)) {
+                    ItemStack stack = screenHandler.getSlot(0).getItem();
+                    if (stack.isEmpty() || (stack.is(item) && stack.getCount() == 1)) {
                         for (int i = 4; i < 40; i++) {
-                            if (screenHandler.getSlot(i).getStack().isOf(item)) {
+                            if (screenHandler.getSlot(i).getItem().is(item)) {
                                 InventoryUtils.swapStacks(i, 0);
                                 this.stopwatch.reset();
                                 return;
@@ -91,7 +81,7 @@ public class AutoUpgrade extends Module {
                         }
                         return;
                     }
-                    if (screenHandler.getSlot(1).getStack().isEmpty()) {
+                    if (screenHandler.getSlot(1).getItem().isEmpty()) {
                         int i2 = findUpgradeableSlot(screenHandler);
                         if (i2 == -1) {
                             return;
@@ -100,9 +90,9 @@ public class AutoUpgrade extends Module {
                         this.stopwatch.reset();
                         return;
                     }
-                    if (screenHandler.getSlot(2).getStack().isEmpty()) {
+                    if (screenHandler.getSlot(2).getItem().isEmpty()) {
                         for (int i3 = 4; i3 < 40; i3++) {
-                            if (screenHandler.getSlot(i3).getStack().isOf(Items.NETHERITE_INGOT)) {
+                            if (screenHandler.getSlot(i3).getItem().is(Items.NETHERITE_INGOT)) {
                                 InventoryUtils.swapStacks(i3, 2);
                                 this.stopwatch.reset();
                                 return;
@@ -114,38 +104,34 @@ public class AutoUpgrade extends Module {
         }
     }
 
-    public int countItemInContainer(ScreenHandler screenHandler, Item item2) {
+    public int countItemInContainer(AbstractContainerMenu screenHandler, Item item2) {
         int i = 0;
         Iterator it = screenHandler.slots.iterator();
         while (it.hasNext()) {
             Slot slot = (Slot) it.next();
-            if (slot.getStack().isOf(item2)) {
-                i += slot.getStack().getCount();
+            if (slot.getItem().is(item2)) {
+                i += slot.getItem().getCount();
             }
         }
         return i;
     }
 
-    public int findUpgradeableSlot(ScreenHandler screenHandler) {
+    public int findUpgradeableSlot(AbstractContainerMenu screenHandler) {
         boolean z = this.items.getValue() == AutoUpgradeMode.TOOLS;
         boolean z2 = this.items.getValue() == AutoUpgradeMode.ARMOR;
         for (int i = 4; i < 40; i++) {
-            ItemStack stack = screenHandler.getSlot(i).getStack();
+            ItemStack stack = screenHandler.getSlot(i).getItem();
             if (!z) {
-                ArmorItem item2 = (stack.getItem()) instanceof ArmorItem ? (ArmorItem) (stack.getItem()) : null;
-                if (item2 instanceof ArmorItem) {
-                    if (isDiamondIngredient((Ingredient) ((ArmorMaterial) item2.getMaterial().value()).repairIngredient().get())) {
-                        return i;
-                    }
+                // 26.2 port: ArmorItem removed; armor detected via EQUIPPABLE component, diamond via repairable.
+                if (stack.has(DataComponents.EQUIPPABLE) && stack.isValidRepairItem(new ItemStack(Items.DIAMOND))) {
+                    return i;
                 }
             }
             if (!z2) {
-                ToolItem item3 = (stack.getItem()) instanceof ToolItem ? (ToolItem) (stack.getItem()) : null;
-                if (item3 instanceof ToolItem) {
-                    if (isDiamondIngredient(item3.getMaterial().getRepairIngredient())) {
-                        return i;
-                    }
-                } else {
+                // 26.2 port: ToolItem/DiggerItem removed; tools detected via TOOL component, diamond via repairable.
+                if (stack.has(DataComponents.TOOL) && stack.isValidRepairItem(new ItemStack(Items.DIAMOND))) {
+                    return i;
+                } else if (!stack.has(DataComponents.TOOL) && !stack.has(DataComponents.EQUIPPABLE)) {
                     continue;
                 }
             }
@@ -154,11 +140,7 @@ public class AutoUpgrade extends Module {
     }
 
     public boolean isDiamondIngredient(Ingredient ingredient) {
-        for (ItemStack itemStack : ingredient.getMatchingStacks()) {
-            if (itemStack.isOf(Items.DIAMOND)) {
-                return true;
-            }
-        }
-        return false;
+        // 26.2 port: Ingredient#getMatchingStacks removed; Predicate#test is equivalent.
+        return ingredient.test(new ItemStack(Items.DIAMOND));
     }
 }

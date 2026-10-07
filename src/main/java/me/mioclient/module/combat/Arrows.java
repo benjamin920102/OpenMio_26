@@ -8,54 +8,47 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.inventory.PotionResolver;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.inventory.PotionResolver;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.StopUsingItemEvent;
 import me.mioclient.event.events.client.TickPostEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArrowItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.RangedWeaponItem;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.potion.Potion;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.core.Holder;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import me.mioclient.ducks.DuckStatusEffectInstance;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Arrows.class */
 public class Arrows extends Module {
     public static final AtomicBoolean atomicBoolean = new AtomicBoolean();
     public Setting<Boolean> autoShoot = add(new BooleanSetting("AutoShoot", false));
     public Setting<Float> fov = add(new NumberSetting<>("Fov", 20.0f, 10.0f, 45.0f, v -> !this.autoShoot.getValue().booleanValue()));
     public Setting<Integer> assumeDuration = add(new NumberSetting<>("AssumeDuration", 50, 0, 100).setSuffix("%"));
-    public final Map<StatusEffect, Long> map;
+    public final Map<MobEffect, Long> map;
     public final Stopwatch stopwatch;
     public int num;
     public Potion potion;
@@ -73,33 +66,27 @@ public class Arrows extends Module {
         }
     }
 
-    /* JADX WARN: Code restructure failed: missing block: B:10:0x008f, code lost:
-    
-        if (scoreArrow(me.mioclient.module.combat.Arrows.minecraftClient.player.getInventory().getStack(r5.num), r0) <= 0) goto L13;
-     */
     @Listen
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void onStopUsingItem(StopUsingItemEvent stopUsingItemEvent) {
-        PlayerEntity playerEntity1934 = findClosestTargetInFov();
-        Hand activeHand = minecraftClient.player.getActiveHand();
-        if (activeHand == null || !(minecraftClient.player.getStackInHand(activeHand).getItem() instanceof RangedWeaponItem)) {
+        Player playerEntity1934 = findClosestTargetInFov();
+        InteractionHand activeHand = minecraftClient.player.getUsedItemHand();
+        if (activeHand == null || !(minecraftClient.player.getItemInHand(activeHand).getItem() instanceof ProjectileWeaponItem)) {
             return;
         }
         if (playerEntity1934 != null) {
             if (this.num != -1) {
             }
-            int i = minecraftClient.player.getInventory().selectedSlot;
+            int i = minecraftClient.player.getInventory().getSelectedSlot();
             InventoryUtils.selectSlot((i + 1) % 9);
-            PacketSender.sendPlayerAction(PlayerActionC2SPacket.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, Direction.DOWN);
+            PacketSender.sendPlayerAction(ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN);
             InventoryUtils.selectSlot(i);
             stopUsingItemEvent.cancel();
             return;
         }
         if (this.stopwatch.hasElapsedMs(50L)) {
-            for (int i2 = 0; i2 < minecraftClient.player.getInventory().size(); i2++) {
-                if (minecraftClient.player.getInventory().getStack(i2).getItem() instanceof ArrowItem) {
+            for (int i2 = 0; i2 < minecraftClient.player.getInventory().getContainerSize(); i2++) {
+                if (minecraftClient.player.getInventory().getItem(i2).getItem() instanceof ArrowItem) {
                     if (i2 != this.num) {
                         this.stopwatch.reset();
                         ClientServices.fireworksHelper.setSyncBatching(true);
@@ -112,7 +99,7 @@ public class Arrows extends Module {
                     }
                     Iterator it = this.potion.getEffects().iterator();
                     while (it.hasNext()) {
-                        this.map.put((StatusEffect) ((StatusEffectInstance) it.next()).getEffectType().value(), Long.valueOf(System.currentTimeMillis()));
+                        this.map.put((MobEffect) ((MobEffectInstance) it.next()).getEffect().value(), Long.valueOf(System.currentTimeMillis()));
                     }
                     return;
                 }
@@ -122,8 +109,8 @@ public class Arrows extends Module {
 
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
-        if (minecraftClient.player.getMainHandStack().getItem() instanceof RangedWeaponItem) {
-            ClientPlayerEntity playerEntity1934 = (ClientPlayerEntity)(findClosestTargetInFov());
+        if (minecraftClient.player.getMainHandItem().getItem() instanceof ProjectileWeaponItem) {
+            LocalPlayer playerEntity1934 = (LocalPlayer)(findClosestTargetInFov());
             if (playerEntity1934 == null) {
                 playerEntity1934 = minecraftClient.player;
             }
@@ -132,8 +119,8 @@ public class Arrows extends Module {
             });
             int i = -1;
             int i2 = -1;
-            for (int i3 = 0; i3 < minecraftClient.player.getInventory().size(); i3++) {
-                int i4 = scoreArrow(minecraftClient.player.getInventory().getStack(i3), playerEntity1934);
+            for (int i3 = 0; i3 < minecraftClient.player.getInventory().getContainerSize(); i3++) {
+                int i4 = scoreArrow(minecraftClient.player.getInventory().getItem(i3), playerEntity1934);
                 if (i4 >= 0 && i4 > i) {
                     i2 = i3;
                     i = i4;
@@ -141,7 +128,7 @@ public class Arrows extends Module {
             }
             this.num = i2;
             if (this.num != -1) {
-                this.potion = PotionResolver.resolvePotion(minecraftClient.player.getInventory().getStack(this.num));
+                this.potion = PotionResolver.resolvePotion(minecraftClient.player.getInventory().getItem(this.num));
             }
         }
     }
@@ -150,7 +137,7 @@ public class Arrows extends Module {
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
         if (this.autoShoot.getValue().booleanValue()) {
             if (this.num != -1) {
-                if (scoreArrow(minecraftClient.player.getInventory().getStack(this.num), minecraftClient.player) > 0) {
+                if (scoreArrow(minecraftClient.player.getInventory().getItem(this.num), minecraftClient.player) > 0) {
                     shootBow();
                     return;
                 }
@@ -159,15 +146,15 @@ public class Arrows extends Module {
         }
     }
 
-    public PlayerEntity findClosestTargetInFov() {
-        if (!this.autoShoot.getValue().booleanValue() && minecraftClient.player.getPitch() >= Float.intBitsToFloat(-1029046272)) {
-            AbstractClientPlayerEntity abstractClientPlayerEntity = null;
+    public Player findClosestTargetInFov() {
+        if (!this.autoShoot.getValue().booleanValue() && minecraftClient.player.getXRot() >= Float.intBitsToFloat(-1029046272)) {
+            AbstractClientPlayer abstractClientPlayerEntity = null;
             double longBitsToDouble = Double.longBitsToDouble(5183643170566569984L);
-            for (AbstractClientPlayerEntity abstractClientPlayerEntity2 : minecraftClient.world.getPlayers()) {
-                if (minecraftClient.player != abstractClientPlayerEntity2 && !ClientServices.socialManager.isFriendEntity((PlayerEntity) abstractClientPlayerEntity2)) {
+            for (AbstractClientPlayer abstractClientPlayerEntity2 : minecraftClient.level.players()) {
+                if (minecraftClient.player != abstractClientPlayerEntity2 && !ClientServices.socialManager.isFriendEntity((Player) abstractClientPlayerEntity2)) {
                     float[] floatArray2483 = RotationManager.getRotationsTo((Entity) abstractClientPlayerEntity2);
-                    float angleBetween = MathHelper.angleBetween(minecraftClient.player.getYaw(), floatArray2483[0]) - (abstractClientPlayerEntity2.getDimensions(abstractClientPlayerEntity2.getPose()).width() * Float.intBitsToFloat(1056964608));
-                    float angleBetween2 = MathHelper.angleBetween(minecraftClient.player.getPitch(), floatArray2483[1]) - (abstractClientPlayerEntity2.getDimensions(abstractClientPlayerEntity2.getPose()).height() * Float.intBitsToFloat(1056964608));
+                    float angleBetween = Mth.degreesDifferenceAbs(minecraftClient.player.getYRot(), floatArray2483[0]) - (abstractClientPlayerEntity2.getDimensions(abstractClientPlayerEntity2.getPose()).width() * Float.intBitsToFloat(1056964608));
+                    float angleBetween2 = Mth.degreesDifferenceAbs(minecraftClient.player.getXRot(), floatArray2483[1]) - (abstractClientPlayerEntity2.getDimensions(abstractClientPlayerEntity2.getPose()).height() * Float.intBitsToFloat(1056964608));
                     if (angleBetween <= this.fov.getValue().floatValue() && angleBetween2 <= this.fov.getValue().floatValue()) {
                         double hypot = Math.hypot(angleBetween, angleBetween2);
                         if (hypot < longBitsToDouble) {
@@ -183,22 +170,22 @@ public class Arrows extends Module {
     }
 
     public int scoreArrow(ItemStack itemStack, Object obj) {
-        if (!(itemStack.getItem() instanceof ArrowItem) || !(obj instanceof PlayerEntity)) {
+        if (!(itemStack.getItem() instanceof ArrowItem) || !(obj instanceof Player)) {
             return -1;
         }
-        PlayerEntity playerEntity = (PlayerEntity) obj;
+        Player playerEntity = (Player) obj;
         Potion potion1565 = PotionResolver.resolvePotion(itemStack);
         boolean z = playerEntity == minecraftClient.player || ClientServices.socialManager.isFriendEntity(playerEntity);
         int i = potion1565.getEffects().isEmpty() ? z ? -1 : 1 : 0;
-        for (StatusEffectInstance statusEffectInstance : potion1565.getEffects()) {
-            RegistryEntry<StatusEffect> effectType = statusEffectInstance.getEffectType();
-            boolean hasStatusEffect = playerEntity.hasStatusEffect(effectType);
-            if (hasStatusEffect && ((me.mioclient.ducks.DuckStatusEffectInstance)(Object) playerEntity.getStatusEffect(effectType)).mio$getDurationRation() * Float.intBitsToFloat(1120403456) < this.assumeDuration.getValue().intValue()) {
+        for (MobEffectInstance statusEffectInstance : potion1565.getEffects()) {
+            Holder<MobEffect> effectType = statusEffectInstance.getEffect();
+            boolean hasStatusEffect = playerEntity.hasEffect(effectType);
+            if (hasStatusEffect && ((me.mioclient.ducks.DuckStatusEffectInstance)(Object) playerEntity.getEffect(effectType)).mio$getDurationRation() * Float.intBitsToFloat(1120403456) < this.assumeDuration.getValue().intValue()) {
                 hasStatusEffect = false;
             }
             if (!hasStatusEffect) {
                 if (!this.map.containsKey(effectType.value())) {
-                    int amplifier = (!((StatusEffect) effectType.value()).isInstant() ? statusEffectInstance.getAmplifier() : 0) + 1;
+                    int amplifier = (!((MobEffect) effectType.value()).isInstantaneous() ? statusEffectInstance.getAmplifier() : 0) + 1;
                     if (isBeneficialEffect(effectType) != z) {
                         amplifier *= -1;
                     }
@@ -209,28 +196,28 @@ public class Arrows extends Module {
         return i;
     }
 
-    public boolean isBeneficialEffect(RegistryEntry<StatusEffect> registryEntry) {
-        if (registryEntry == StatusEffects.SLOW_FALLING) {
+    public boolean isBeneficialEffect(Holder<MobEffect> registryEntry) {
+        if (registryEntry == MobEffects.SLOW_FALLING) {
             return false;
         }
-        return ((StatusEffect) registryEntry.value()).isBeneficial();
+        return ((MobEffect) registryEntry.value()).isBeneficial();
     }
 
     public void shootBow() {
-        int i = minecraftClient.player.getInventory().selectedSlot;
+        int i = minecraftClient.player.getInventory().getSelectedSlot();
         int i2 = InventoryUtils.findInHotbar(Items.BOW);
-        ClientServices.RotationManager.requestRotations(new float[]{minecraftClient.player.getYaw(), Float.intBitsToFloat(-1028390912)}, 999);
+        ClientServices.RotationManager.requestRotations(new float[]{minecraftClient.player.getYRot(), Float.intBitsToFloat(-1028390912)}, 999);
         if (i2 == -1 || minecraftClient.player.isUsingItem()) {
             return;
         }
         InventoryUtils.do438(i2);
-        minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.MAIN_HAND);
+        minecraftClient.gameMode.useItem(minecraftClient.player, InteractionHand.MAIN_HAND);
         if (atomicBoolean.get()) {
             return;
         }
         atomicBoolean.set(true);
         ClientServices.tooltipsHelper.schedule(() -> {
-            minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
+            minecraftClient.gameMode.releaseUsingItem(minecraftClient.player);
             InventoryUtils.do438(i);
             atomicBoolean.set(false);
             disable();

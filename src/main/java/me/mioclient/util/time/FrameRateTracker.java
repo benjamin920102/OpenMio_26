@@ -5,10 +5,8 @@ import me.mioclient.api.ClientAccessor;
 import me.mioclient.event.EventBus;
 
 import java.util.LinkedList;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FrameRateTracker.class */
 public final class FrameRateTracker implements ClientAccessor {
     public final LinkedList<Long> linkedList = new LinkedList<>();
     public int num;
@@ -31,6 +29,6 @@ public final class FrameRateTracker implements ClientAccessor {
     }
 
     public float getFrameDelta(float f) {
-        return MathHelper.clamp(Float.intBitsToFloat(1065353216) / (this.num * f), 0.0f, Float.intBitsToFloat(1065353216));
+        return Mth.clamp(Float.intBitsToFloat(1065353216) / (this.num * f), 0.0f, Float.intBitsToFloat(1065353216));
     }
 }

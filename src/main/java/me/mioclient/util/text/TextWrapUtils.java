@@ -2,13 +2,9 @@ package me.mioclient.util.text;
 
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.render.font.ClientTextRenderer;
-
 import java.util.ArrayList;
 import java.util.List;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Helper_23.class */
 public class TextWrapUtils {
     public static List<String> wrapText(String str, double d) {
         ArrayList arrayList = new ArrayList();

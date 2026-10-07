@@ -9,9 +9,6 @@ import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.panel.PresetPanel;
 import me.mioclient.mode.misc.PresetHelperMode;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.panel.ClickGuiPanel;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -22,15 +19,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.Stream;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.setting.EnumJsonConverter;
-import me.mioclient.mode.misc.PresetHelperMode;
 import me.mioclient.setting.PresetPresetSettingButton;
-import me.mioclient.gui.widget.ActionButton;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Category.class */
 public class CategorySelectScreen extends AbstractClickGuiScreen {
     public final ClickGuiPanel presetEnumSettingHelper = new ClickGuiPanel("Category");
     public final Screen screen;
@@ -56,7 +47,7 @@ public class CategorySelectScreen extends AbstractClickGuiScreen {
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
     public void requestClose() {
-        minecraftClient.setScreen(this.screen);
+        minecraftClient.gui.setScreen(this.screen);
     }
 
     public String getPresetFileName(Path path) {
@@ -70,7 +61,7 @@ public class CategorySelectScreen extends AbstractClickGuiScreen {
             e.printStackTrace();
         }
         ClientServices.presetHelper.getPresetRegistry(presetHelperMode).do34();
-        minecraftClient.setScreen(this.screen);
+        minecraftClient.gui.setScreen(this.screen);
     }
 
     public PresetHelperMode detectPresetCategory(Path path) {
@@ -99,7 +90,7 @@ public class CategorySelectScreen extends AbstractClickGuiScreen {
         if (arrayList.size() != 1) {
             return false;
         }
-        minecraftClient.setScreen(new CategorySelectScreen(screen, (Path) arrayList.getFirst()));
+        minecraftClient.gui.setScreen(new CategorySelectScreen(screen, (Path) arrayList.getFirst()));
         return true;
     }
 }

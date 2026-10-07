@@ -8,9 +8,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
 @Mixin({BoolArgumentType.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/brigadier/MixinBoolArgumentType.class */
+
 public class MixinBoolArgumentType {
     @Inject(method = {"parse(Lcom/mojang/brigadier/StringReader;)Ljava/lang/Boolean;"}, at = {@At("HEAD")}, remap = false, cancellable = true)
     private void parseHook(StringReader stringReader, CallbackInfoReturnable<Boolean> callbackInfoReturnable) throws com.mojang.brigadier.exceptions.CommandSyntaxException {

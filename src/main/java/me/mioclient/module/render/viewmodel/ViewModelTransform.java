@@ -5,8 +5,6 @@ import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
 import me.mioclient.module.render.ViewModel;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Data_2.class */
 public final class ViewModelTransform {
     public final float val;
     public final float val2;
@@ -76,9 +74,6 @@ public final class ViewModelTransform {
         viewModel.offRotateY.setValue(Float.valueOf(this.val17));
         viewModel.offRotateZ.setValue(Float.valueOf(this.val18));
     }
-
-
-
 
     public float getMainX() {
         return this.val;

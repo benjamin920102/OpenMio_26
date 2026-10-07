@@ -2,10 +2,6 @@ package me.mioclient.mode.render;
 
 import me.mioclient.util.math.GridPoint;
 
-import me.mioclient.util.math.GridPoint;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_3.class */
 public enum Direction {
     UP(0, -1),
     RIGHT(1, 0),

@@ -3,13 +3,9 @@ package me.mioclient.module;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.render.hud.ResizableHudElement;
-
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
 
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
@@ -22,26 +18,22 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
-import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/EntityList.class */
 public class EntityList extends me.mioclient.module.HudModule {
     public Setting<Set<EntityType<?>>> setting;
     public Setting<Set<Item>> setting2;
@@ -53,8 +45,7 @@ public class EntityList extends me.mioclient.module.HudModule {
     public final java.util.Map<String, Integer> map;
     public final List<Record> list;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/EntityList$EntityListMode.class */
+    
     public enum EntityListMode implements NamedValue {
         ALPHABET("Alphabet"),
         COUNT("Count"),
@@ -72,9 +63,8 @@ public class EntityList extends me.mioclient.module.HudModule {
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/EntityList$Record.class */
+    
+    
     public static final class Record {
         public final String string;
         public final int num;
@@ -88,12 +78,9 @@ public class EntityList extends me.mioclient.module.HudModule {
             return new Record(entry.getKey(), entry.getValue().intValue());
         }
 
-        public String formatDisplay(Formatting formatting) {
+        public String formatDisplay(ChatFormatting formatting) {
             return new StringTemplate().arg(this.num).arg(this.string).format("\u0001 x\u0001");
         }
-
-
-
 
         public String getRawName() {
             return this.string;
@@ -106,8 +93,8 @@ public class EntityList extends me.mioclient.module.HudModule {
 
     public EntityList() {
         super("EntityList", new String[0]);
-        this.setting = add(new EntityListObjectSetting("WhiteList", Registries.ENTITY_TYPE, EntityType.PLAYER));
-        this.setting2 = add(new EntityListObjectSetting("Items", Registries.ITEM, Items.OBSIDIAN));
+        this.setting = add(new EntityListObjectSetting("WhiteList", BuiltInRegistries.ENTITY_TYPE, EntityTypes.PLAYER));
+        this.setting2 = add(new EntityListObjectSetting("Items", BuiltInRegistries.ITEM, Items.OBSIDIAN));
         this.setting3 = add(new EnumSetting("Selection", ScaffoldMode_2.BLACKLIST));
         this.setting4 = add(new EnumSetting("ItemSelection", ScaffoldMode_2.ANY));
         this.setting5 = add(new EnumSetting("Sorting", EntityListMode.ALPHABET));
@@ -116,7 +103,7 @@ public class EntityList extends me.mioclient.module.HudModule {
         this.map = new HashMap();
         this.list = new ArrayList();
         this.setting4.addVisibilityPredicate(scaffoldMode_2 -> {
-            return this.setting3.getValue().isAllowed(EntityType.ITEM, this.setting.getValue());
+            return this.setting3.getValue().isAllowed(EntityTypes.ITEM, this.setting.getValue());
         });
         setElement(new ResizableHudElement(this));
     }
@@ -125,20 +112,20 @@ public class EntityList extends me.mioclient.module.HudModule {
     public void onTick(TickEvent tickEvent) {
         synchronized (this.list) {
             this.map.clear();
-            for (Entity itemEntity : minecraftClient.world.getEntities()) {
+            for (Entity itemEntity : minecraftClient.level.entitiesForRendering()) {
                 if (this.setting3.getValue().isAllowed(((Entity) itemEntity).getType(), this.setting.getValue())) {
                     if (itemEntity instanceof ItemEntity) {
                         ItemEntity itemEntity2 = (ItemEntity) itemEntity;
-                        if (!itemEntity2.getStack().isEmpty()) {
-                            if (!this.setting4.getValue().isAllowedBySetting(itemEntity2.getStack().getItem(), this.setting2)) {
+                        if (!itemEntity2.getItem().isEmpty()) {
+                            if (!this.setting4.getValue().isAllowedBySetting(itemEntity2.getItem().getItem(), this.setting2)) {
                             }
                         }
                     }
-                    String string = this.setting6.getValue().booleanValue() ? ((Entity) itemEntity).getName().getString() : ((Entity) itemEntity).getType().getName().getString();
+                    String string = this.setting6.getValue().booleanValue() ? ((Entity) itemEntity).getName().getString() : ((Entity) itemEntity).getType().getDescription().getString();
                     if (itemEntity instanceof ItemEntity) {
-                        string = ((ItemEntity) itemEntity).getStack().getName().getString();
+                        string = ((ItemEntity) itemEntity).getItem().getHoverName().getString();
                     }
-                    int count = itemEntity instanceof ItemEntity ? ((ItemEntity) itemEntity).getStack().getCount() : 1;
+                    int count = itemEntity instanceof ItemEntity ? ((ItemEntity) itemEntity).getItem().getCount() : 1;
                     this.map.compute(string, (str, num) -> {
                         return num == null ? Integer.valueOf(count) : Integer.valueOf(num.intValue() + count);
                     });
@@ -159,7 +146,7 @@ public class EntityList extends me.mioclient.module.HudModule {
                     break;
                 case LENGTH:
                     this.list.sort(Comparator.comparing(record3 -> {
-                        return Float.valueOf(ClientTextRenderer.INSTANCE.getStringWidth(record3.formatDisplay(Formatting.WHITE)));
+                        return Float.valueOf(ClientTextRenderer.INSTANCE.getStringWidth(record3.formatDisplay(ChatFormatting.WHITE)));
                     }));
                     break;
             }
@@ -167,12 +154,12 @@ public class EntityList extends me.mioclient.module.HudModule {
     }
 
     @Override // me.mioclient.module.HudModule
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
         float f = this.moduleListSearchHelper4.getAlignedY(ClientTextRenderer.INSTANCE.getFontHeight()) - this.moduleListSearchHelper4.getY();
         synchronized (this.list) {
             for (Record record : this.list) {
                 Color color3018 = getHudColor(f);
-                String string332 = record.formatDisplay(this.setting7.getValue().booleanValue() ? Formatting.WHITE : Formatting.RESET);
+                String string332 = record.formatDisplay(this.setting7.getValue().booleanValue() ? ChatFormatting.WHITE : ChatFormatting.RESET);
                 ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, string332, this.moduleListSearchHelper4.getAlignedX(ClientTextRenderer.INSTANCE.getStringWidth(string332)) - this.moduleListSearchHelper4.getX(), f, color3018);
                 f += (ClientTextRenderer.INSTANCE.getFontHeight() + 1) * this.moduleListSearchHelper4.getVerticalSide();
             }
@@ -186,7 +173,7 @@ public class EntityList extends me.mioclient.module.HudModule {
         synchronized (this.list) {
             Iterator<Record> it = this.list.iterator();
             while (it.hasNext()) {
-                float f3 = ClientTextRenderer.INSTANCE.getStringWidth(it.next().formatDisplay(Formatting.WHITE));
+                float f3 = ClientTextRenderer.INSTANCE.getStringWidth(it.next().formatDisplay(ChatFormatting.WHITE));
                 f += ClientTextRenderer.INSTANCE.getFontHeight() + 1;
                 if (f3 > f2) {
                     f2 = f3;

@@ -9,25 +9,14 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.math.GridPoint;
 import me.mioclient.util.math.MathConstants;
 
-import me.mioclient.util.math.GridPoint;
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.math.MathConstants;
-
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.lwjgl.glfw.GLFW;
-import me.mioclient.mode.render.Direction;
-import me.mioclient.gui.widget.PanelComponent;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.util.text.StringTemplate;
 
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/GameStopwatchPresetSettingButton.class */
 public class GameStopwatchPresetSettingButton extends StopwatchPresetSettingButton {
     public Direction mode_3;
     public Direction mode_32;
@@ -80,7 +69,7 @@ public class GameStopwatchPresetSettingButton extends StopwatchPresetSettingButt
     }
 
     @Override // me.mioclient.setting.StopwatchPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         drawGridCell(matrixStack, this.positionData.get476(), this.positionData.getGridY(), Color.red);
         boolean z = false;
@@ -128,7 +117,7 @@ public class GameStopwatchPresetSettingButton extends StopwatchPresetSettingButt
 
     @Override // me.mioclient.setting.StopwatchPresetSettingButton
     public int getTickDelay() {
-        if (GLFW.glfwGetKey(minecraftClient.getWindow().getHandle(), 32) == 1) {
+        if (GLFW.glfwGetKey(minecraftClient.getWindow().handle(), 32) == 1) {
             return RenderConstants.num;
         }
         return 500;

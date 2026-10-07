@@ -6,23 +6,16 @@ import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.render.hud.HudTextLine;
 import me.mioclient.render.hud.TextHudElement;
 
-import me.mioclient.render.hud.HudTextLine;
-import me.mioclient.render.hud.TextHudElement;
-
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.manager.RotationManager;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Direction.class */
 public class Direction extends me.mioclient.module.HudModule {
     public Direction() {
         super("Direction", "facing");
         setElement(new TextHudElement(this, new HudTextLine(() -> {
-            return Text.literal(getString1217());
+            return Component.literal(getString1217());
         }, () -> {
             return true;
         })));
@@ -30,8 +23,8 @@ public class Direction extends me.mioclient.module.HudModule {
     }
 
     public String getString1217() {
-        String string2921 = new StringTemplate().arg((int) MathHelper.wrapDegrees(minecraftClient.gameRenderer.getCamera().getYaw())).arg(String.valueOf(Formatting.WHITE)).format("\u0001 (\u0001, ");
-        switch (RotationManager.getYawOctant(minecraftClient.gameRenderer.getCamera().getYaw())) {
+        String string2921 = new StringTemplate().arg((int) Mth.wrapDegrees(minecraftClient.gameRenderer.mainCamera().yRot())).arg(String.valueOf(ChatFormatting.WHITE)).format(" (, ");
+        switch (RotationManager.getYawOctant(minecraftClient.gameRenderer.mainCamera().yRot())) {
             case 0:
                 return new StringTemplate().arg(string2921).format("South\u0001+Z)");
             case 1:

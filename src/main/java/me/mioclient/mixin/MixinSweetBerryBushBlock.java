@@ -2,20 +2,17 @@ package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import me.mioclient.module.movement.NoSlow;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SweetBerryBushBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.SweetBerryBushBlock;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-/* compiled from: 0.java */
 @Mixin({SweetBerryBushBlock.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinSweetBerryBushBlock.class */
+
 public class MixinSweetBerryBushBlock {
     private static NoSlow noslow;
 
@@ -31,8 +28,10 @@ public class MixinSweetBerryBushBlock {
 
     }
 
-    @Redirect(method = {"onEntityCollision"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;slowMovement(Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/Vec3d;)V"))
-    private void onEntityCollisionHook(Entity entity, BlockState blockState, Vec3d vec3d) {
+    /* 26.2 port: Block.onEntityCollision renamed to BlockBehaviour.entityInside
+       (verified via javap: entityInside still calls makeStuckInBlock). */
+    @Redirect(method = {"entityInside"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;makeStuckInBlock(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/phys/Vec3;)V"))
+    private void onEntityCollisionHook(Entity entity, BlockState blockState, Vec3 vec3d) {
         NoSlow noslow_lcl = getNoslow();
 
         if (noslow_lcl == null) return;
@@ -40,6 +39,6 @@ public class MixinSweetBerryBushBlock {
         if (noslow_lcl.isToggled() && noslow_lcl.berryBush.getValue().booleanValue()) {
             return;
         }
-        entity.slowMovement(blockState, vec3d);
+        entity.makeStuckInBlock(blockState, vec3d);
     }
 }

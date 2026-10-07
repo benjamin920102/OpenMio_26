@@ -7,18 +7,13 @@ import me.mioclient.event.events.input.InputTickEvent;
 
 import me.mioclient.api.ClientAccessor;
 
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.MoveEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.event.events.input.InputTickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.movement.ElytraFly;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ElytraFlyModeBase.class */
 public abstract class ElytraFlyModeBase implements ClientAccessor {
     public final ElytraFly elytraFly;
 

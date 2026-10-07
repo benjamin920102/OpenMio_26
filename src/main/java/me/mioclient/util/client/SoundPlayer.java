@@ -4,17 +4,14 @@ import me.mioclient.api.ClientAccessor;
 
 import java.io.ByteArrayInputStream;
 import me.mioclient.mixin.ducks.DuckAbstractSoundInstance;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SoundPlayer.class */
 public class SoundPlayer implements ClientAccessor {
     public static final SoundPlayer INSTANCE = new Inner(null);
     public final byte[] byteArr;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/SoundPlayer$Inner.class */
+    
     static class Inner extends SoundPlayer {
         public Inner(byte[] bArr) {
             super(bArr);
@@ -25,7 +22,7 @@ public class SoundPlayer implements ClientAccessor {
         }
 
         @Override // me.mioclient.util.client.SoundPlayer
-        public void playAt(Vec3d vec3d, float f) {
+        public void playAt(Vec3 vec3d, float f) {
         }
     }
 
@@ -37,7 +34,7 @@ public class SoundPlayer implements ClientAccessor {
         play(Float.intBitsToFloat(1065353216));
     }
 
-    public void playAt(Vec3d vec3d) {
+    public void playAt(Vec3 vec3d) {
         playAt(vec3d, Float.intBitsToFloat(1065353216));
     }
 
@@ -55,8 +52,8 @@ public class SoundPlayer implements ClientAccessor {
         }
     }
 
-    public void playAt(Vec3d vec3d, float f) {
-        if (minecraftClient.world != null) {
+    public void playAt(Vec3 vec3d, float f) {
+        if (minecraftClient.level != null) {
             try {
                 minecraftClient.execute(() -> {
                     SoundInstance inputStreamAbstractSoundInstance = new StreamedSoundInstance(vec3d, new ByteArrayInputStream(getSoundData()));

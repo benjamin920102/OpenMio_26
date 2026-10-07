@@ -2,25 +2,21 @@ package me.mioclient.command;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.Iterator;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_21.class */
 public class DefaultsCommand extends CommandFeature {
     public DefaultsCommand() {
         super("defaults");
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.executes(commandContext -> {
             ConfirmScreen confirmScreen = new ConfirmScreen(z -> {
                 if (z) {
@@ -32,10 +28,10 @@ public class DefaultsCommand extends CommandFeature {
                         module.setToggled(false);
                     }
                 }
-                minecraftClient.setScreen((Screen) null);
-            }, Text.of("Reset to defaults."), Text.of("Continue?"));
+                minecraftClient.setScreenAndShow((Screen) null);
+            }, Component.literal("Reset to defaults."), Component.literal("Continue?"));
             runLater(() -> {
-                minecraftClient.setScreen((Screen) confirmScreen);
+                minecraftClient.setScreenAndShow((Screen) confirmScreen);
             });
             return 1;
         });

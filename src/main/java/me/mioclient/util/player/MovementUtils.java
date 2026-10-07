@@ -7,16 +7,14 @@ import me.mioclient.render.RenderUtil;
 
 import java.util.Iterator;
 import me.mioclient.event.events.player.MoveEvent;
-import net.minecraft.client.input.Input;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MovementUtils.class */
 public class MovementUtils implements ClientAccessor {
     public static float val = Float.intBitsToFloat(1049827580);
     public static float val2 = val * Float.intBitsToFloat(1045220557);
@@ -26,14 +24,16 @@ public class MovementUtils implements ClientAccessor {
             moveEvent.setHorizontal(0.0d, 0.0d);
             return new double[]{0.0d, 0.0d};
         }
-        double[] doubleArray2508 = computeVelocity(minecraftClient.player.getYaw(RenderUtil.getPartialTick()), minecraftClient.player.input, d);
+        double[] doubleArray2508 = computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, d);
         moveEvent.setHorizontal(doubleArray2508[0], doubleArray2508[1]);
         return doubleArray2508;
     }
 
-    public static double[] computeVelocity(float f, Input input, double d) {
-        float f2 = input.movementForward;
-        float f3 = input.movementSideways;
+    public static double[] computeVelocity(float f, ClientInput input, double d) {
+        // 26.2 port: Yarn Input.movementForward/movementSideways -> MojMap ClientInput.keyPresses (Input record).
+        net.minecraft.world.entity.player.Input presses = input.keyPresses;
+        float f2 = (presses.forward() ? 1.0f : 0.0f) - (presses.backward() ? 1.0f : 0.0f);
+        float f3 = (presses.left() ? 1.0f : 0.0f) - (presses.right() ? 1.0f : 0.0f);
         float f4 = f;
         if (f2 != 0.0f) {
             if (f3 > 0.0f) {
@@ -55,14 +55,15 @@ public class MovementUtils implements ClientAccessor {
         if (d2 >= d) {
             return d;
         }
-        return Math.min(d2 + ((d - d2) * MathHelper.clamp((System.currentTimeMillis() - j) / (d3 * Double.longBitsToDouble(4652007308841189376L)), 0.0d, Double.longBitsToDouble(4607182418800017408L))), d);
+        return Math.min(d2 + ((d - d2) * Mth.clamp((System.currentTimeMillis() - j) / (d3 * Double.longBitsToDouble(4652007308841189376L)), 0.0d, Double.longBitsToDouble(4607182418800017408L))), d);
     }
 
-    public static boolean isPlayerMoving(PlayerEntity playerEntity) {
+    public static boolean isPlayerMoving(Player playerEntity) {
         if (playerEntity == null) {
             return false;
         }
-        return (playerEntity.forwardSpeed == 0.0f && playerEntity.sidewaysSpeed == 0.0f) ? false : true;
+        // 26.2 port: Yarn Player.forwardSpeed/sidewaysSpeed removed; use horizontal delta movement.
+        return playerEntity.getDeltaMovement().horizontalDistanceSqr() > Double.longBitsToDouble(4576918229304087675L);
     }
 
     public static boolean is2181() {
@@ -75,12 +76,12 @@ public class MovementUtils implements ClientAccessor {
 
     public static double computeMoveSpeed(boolean z, double d) {
         double d2 = d;
-        if (minecraftClient.player.hasStatusEffect(StatusEffects.SPEED)) {
-            d2 *= Double.longBitsToDouble(4607182418800017408L) + (Double.longBitsToDouble(4596373779694328218L) * (minecraftClient.player.getStatusEffect(StatusEffects.SPEED).getAmplifier() + 1));
+        if (minecraftClient.player.hasEffect(MobEffects.SPEED)) {
+            d2 *= Double.longBitsToDouble(4607182418800017408L) + (Double.longBitsToDouble(4596373779694328218L) * (minecraftClient.player.getEffect(MobEffects.SPEED).getAmplifier() + 1));
         }
         if (z) {
-            if (minecraftClient.player.hasStatusEffect(StatusEffects.SLOWNESS)) {
-                d2 /= Double.longBitsToDouble(4607182418800017408L) + (Double.longBitsToDouble(4596373779694328218L) * (minecraftClient.player.getStatusEffect(StatusEffects.SLOWNESS).getAmplifier() + 1));
+            if (minecraftClient.player.hasEffect(MobEffects.SLOWNESS)) {
+                d2 /= Double.longBitsToDouble(4607182418800017408L) + (Double.longBitsToDouble(4596373779694328218L) * (minecraftClient.player.getEffect(MobEffects.SLOWNESS).getAmplifier() + 1));
             }
         }
         return d2;
@@ -88,21 +89,21 @@ public class MovementUtils implements ClientAccessor {
 
     public static double getJumpBoostBonus() {
         double d = 0.0d;
-        if (minecraftClient.player.hasStatusEffect(StatusEffects.JUMP_BOOST)) {
-            d = 0.0d + ((minecraftClient.player.getStatusEffect(StatusEffects.JUMP_BOOST).getAmplifier() + 1) * Double.longBitsToDouble(4591870180066957722L));
+        if (minecraftClient.player.hasEffect(MobEffects.JUMP_BOOST)) {
+            d = 0.0d + ((minecraftClient.player.getEffect(MobEffects.JUMP_BOOST).getAmplifier() + 1) * Double.longBitsToDouble(4591870180066957722L));
         }
         return d;
     }
 
     public static double computeStepUpHeight(double d) {
-        if (!(minecraftClient.player.isOnGround() && minecraftClient.player.horizontalCollision)) {
+        if (!(minecraftClient.player.onGround() && minecraftClient.player.horizontalCollision)) {
             return 0.0d;
         }
         double longBitsToDouble = Double.longBitsToDouble(-4616189618054758400L);
-        Box expand = minecraftClient.player.getBoundingBox().offset(0.0d, Double.longBitsToDouble(4587366580439587226L), 0.0d).expand(Double.longBitsToDouble(4587366580439587226L));
-        Iterator it = minecraftClient.world.getCollisions(minecraftClient.player, expand.withMaxY(expand.maxY + d)).iterator();
+        AABB expand = minecraftClient.player.getBoundingBox().move(0.0d, Double.longBitsToDouble(4587366580439587226L), 0.0d).inflate(Double.longBitsToDouble(4587366580439587226L));
+        Iterator it = minecraftClient.level.getCollisions(minecraftClient.player, expand.setMaxY(expand.maxY + d)).iterator();
         while (it.hasNext()) {
-            for (Box box : ((VoxelShape) it.next()).getBoundingBoxes()) {
+            for (AABB box : ((VoxelShape) it.next()).toAabbs()) {
                 if (box.maxY > longBitsToDouble) {
                     longBitsToDouble = box.maxY;
                 }
@@ -115,34 +116,39 @@ public class MovementUtils implements ClientAccessor {
         return y;
     }
 
-    public static boolean isEntityMovingToward(PlayerEntity playerEntity, Vec3d vec3d) {
-        Vec3d velocity = playerEntity.getVelocity();
+    public static boolean isEntityMovingToward(Player playerEntity, Vec3 vec3d) {
+        Vec3 velocity = playerEntity.getDeltaMovement();
         if (isPlayerMoving(playerEntity)) {
-            return playerEntity.getPos().add(velocity.getX() * Double.longBitsToDouble(4666723172467343360L), 0.0d, velocity.getZ() * Double.longBitsToDouble(4666723172467343360L)).squaredDistanceTo(vec3d) < playerEntity.getPos().add(velocity.getX() * Double.longBitsToDouble(-4556648864387432448L), 0.0d, velocity.getZ() * Double.longBitsToDouble(-4556648864387432448L)).squaredDistanceTo(vec3d);
+            return playerEntity.position().add(velocity.x * Double.longBitsToDouble(4666723172467343360L), 0.0d, velocity.z * Double.longBitsToDouble(4666723172467343360L)).distanceToSqr(vec3d) < playerEntity.position().add(velocity.x * Double.longBitsToDouble(-4556648864387432448L), 0.0d, velocity.z * Double.longBitsToDouble(-4556648864387432448L)).distanceToSqr(vec3d);
         }
         return false;
     }
 
-    public static boolean isLocalPlayerMovingToward(Vec3d vec3d) {
+    public static boolean isLocalPlayerMovingToward(Vec3 vec3d) {
         return isEntityMovingToward(minecraftClient.player, vec3d);
     }
 
     public static float getMovementYaw() {
         if (minecraftClient.player.isFallFlying()) {
-            double[] doubleArray2508 = computeVelocity(minecraftClient.player.getYaw(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
+            double[] doubleArray2508 = computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
             return (float) (Math.toDegrees(Math.atan2(doubleArray2508[1], doubleArray2508[0])) - MathConstants.num2);
         }
-        float yaw = minecraftClient.player.getYaw();
-        Input input = minecraftClient.player.input;
-        boolean z = input.pressingForward != input.pressingBack;
-        if (input.pressingBack) {
+        float yaw = minecraftClient.player.getYRot();
+        // 26.2 port: ClientInput has keyPresses (Input record); forward/strafe derived from it.
+        net.minecraft.world.entity.player.Input presses = minecraftClient.player.input.keyPresses;
+        boolean forward = presses.forward();
+        boolean back = presses.backward();
+        boolean left = presses.left();
+        boolean right = presses.right();
+        boolean z = forward != back;
+        if (back) {
             yaw += Float.intBitsToFloat(1127481344);
         }
-        if (input.pressingRight && !z) {
-            yaw += MathConstants.num2 * (input.pressingBack ? -1 : 1);
+        if (right && !z) {
+            yaw += MathConstants.num2 * (back ? -1 : 1);
         }
-        if (input.pressingLeft && !z) {
-            yaw -= MathConstants.num2 * (input.pressingBack ? -1 : 1);
+        if (left && !z) {
+            yaw -= MathConstants.num2 * (back ? -1 : 1);
         }
         return yaw;
     }

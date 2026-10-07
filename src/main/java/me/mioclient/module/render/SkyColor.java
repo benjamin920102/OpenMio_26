@@ -3,12 +3,7 @@ package me.mioclient.module.render;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import java.awt.Color;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
@@ -16,8 +11,6 @@ import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/SkyColor.class */
 public class SkyColor extends Module {
     public Setting<MixinClientWorldMode> type = add(new EnumSetting<>("Type", MixinClientWorldMode.NONE));
     public Setting<Boolean> dense = add(new BooleanSetting("Dense", false));
@@ -28,8 +21,7 @@ public class SkyColor extends Module {
     public Setting<Boolean> nether = add(new BooleanSetting("Nether", true).requiresSettings(this.dimensions));
     public Setting<Boolean> end = add(new BooleanSetting("End", true).requiresSettings(this.dimensions));
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/SkyColor$MixinClientWorldMode.class */
+    
     public enum MixinClientWorldMode implements NamedValue {
         NONE("None"),
         FLAT("Flat"),

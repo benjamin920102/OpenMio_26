@@ -10,11 +10,8 @@ import java.util.function.Function;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/UnfocusedFPS.class */
 public class UnfocusedFPS extends Module {
     public Setting<Integer> fps = add(new NumberSetting<>("FPS", 30, 1, 61).setHoleSnapConfig("VSync", HoleSnapMode.MAX));
 

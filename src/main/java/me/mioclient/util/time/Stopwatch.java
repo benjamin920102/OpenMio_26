@@ -2,14 +2,11 @@ package me.mioclient.util.time;
 
 import java.util.concurrent.TimeUnit;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Stopwatch.class */
 public class Stopwatch {
     public long time = -1;
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/feature/Stopwatch$Inner.class */
+    
+    
     public static /* synthetic */ class Inner {
         public static final /* synthetic */ int[] intArr = new int[TimeUnit.values().length];
 

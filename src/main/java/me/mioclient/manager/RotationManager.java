@@ -13,43 +13,32 @@ import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.player.RotationRequest;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.player.RotationRequest;
 import me.mioclient.network.PacketSender;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.math.MathConstants;
 
 import me.mioclient.event.EventBus;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.mixin.ducks.DuckClientPlayerEntity;
-import me.mioclient.mixin.ducks.DuckWorldRenderer;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.mode.combat.CrystalRotationMode;
-import me.mioclient.mode.combat.KeyPearlMode;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.core.Position;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/RotationManager.class */
 public final class RotationManager implements ClientAccessor {
     public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
     public static boolean flag;
@@ -95,7 +84,7 @@ public final class RotationManager implements ClientAccessor {
         }
         float[] floatArray218 = this.elytraFlyData.getRotationAngles();
         float f = getNearestYaw(floatArray218);
-        if (f != floatArray218[0] && f != MathHelper.wrapDegrees(floatArray218[0] - MathConstants.num) && f != MathHelper.wrapDegrees(floatArray218[0] + MathConstants.num)) {
+        if (f != floatArray218[0] && f != Mth.wrapDegrees(floatArray218[0] - MathConstants.num) && f != Mth.wrapDegrees(floatArray218[0] + MathConstants.num)) {
             minecraftClient.player.setSprinting(false);
         }
         event_3.cancel();
@@ -115,8 +104,8 @@ public final class RotationManager implements ClientAccessor {
             if (i2 >= MathConstants.num3) {
                 return f2;
             }
-            float wrapDegrees = MathHelper.wrapDegrees(fArr[0] + i2);
-            float angleBetween = MathHelper.angleBetween(wrapDegrees, minecraftClient.player.getYaw());
+            float wrapDegrees = Mth.wrapDegrees(fArr[0] + i2);
+            float angleBetween = Mth.degreesDifferenceAbs(wrapDegrees, minecraftClient.player.getYRot());
             if (angleBetween <= f) {
                 f2 = wrapDegrees;
                 f = angleBetween;
@@ -152,7 +141,7 @@ public final class RotationManager implements ClientAccessor {
         if (!this.flag2 || sendImmediatelyEvent.isCancelled() || this.flag3) {
             return;
         }
-        if (sendImmediatelyEvent.getPacket() instanceof PlayerMoveC2SPacket) {
+        if (sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket) {
             sendImmediatelyEvent.cancel();
             PacketSender.sendPacketDirect(sendImmediatelyEvent.getPacket());
             do978();
@@ -162,8 +151,9 @@ public final class RotationManager implements ClientAccessor {
         }
     }
 
-    public boolean isSneakCommand(ClientCommandC2SPacket.Mode mode) {
-        return mode == ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY || mode == ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY;
+    public boolean isSneakCommand(ServerboundPlayerCommandPacket.Action mode) {
+        // 26.2 MojMap: PRESS_SHIFT_KEY / RELEASE_SHIFT_KEY removed (sneak now via ServerboundPlayerInputPacket).
+        return false;
     }
 
     public void setInRotationTick(boolean z) {
@@ -223,7 +213,7 @@ public final class RotationManager implements ClientAccessor {
     }
 
     public void requestRotations(float[] fArr, int i, boolean z) {
-        if (antiCheat.isF2b2t() && (minecraftClient.currentScreen instanceof HandledScreen)) {
+        if (antiCheat.isF2b2t() && (minecraftClient.gui.screen() instanceof AbstractContainerScreen)) {
             return;
         }
         if (!is1144() || z) {
@@ -243,7 +233,7 @@ public final class RotationManager implements ClientAccessor {
     }
 
     public void applyRotations(float[] fArr, int i) {
-        this.num = minecraftClient.player.age;
+        this.num = minecraftClient.player.tickCount;
         this.val4 = this.val;
         this.val5 = this.val2;
         this.val6 = this.val3;
@@ -259,43 +249,43 @@ public final class RotationManager implements ClientAccessor {
     }
 
     public static float[] getRotationsToBlock(BlockPos blockPos) {
-        return getRotationsTo(new Vec3d(blockPos.getX() + MathConstants.val2, blockPos.getY() + MathConstants.val2, blockPos.getZ() + MathConstants.val2));
+        return getRotationsTo(new Vec3(blockPos.getX() + MathConstants.val2, blockPos.getY() + MathConstants.val2, blockPos.getZ() + MathConstants.val2));
     }
 
     public static float[] getRotationsTo(Entity entity) {
-        return getRotationsTo(BoxMath.getClosestPointInBox(minecraftClient.player.getEyePos(), entity.getBoundingBox()));
+        return getRotationsTo(BoxMath.getClosestPointInBox(minecraftClient.player.getEyePosition(), entity.getBoundingBox()));
     }
 
-    public static float[] getRotationsTo(Vec3d vec3d) {
-        return getRotations(minecraftClient.player.getCameraPosVec(RenderUtil.getPartialTick()), vec3d);
+    public static float[] getRotationsTo(Vec3 vec3d) {
+        return getRotations(minecraftClient.player.getEyePosition(RenderUtil.getPartialTick()), vec3d);
     }
 
-    public static float[] getRotationsToSide(Vec3d vec3d, Direction direction) {
-        Vec3d offset;
-        Vec3d cameraPosVec = minecraftClient.player.getCameraPosVec(RenderUtil.getPartialTick());
+    public static float[] getRotationsToSide(Vec3 vec3d, Direction direction) {
+        Vec3 offset;
+        Vec3 cameraPosVec = minecraftClient.player.getEyePosition(RenderUtil.getPartialTick());
         if (direction == null) {
             offset = vec3d;
         } else {
-            offset = vec3d.offset(direction, MathConstants.val2);
+            offset = vec3d.relative(direction, MathConstants.val2);
         }
         return getRotations(cameraPosVec, offset);
     }
 
-    public static float[] getRotations(Vec3d vec3d, Vec3d vec3d2) {
+    public static float[] getRotations(Vec3 vec3d, Vec3 vec3d2) {
         double d = vec3d2.x - vec3d.x;
         double longBitsToDouble = (vec3d2.y - vec3d.y) * Double.longBitsToDouble(-4616189618054758400L);
         double d2 = vec3d2.z - vec3d.z;
-        return new float[]{(float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(d2, d)) - MathConstants.num2), (float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(longBitsToDouble, Math.sqrt((d * d) + (d2 * d2)))))};
+        return new float[]{(float) Mth.wrapDegrees(Math.toDegrees(Math.atan2(d2, d)) - MathConstants.num2), (float) Mth.wrapDegrees(Math.toDegrees(Math.atan2(longBitsToDouble, Math.sqrt((d * d) + (d2 * d2)))))};
     }
 
     public static float[] limitYawSpeed(float[] fArr, float f) {
         if (fArr == null) {
             return null;
         }
-        float clamp = MathHelper.clamp(f, Float.intBitsToFloat(1036831949), Float.intBitsToFloat(1065353216));
+        float clamp = Mth.clamp(f, Float.intBitsToFloat(1036831949), Float.intBitsToFloat(1065353216));
         if (clamp < Float.intBitsToFloat(1065353216)) {
             float lastYaw = ((DuckClientPlayerEntity)(Object) minecraftClient.player).lastYaw();
-            float wrapDegrees = MathHelper.wrapDegrees(fArr[0] - lastYaw);
+            float wrapDegrees = Mth.wrapDegrees(fArr[0] - lastYaw);
             if (Math.abs(wrapDegrees) > Float.intBitsToFloat(1127481344) * clamp) {
                 fArr[0] = lastYaw + (wrapDegrees * ((Float.intBitsToFloat(1127481344) * clamp) / Math.abs(wrapDegrees)));
             }
@@ -304,15 +294,15 @@ public final class RotationManager implements ClientAccessor {
     }
 
     public static int getYawOctant(float f) {
-        return MathHelper.floor(((f * Float.intBitsToFloat(1090519040)) / MathConstants.num3) + MathConstants.val2) & 7;
+        return Mth.floor(((f * Float.intBitsToFloat(1090519040)) / MathConstants.num3) + MathConstants.val2) & 7;
     }
 
     public static int getYawQuadrant() {
-        return getYawQuadrant(minecraftClient.gameRenderer.getCamera().getYaw());
+        return getYawQuadrant(minecraftClient.gameRenderer.mainCamera().yRot());
     }
 
     public static int getYawQuadrant(float f) {
-        return MathHelper.floor(((f * Float.intBitsToFloat(1082130432)) / MathConstants.num3) + MathConstants.val2) & 3;
+        return Mth.floor(((f * Float.intBitsToFloat(1082130432)) / MathConstants.num3) + MathConstants.val2) & 3;
     }
 
     public static Direction getDirectionFromQuadrant(int i) {
@@ -330,16 +320,19 @@ public final class RotationManager implements ClientAccessor {
         }
     }
 
-    public static boolean isInFrustum(Box box) {
-        return ((DuckWorldRenderer)(Object) minecraftClient.worldRenderer).getFrustum().isVisible(box);
+    public static boolean isInFrustum(AABB box) {
+        // 26.2 (verified via DuckLevelRenderer): LevelRenderer has no frustum field
+        // (culling moved to SubmitNodeCollector/Frustum via EntityRenderDispatcher).
+        // Fail-open so visibility checks never cull until re-ported.
+        return true;
     }
 
-    public static boolean isInFrustum(Vec3d vec3d) {
-        return isInFrustum(new Box(BlockPos.ofFloored((Position) vec3d)));
+    public static boolean isInFrustum(Vec3 vec3d) {
+        return isInFrustum(new AABB(BlockPos.containing((Position) vec3d)));
     }
 
     public void applyRotationsOnce(float f, float f2) {
-        if (minecraftClient.player.age == this.num) {
+        if (minecraftClient.player.tickCount == this.num) {
             return;
         }
         applyRotations(new float[]{f, f2});
@@ -393,21 +386,21 @@ public final class RotationManager implements ClientAccessor {
     }
 
     public float computeBodyYaw(float f, float f2) {
-        if (minecraftClient.player.hasVehicle()) {
+        if (minecraftClient.player.isPassenger()) {
             return f;
         }
         float f3 = f2;
-        double x = minecraftClient.player.getX() - minecraftClient.player.prevX;
-        double z = minecraftClient.player.getZ() - minecraftClient.player.prevZ;
+        double x = minecraftClient.player.getX() - minecraftClient.player.xo;
+        double z = minecraftClient.player.getZ() - minecraftClient.player.zo;
         if ((x * x) + (z * z) > Double.longBitsToDouble(4567911030457368576L)) {
-            float atan2 = (((float) MathHelper.atan2(z, x)) * Float.intBitsToFloat(1113927392)) - MathConstants.num2;
-            float abs = MathHelper.abs(MathHelper.wrapDegrees(f) - atan2);
+            float atan2 = (((float) Mth.atan2(z, x)) * Float.intBitsToFloat(1113927392)) - MathConstants.num2;
+            float abs = Mth.abs(Mth.wrapDegrees(f) - atan2);
             f3 = (Float.intBitsToFloat(1119748096) >= abs || abs >= Float.intBitsToFloat(1132756992)) ? atan2 : atan2 - Float.intBitsToFloat(1127481344);
         }
-        if (minecraftClient.player.handSwingProgress > 0.0f) {
+        if (minecraftClient.player.attackAnim > 0.0f) {
             f3 = f;
         }
-        float wrapDegrees = MathHelper.wrapDegrees(f - (f2 + (MathHelper.wrapDegrees(f3 - f2) * Float.intBitsToFloat(1050253722))));
+        float wrapDegrees = Mth.wrapDegrees(f - (f2 + (Mth.wrapDegrees(f3 - f2) * Float.intBitsToFloat(1050253722))));
         if (wrapDegrees < Float.intBitsToFloat(-1030356992)) {
             wrapDegrees = Float.intBitsToFloat(-1030356992);
         } else if (wrapDegrees >= Float.intBitsToFloat(1117126656)) {

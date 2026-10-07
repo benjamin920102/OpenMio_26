@@ -3,23 +3,21 @@ package me.mioclient.util.client;
 import me.mioclient.api.ClientAccessor;
 
 import java.io.InputStream;
-import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.sound.AbstractSoundInstance;
-import net.minecraft.client.sound.AudioStream;
-import net.minecraft.client.sound.OggAudioStream;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.client.sound.SoundLoader;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.resources.sounds.AbstractSoundInstance;
+import net.minecraft.client.resources.sounds.Sound;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.valueproviders.ConstantFloat;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/InputStreamAbstractSoundInstance.class */
 public class StreamedSoundInstance extends AbstractSoundInstance {
     public InputStream inputStream;
 
-    public StreamedSoundInstance(Vec3d vec3d, InputStream inputStream) {
-        super(Identifier.of(ClientAccessor.isGlobalsLoaded() ? "mioloader" : "mio", "sound"), SoundCategory.MASTER, SoundInstance.createRandom());
+    public StreamedSoundInstance(Vec3 vec3d, InputStream inputStream) {
+        super(Identifier.fromNamespaceAndPath(ClientAccessor.isGlobalsLoaded() ? "mioloader" : "mio", "sound"), SoundSource.MASTER, SoundInstance.createUnseededRandom());
         this.x = vec3d.x;
         this.y = vec3d.y;
         this.z = vec3d.z;
@@ -27,7 +25,7 @@ public class StreamedSoundInstance extends AbstractSoundInstance {
     }
 
     public StreamedSoundInstance(InputStream inputStream) {
-        super(Identifier.of(ClientAccessor.isGlobalsLoaded() ? "mioloader" : "mio", "sound"), SoundCategory.MASTER, SoundInstance.createRandom());
+        super(Identifier.fromNamespaceAndPath(ClientAccessor.isGlobalsLoaded() ? "mioloader" : "mio", "sound"), SoundSource.MASTER, SoundInstance.createUnseededRandom());
         this.inputStream = inputStream;
         this.relative = true;
         this.x = 0.0d;
@@ -35,11 +33,11 @@ public class StreamedSoundInstance extends AbstractSoundInstance {
         this.z = Double.longBitsToDouble(-4616189618054758400L);
     }
 
-    public CompletableFuture<AudioStream> getAudioStream(SoundLoader soundLoader, Identifier identifier, boolean z) {
-        try {
-            return CompletableFuture.completedFuture(new OggAudioStream(this.inputStream));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
+    @Override
+    public WeighedSoundEvents resolve(SoundManager soundManager) {
+        WeighedSoundEvents events = new WeighedSoundEvents(getIdentifier(), null);
+        events.addSound(new Sound(getIdentifier(), ConstantFloat.of(1.0F), ConstantFloat.of(1.0F), 1, Sound.Type.FILE, true, false, 16));
+        this.sound = events.getSound(this.random);
+        return events;
     }
 }

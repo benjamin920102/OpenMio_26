@@ -7,45 +7,35 @@ import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.world.BlockPlacer;
 import me.mioclient.util.world.RaycastUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.world.RaycastUtils;
 
 import me.mioclient.render.RenderConstants;
-import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.EndermanEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.RangedWeaponItem;
-import net.minecraft.item.TridentItem;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.TridentItem;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim.class */
 public class AntiAim extends Module {
     public Setting<Boolean> yaw2 = add(new BooleanSetting("Yaw", false).setVisible());
     public Setting<AntiAimPredicateMode> yaw = add(new EnumSetting<>("Yaw", AntiAimPredicateMode.antiAimPredicateMode).requiresSettings(this.yaw2));
@@ -63,11 +53,9 @@ public class AntiAim extends Module {
     public float val;
     public int num;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimMode.class */
+    
+
+    
     public enum AntiAimMode implements NamedValue {
         antiAimMode("Static") {
             @Override
@@ -98,8 +86,7 @@ public class AntiAim extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimMode_2.class */
+    
     public enum AntiAimMode_2 implements NamedValue {
         AVOID("Avoid"),
         STARE("Stare");
@@ -116,29 +103,27 @@ public class AntiAim extends Module {
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAim$AntiAimPredicateMode.class */
+    
+
+    
     public enum AntiAimPredicateMode implements NamedValue {
         antiAimPredicateMode("Jitter") {
             @Override
             public float computeYawAngle(AntiAim antiAim, float f) {
-                return (float) MathHelper.wrapDegrees((((Math.random() * antiAim.jitterRange.getValue().floatValue()) * 2.0d) - antiAim.jitterRange.getValue().floatValue()) + antiAim.base.getValue().floatValue());
+                return (float) Mth.wrapDegrees((((Math.random() * antiAim.jitterRange.getValue().floatValue()) * 2.0d) - antiAim.jitterRange.getValue().floatValue()) + antiAim.base.getValue().floatValue());
             }
         },
         antiAimPredicateMode2("Spin") {
             @Override
             public float computeYawAngle(AntiAim antiAim, float f) {
                 antiAim.val += antiAim.speed.getValue().floatValue();
-                return MathHelper.wrapDegrees(antiAim.val);
+                return Mth.wrapDegrees(antiAim.val);
             }
         },
         RANDOMIRECTION("Flip") {
             @Override
             public float computeYawAngle(AntiAim antiAim, float f) {
-                return MathHelper.wrapDegrees(antiAim.base.getValue().floatValue() + (ClientAccessor.minecraftClient.player.age % 2 == 0 ? -antiAim.flip.getValue().floatValue() : antiAim.flip.getValue().floatValue()));
+                return Mth.wrapDegrees(antiAim.base.getValue().floatValue() + (ClientAccessor.minecraftClient.player.tickCount % 2 == 0 ? -antiAim.flip.getValue().floatValue() : antiAim.flip.getValue().floatValue()));
             }
         },
         antiAimPredicateMode4("Static") {
@@ -178,7 +163,7 @@ public class AntiAim extends Module {
 
     @Listen(get219= RenderConstants.num4)
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
-        EndermanEntity endermanEntity852;
+        EnderMan endermanEntity852;
         this.flag = false;
         if (ClientServices.RotationManager.getActiveRequest() != null) {
             return;
@@ -190,11 +175,11 @@ public class AntiAim extends Module {
         float f = holeSnapEvent.getYaw();
         float f2 = holeSnapEvent.getPitch();
         if (this.yaw2.getValue().booleanValue()) {
-            f = this.yaw.getValue().computeYawAngle(this, minecraftClient.player.getYaw());
+            f = this.yaw.getValue().computeYawAngle(this, minecraftClient.player.getYRot());
             markRotationModified();
         }
         if (this.pitch.getValue().booleanValue()) {
-            f2 = this.pitch2.getValue().computePitchAngle(this, minecraftClient.player.getPitch());
+            f2 = this.pitch2.getValue().computePitchAngle(this, minecraftClient.player.getXRot());
             markRotationModified();
         }
         if (this.enderman.getValue().booleanValue() && (endermanEntity852 = getEndermanEntity852()) != null) {
@@ -203,7 +188,7 @@ public class AntiAim extends Module {
                 markRotationModified();
             }
             if (this.look.getValue() == AntiAimMode_2.STARE) {
-                float[] floatArray2484 = RotationManager.getRotationsTo(endermanEntity852.getEyePos());
+                float[] floatArray2484 = RotationManager.getRotationsTo(endermanEntity852.getEyePosition());
                 f = floatArray2484[0];
                 f2 = floatArray2484[1];
                 markRotationModified();
@@ -216,49 +201,64 @@ public class AntiAim extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        Item item = minecraftClient.player.getMainHandStack().getItem();
-        if (((item instanceof RangedWeaponItem) || (item instanceof TridentItem)) && minecraftClient.player.isUsingItem()) {
+        Item item = minecraftClient.player.getMainHandItem().getItem();
+        if (((item instanceof ProjectileWeaponItem) || (item instanceof TridentItem)) && minecraftClient.player.isUsingItem()) {
             this.num = 2;
         }
     }
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        PlayerInteractItemC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractItemC2SPacket ? (PlayerInteractItemC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerInteractItemC2SPacket) {
+        ServerboundUseItemPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundUseItemPacket ? (ServerboundUseItemPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundUseItemPacket) {
             handleItemUse(packet904.getHand());
         }
-        PlayerInteractBlockC2SPacket packet9042 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet9042 instanceof PlayerInteractBlockC2SPacket) {
+        ServerboundUseItemOnPacket packet9042 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundUseItemOnPacket ? (ServerboundUseItemOnPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet9042 instanceof ServerboundUseItemOnPacket) {
             handleItemUse(packet9042.getHand());
         }
     }
 
-    public EndermanEntity getEndermanEntity852() {
-        for (Entity entity : minecraftClient.world.getEntities()) {
-            if (entity instanceof EndermanEntity) {
-                EndermanEntity endermanEntity = (EndermanEntity) entity;
-                if (!endermanEntity.isAngry() && endermanEntity.isAlive() && (this.look.getValue() != AntiAimMode_2.AVOID || isEndermanInCrosshairFOV(endermanEntity))) {
-                    if (RaycastUtils.hasLineOfSight(entity)) {
-                        return endermanEntity;
-                    }
-                }
+    public EnderMan getEndermanEntity852() {
+        // 26.2: ClientLevel inherits EntityGetter#getEntitiesOfClass(Class, AABB, Predicate) publicly.
+        if (minecraftClient.level == null || minecraftClient.player == null) {
+            return null;
+        }
+        net.minecraft.world.phys.AABB box = minecraftClient.player.getBoundingBox().inflate(64.0);
+        java.util.List<EnderMan> list = minecraftClient.level.getEntitiesOfClass(EnderMan.class, box, e -> e.isAlive() && !e.isRemoved());
+        EnderMan best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (EnderMan em : list) {
+            if (!isEndermanInCrosshairFOV(em)) {
+                continue;
+            }
+            double d = minecraftClient.player.distanceToSqr(em);
+            if (d < bestDist) {
+                bestDist = d;
+                best = em;
             }
         }
-        return null;
+        if (best != null) {
+            return best;
+        }
+        return list.isEmpty() ? null : list.get(0);
     }
 
-    public boolean isEndermanInCrosshairFOV(EndermanEntity endermanEntity) {
-        Vec3d normalize = minecraftClient.player.getRotationVec(Float.intBitsToFloat(1065353216)).normalize();
-        Vec3d vec3d = new Vec3d(endermanEntity.getX() - minecraftClient.player.getX(), endermanEntity.getEyeY() - minecraftClient.player.getEyeY(), endermanEntity.getZ() - minecraftClient.player.getZ());
-        return normalize.dotProduct(vec3d.normalize()) > Double.longBitsToDouble(4607182418800017408L) - (Double.longBitsToDouble(4582862980812216730L) / vec3d.length());
+    public boolean isEndermanInCrosshairFOV(EnderMan endermanEntity) {
+        // 26.2: Entity#getForward() replaces getRotationVec; dot with direction-to-target checks FOV.
+        if (minecraftClient.player == null || endermanEntity == null) {
+            return false;
+        }
+        Vec3 look = minecraftClient.player.getLookAngle().normalize();
+        Vec3 toTarget = endermanEntity.getEyePosition().subtract(minecraftClient.player.getEyePosition()).normalize();
+        return look.dot(toTarget) > 0.0;
     }
 
-    public void handleItemUse(Hand hand) {
+    public void handleItemUse(InteractionHand hand) {
         if (minecraftClient.player == null) {
             return;
         }
-        ItemStack stackInHand = minecraftClient.player.getStackInHand(hand);
+        ItemStack stackInHand = minecraftClient.player.getItemInHand(hand);
         if (stackInHand.isEmpty()) {
             return;
         }

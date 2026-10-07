@@ -7,25 +7,20 @@ import me.mioclient.util.time.Stopwatch;
 import me.mioclient.api.ClientAccessor;
 import me.mioclient.network.PacketSender;
 
-import me.mioclient.event.events.network.PacketSendEvent;
-import me.mioclient.util.time.Stopwatch;
-import me.mioclient.mixin.ducks.DuckVehicleMoveC2SPacket;
 import me.mioclient.module.movement.EntityControl;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.BoatPaddleStateC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundPaddleBoatPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundMoveVehiclePacket;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.event.events.network.Vec3dEvent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/VehicleMoveHandler.class */
 public final class VehicleMoveHandler implements ClientAccessor {
     public final EntityControl entityControl;
     public int num;
     public int num2;
-    public Vec3d vec3d;
+    public Vec3 vec3d;
     public final Stopwatch stopwatch = new Stopwatch();
     public boolean flag = true;
 
@@ -34,7 +29,7 @@ public final class VehicleMoveHandler implements ClientAccessor {
     }
 
     public boolean updateVehicleState() {
-        if (!minecraftClient.player.hasVehicle()) {
+        if (!minecraftClient.player.isPassenger()) {
             return true;
         }
         long j = 1000;
@@ -44,7 +39,7 @@ public final class VehicleMoveHandler implements ClientAccessor {
         if (this.stopwatch.hasElapsedMs(j)) {
             sendVehicleSync();
         }
-        Vec3d pos = minecraftClient.player.getVehicle().getPos();
+        Vec3 pos = minecraftClient.player.getVehicle().position();
         if (this.num2 > 0) {
             this.num2--;
         }
@@ -56,7 +51,7 @@ public final class VehicleMoveHandler implements ClientAccessor {
     }
 
     public void handlePacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if ((sendImmediatelyEvent.getPacket() instanceof PlayerMoveC2SPacket) || (sendImmediatelyEvent.getPacket() instanceof BoatPaddleStateC2SPacket)) {
+        if ((sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket) || (sendImmediatelyEvent.getPacket() instanceof ServerboundPaddleBoatPacket)) {
             sendImmediatelyEvent.cancel();
         }
     }
@@ -67,8 +62,8 @@ public final class VehicleMoveHandler implements ClientAccessor {
         if (vehicle == null) {
             return;
         }
-        Vec3d vec3d1954 = vec3dEvent.getPosition();
-        vehicle.updatePosition(vec3d1954.getX(), vec3d1954.getY(), vec3d1954.getZ());
+        Vec3 vec3d1954 = vec3dEvent.getPosition();
+        vehicle.setPos(vec3d1954.x, vec3d1954.y, vec3d1954.z);
         sendVehicleMovePacket(0.0f);
         vec3dEvent.cancel();
         this.num2 = 2;
@@ -79,7 +74,7 @@ public final class VehicleMoveHandler implements ClientAccessor {
         if (vehicle == null) {
             return;
         }
-        if (this.vec3d == null || this.vec3d.getY() >= vehicle.getY()) {
+        if (this.vec3d == null || this.vec3d.y >= vehicle.getY()) {
             this.num = 0;
         } else {
             this.num++;
@@ -94,8 +89,10 @@ public final class VehicleMoveHandler implements ClientAccessor {
         if (vehicle == null) {
             return;
         }
-        Packet vehicleMoveC2SPacket = new VehicleMoveC2SPacket(vehicle);
-        ((DuckVehicleMoveC2SPacket) vehicleMoveC2SPacket).setY(((VehicleMoveC2SPacket) vehicleMoveC2SPacket).getY() + f);
+        // 26.2 port: ServerboundMoveVehiclePacket is a record - build replacement instead of mutating.
+        ServerboundMoveVehiclePacket base = ServerboundMoveVehiclePacket.fromEntity(vehicle);
+        Vec3 pos = base.position();
+        ServerboundMoveVehiclePacket vehicleMoveC2SPacket = new ServerboundMoveVehiclePacket(new Vec3(pos.x, pos.y + f, pos.z), base.yRot(), base.xRot(), base.onGround());
         PacketSender.sendPacket(vehicleMoveC2SPacket);
     }
 

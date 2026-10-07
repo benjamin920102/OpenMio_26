@@ -3,8 +3,6 @@ package me.mioclient.util.concurrent;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/LockedTaskRunner.class */
 public class LockedTaskRunner {
     public static final Lock lock = new ReentrantLock();
 

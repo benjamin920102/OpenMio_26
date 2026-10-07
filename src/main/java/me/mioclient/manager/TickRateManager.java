@@ -3,7 +3,6 @@ package me.mioclient.manager;
 import me.mioclient.util.player.PlayerTickDriver;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.player.PlayerTickDriver;
 
 import me.mioclient.event.EventBus;
 
@@ -13,16 +12,12 @@ import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.render.RenderConstants;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TickRateManager.class */
 public class TickRateManager implements ClientAccessor {
     public final ConcurrentHashMap<Module, Boolean> concurrentHashMap = new ConcurrentHashMap<>();
     public float val = Float.intBitsToFloat(1065353216);
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/HoleSnapSearchHelper4_2$Inner.class */
+    
     public static class Inner extends TickRateManager {
         @Listen(get219= RenderConstants.num5)
         public void onTick(TickEvent tickEvent) {

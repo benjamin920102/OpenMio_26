@@ -3,26 +3,23 @@ package me.mioclient.util.inventory;
 import me.mioclient.api.ClientServices;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import java.util.Iterator;
 import me.mioclient.module.player.ItemSaver;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ElytraItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.mixin.ducks.DuckInteractionManager;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/InventoryUtils.class */
 public class InventoryUtils implements ClientAccessor {
     public static ItemSaver itemSaver = (ItemSaver) ClientServices.moduleInjector.getModule(ItemSaver.class);
 
@@ -30,35 +27,35 @@ public class InventoryUtils implements ClientAccessor {
         if (i < 0 || i > 8) {
             return;
         }
-        minecraftClient.player.getInventory().selectedSlot = i;
-        ((me.mioclient.mixin.ducks.DuckInteractionManager) minecraftClient.interactionManager).sync();
+        minecraftClient.player.getInventory().setSelectedSlot(i);
+        
     }
 
     public static void swapToHotbar(int i) {
         if (i < 0) {
             return;
         }
-        minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, toNetworkSlot(i), minecraftClient.player.getInventory().selectedSlot, SlotActionType.SWAP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, toNetworkSlot(i), minecraftClient.player.getInventory().getSelectedSlot(), ContainerInput.SWAP, minecraftClient.player);
     }
 
     public static void swapSlots(int i, int i2) {
         if (i < 0 || i2 < 0) {
             return;
         }
-        int i3 = minecraftClient.player.currentScreenHandler.syncId;
-        minecraftClient.interactionManager.clickSlot(i3, i, i2, SlotActionType.SWAP, minecraftClient.player);
+        int i3 = minecraftClient.player.containerMenu.containerId;
+        minecraftClient.gameMode.handleContainerInput(i3, i, i2, ContainerInput.SWAP, minecraftClient.player);
     }
 
     public static void swapStacks(int i, int i2) {
         if (i == -1 || i2 == -1) {
             return;
         }
-        minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, i, 0, SlotActionType.PICKUP, minecraftClient.player);
-        minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, i2, 0, SlotActionType.PICKUP, minecraftClient.player);
-        if (minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty()) {
+        minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, i, 0, ContainerInput.PICKUP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, i2, 0, ContainerInput.PICKUP, minecraftClient.player);
+        if (minecraftClient.player.containerMenu.getCarried().isEmpty()) {
             return;
         }
-        minecraftClient.interactionManager.clickSlot(minecraftClient.player.currentScreenHandler.syncId, i, 0, SlotActionType.PICKUP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(minecraftClient.player.containerMenu.containerId, i, 0, ContainerInput.PICKUP, minecraftClient.player);
     }
 
     public static int findSlot(Item item, boolean z) {
@@ -74,14 +71,14 @@ public class InventoryUtils implements ClientAccessor {
     }
 
     public static int findSlot(Item item, java.util.function.Predicate<ItemStack> predicate, boolean z) {
-        if (!ClientServices.fireworksHelper.hasPendingTotemPop() && item.equals(minecraftClient.player.getOffHandStack().getItem())) {
-            if (predicate.test(minecraftClient.player.getOffHandStack())) {
+        if (!ClientServices.fireworksHelper.hasPendingTotemPop() && item.equals(minecraftClient.player.getOffhandItem().getItem())) {
+            if (predicate.test(minecraftClient.player.getOffhandItem())) {
                 return -1;
             }
         }
         int i = 36;
         while (i >= 0) {
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i);
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i);
             if (stack.getItem() == item && predicate.test(stack)) {
                 if (i < 9) {
                     i += 36;
@@ -94,7 +91,7 @@ public class InventoryUtils implements ClientAccessor {
             return -1;
         }
         for (int i2 = 0; i2 <= 3; i2++) {
-            ItemStack itemStack = (ItemStack) minecraftClient.player.playerScreenHandler.getCraftingInput().getHeldStacks().get(i2);
+            ItemStack itemStack = (ItemStack) minecraftClient.player.inventoryMenu.getInputGridSlots().get(i2).getItem();
             if (itemStack.getItem() == item && predicate.test(itemStack)) {
                 return i2 + 1;
             }
@@ -108,7 +105,7 @@ public class InventoryUtils implements ClientAccessor {
             if (i < (z ? 9 : 0)) {
                 return -1;
             }
-            if (predicate.test(minecraftClient.player.getInventory().getStack(i))) {
+            if (predicate.test(minecraftClient.player.getInventory().getItem(i))) {
                 return i;
             }
             i--;
@@ -134,7 +131,7 @@ public class InventoryUtils implements ClientAccessor {
 
     public static int findInHotbar(java.util.function.Predicate<ItemStack> predicate) {
         for (int i = 0; i < 9; i++) {
-            if (predicate.test(minecraftClient.player.getInventory().getStack(i))) {
+            if (predicate.test(minecraftClient.player.getInventory().getItem(i))) {
                 return i;
             }
         }
@@ -144,13 +141,13 @@ public class InventoryUtils implements ClientAccessor {
     public static int countItems(java.util.function.Predicate<ItemStack> predicate) {
         int i = 0;
         for (int i2 = 40; i2 >= 0; i2--) {
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i2);
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i2);
             if (predicate.test(stack)) {
                 i += stack.getCount();
             }
         }
         for (int i3 = 0; i3 <= 3; i3++) {
-            ItemStack itemStack = (ItemStack) minecraftClient.player.playerScreenHandler.getCraftingInput().getHeldStacks().get(i3);
+            ItemStack itemStack = (ItemStack) minecraftClient.player.inventoryMenu.getInputGridSlots().get(i3).getItem();
             if (predicate.test(itemStack)) {
                 i += itemStack.getCount();
             }
@@ -158,19 +155,20 @@ public class InventoryUtils implements ClientAccessor {
         return i;
     }
 
-    public static Hand getHandWith(Item item) {
-        if (minecraftClient.player.getOffHandStack().getItem() == item) {
-            return Hand.OFF_HAND;
+    public static InteractionHand getHandWith(Item item) {
+        if (minecraftClient.player.getOffhandItem().getItem() == item) {
+            return InteractionHand.OFF_HAND;
         }
-        if (minecraftClient.player.getMainHandStack().getItem() == item) {
-            return Hand.MAIN_HAND;
+        if (minecraftClient.player.getMainHandItem().getItem() == item) {
+            return InteractionHand.MAIN_HAND;
         }
         return null;
     }
 
-    public static float getArmorDurability(PlayerEntity playerEntity) {
+    public static float getArmorDurability(Player playerEntity) {
         float intBitsToFloat = Float.intBitsToFloat(1120403456);
-        Iterator it = playerEntity.getInventory().armor.iterator();
+        java.util.List<ItemStack> armorStacks = java.util.Arrays.asList(playerEntity.getItemBySlot(EquipmentSlot.FEET), playerEntity.getItemBySlot(EquipmentSlot.LEGS), playerEntity.getItemBySlot(EquipmentSlot.CHEST), playerEntity.getItemBySlot(EquipmentSlot.HEAD));
+        Iterator it = armorStacks.iterator();
         while (it.hasNext()) {
             float f = getDurabilityPercent((ItemStack) it.next());
             if (f < intBitsToFloat) {
@@ -181,7 +179,7 @@ public class InventoryUtils implements ClientAccessor {
     }
 
     public static float getDurabilityPercent(ItemStack itemStack) {
-        return 100 - ((int) ((Float.intBitsToFloat(1065353216) - ((itemStack.getMaxDamage() - itemStack.getDamage()) / (float) itemStack.getMaxDamage())) * Float.intBitsToFloat(1120403456)));
+        return 100 - ((int) ((Float.intBitsToFloat(1065353216) - ((itemStack.getMaxDamage() - itemStack.getDamageValue()) / (float) itemStack.getMaxDamage())) * Float.intBitsToFloat(1120403456)));
     }
 
     public static int toNetworkSlot(int i) {
@@ -190,7 +188,7 @@ public class InventoryUtils implements ClientAccessor {
 
     public static boolean isInventoryFull() {
         for (int i = 36; i >= 0; i--) {
-            if (minecraftClient.player.getInventory().getStack(i).isEmpty()) {
+            if (minecraftClient.player.getInventory().getItem(i).isEmpty()) {
                 return false;
             }
         }
@@ -199,7 +197,7 @@ public class InventoryUtils implements ClientAccessor {
 
     public static boolean isHotbarFull() {
         for (int i = 0; i < 9; i++) {
-            if (minecraftClient.player.getInventory().getStack(i).isEmpty()) {
+            if (minecraftClient.player.getInventory().getItem(i).isEmpty()) {
                 return false;
             }
         }
@@ -210,16 +208,19 @@ public class InventoryUtils implements ClientAccessor {
         if (i == -1) {
             return;
         }
-        minecraftClient.player.getInventory().selectedSlot = i;
-        ((me.mioclient.mixin.ducks.DuckInteractionManager) minecraftClient.interactionManager).sync();
+        minecraftClient.player.getInventory().setSelectedSlot(i);
+        
     }
 
     public static boolean fitsEquipmentSlot(EquipmentSlot equipmentSlot, ItemStack itemStack) {
         if (equipmentSlot == null) {
             return false;
         }
-        ArmorItem item = (itemStack.getItem()) instanceof ArmorItem ? (ArmorItem) (itemStack.getItem()) : null;
-        return item instanceof ArmorItem ? item.getSlotType() == equipmentSlot : (itemStack.getItem() instanceof ElytraItem) && equipmentSlot == EquipmentSlot.CHEST;
+        Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
+        if (equippable == null) {
+            return false;
+        }
+        return equippable.slot() == equipmentSlot;
     }
 
     public static EquipmentSlot getEquipmentSlot(int i) {
@@ -240,24 +241,24 @@ public class InventoryUtils implements ClientAccessor {
     public static int getBestToolSlot(BlockPos blockPos, boolean z) {
         double longBitsToDouble = Double.longBitsToDouble(-4616189618054758400L);
         int i = -1;
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
         int i2 = 0;
         while (true) {
             if (i2 >= (!z ? 36 : 9)) {
                 return i;
             }
-            ItemStack stack = minecraftClient.player.getInventory().getStack(i2);
+            ItemStack stack = minecraftClient.player.getInventory().getItem(i2);
             if (itemSaver.isToggled()) {
                 ItemSaver itemSaver2 = itemSaver;
                 if (!ItemSaver.isToolSafe(stack)) {
                     i2++;
                 }
             }
-            double miningSpeedMultiplier = stack.getMiningSpeedMultiplier(blockState);
+            double miningSpeedMultiplier = stack.getDestroySpeed(blockState);
             if (miningSpeedMultiplier > longBitsToDouble) {
                 longBitsToDouble = miningSpeedMultiplier;
                 i = i2;
-            } else if (i2 == minecraftClient.player.getInventory().selectedSlot && miningSpeedMultiplier == longBitsToDouble) {
+            } else if (i2 == minecraftClient.player.getInventory().getSelectedSlot() && miningSpeedMultiplier == longBitsToDouble) {
                 i = i2;
             }
             i2++;

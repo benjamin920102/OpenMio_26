@@ -11,44 +11,27 @@ import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.util.client.InteractPacketReader;
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.client.InteractPacketReader;
+import me.mioclient.render.shape.Shape2DRenderer;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.event.events.render.HudRenderEvent;
-import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
-import me.mioclient.mixin.ducks.DuckPlayerInteractEntityC2SPacket;
 import me.mioclient.module.Module;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Hitmarker.class */
 public class Hitmarker extends Module {
     public Setting<Boolean> draw = add(new BooleanSetting("Draw", true).setVisible());
     public Setting<Float> length = add(new NumberSetting<>("Length", 3.0f, 0.1f, 10.0f, v -> this.draw.isShown()));
@@ -105,8 +88,8 @@ public class Hitmarker extends Module {
         if (this.num2 <= 0 || !this.draw.getValue().booleanValue()) {
             return;
         }
-        float scaledWidth = minecraftClient.getWindow().getScaledWidth() / Float.intBitsToFloat(1073741824);
-        float scaledHeight = (minecraftClient.getWindow().getScaledHeight() / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1056964608);
+        float scaledWidth = minecraftClient.getWindow().getGuiScaledWidth() / Float.intBitsToFloat(1073741824);
+        float scaledHeight = (minecraftClient.getWindow().getGuiScaledHeight() / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1056964608);
         if (crosshair.isToggled()) {
             scaledHeight = (float) (scaledHeight + Double.longBitsToDouble(4602678819172646912L));
         } else {
@@ -118,7 +101,7 @@ public class Hitmarker extends Module {
         int i = 0;
         while (i < 2) {
             Color color = i == 0 ? color816 : color8162;
-            matrixStackEvent_2.getMatrixStack().push();
+            matrixStackEvent_2.getMatrixStack().pushPose();
             if (crosshair.isToggled()) {
                 matrixStackEvent_2.getMatrixStack().translate(Double.longBitsToDouble(-4619792497756654797L), 0.0d, 0.0d);
             }
@@ -126,7 +109,7 @@ public class Hitmarker extends Module {
             drawHitmarkerLine(matrixStackEvent_2.getMatrixStack(), color, scaledWidth - intBitsToFloat, scaledHeight + intBitsToFloat, scaledWidth - Float.intBitsToFloat(1073741824), scaledHeight + Float.intBitsToFloat(1073741824));
             drawHitmarkerLine(matrixStackEvent_2.getMatrixStack(), color, scaledWidth + Float.intBitsToFloat(1073741824), scaledHeight - Float.intBitsToFloat(1073741824), scaledWidth + intBitsToFloat, scaledHeight - intBitsToFloat);
             drawHitmarkerLine(matrixStackEvent_2.getMatrixStack(), color, scaledWidth + Float.intBitsToFloat(1073741824), scaledHeight + Float.intBitsToFloat(1073741824), scaledWidth + intBitsToFloat, scaledHeight + intBitsToFloat);
-            matrixStackEvent_2.getMatrixStack().pop();
+            matrixStackEvent_2.getMatrixStack().popPose();
             i++;
         }
     }
@@ -136,19 +119,16 @@ public class Hitmarker extends Module {
         if (isNotInGame() || sendImmediatelyEvent.isCancelled()) {
             return;
         }
-        DuckPlayerInteractEntityC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractEntityC2SPacket ? (DuckPlayerInteractEntityC2SPacket)(sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerInteractEntityC2SPacket) {
-            DuckPlayerInteractEntityC2SPacket duckPlayerInteractEntityC2SPacket = (DuckPlayerInteractEntityC2SPacket)((PlayerInteractEntityC2SPacket) packet904);
-            if (InteractPacketReader.getCrystalInteractionType((PlayerInteractEntityC2SPacket) duckPlayerInteractEntityC2SPacket) == InteractPacketReader.LegacyCrystalMode.ATTACK) {
-                Entity entityById = minecraftClient.world.getEntityById(duckPlayerInteractEntityC2SPacket.getEntityId());
-                if (entityById == null || entityById.getWorld() == null || entityById == minecraftClient.player || !entityById.getWorld().isClient || !shouldTrackEntity(entityById)) {
-                    return;
-                }
-                this.num = System.currentTimeMillis();
-                this.num2 = 255;
-                this.flag = true;
-            }
+        if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundInteractPacket interactPacket)) {
+            return;
         }
+        Entity entityById = InteractPacketReader.resolvePacketEntity(interactPacket);
+        if (entityById == null || entityById.level() == null || entityById == minecraftClient.player || !entityById.level().isClientSide() || !shouldTrackEntity(entityById)) {
+            return;
+        }
+        this.num = System.currentTimeMillis();
+        this.num2 = 255;
+        this.flag = true;
     }
 
     public void updateFadeAlpha(long j) {
@@ -157,22 +137,26 @@ public class Hitmarker extends Module {
             return;
         }
         this.num2 = (int) (this.num2 - ((Float.intBitsToFloat(1132396544) / this.fadeTime.getValue().floatValue()) * ClientServices.hitmarkerHelper.getFrameDelta(Float.intBitsToFloat(1065353216))));
-        this.num2 = MathHelper.clamp(this.num2, 0, 255);
+        this.num2 = Mth.clamp(this.num2, 0, 255);
     }
 
     public boolean shouldTrackEntity(Entity entity) {
-        return (this.animals.getValue().booleanValue() && (entity instanceof PassiveEntity)) || (this.hostiles.getValue().booleanValue() && (entity instanceof Monster)) || ((this.players.getValue().booleanValue() && (entity instanceof PlayerEntity)) || (this.crystals.getValue().booleanValue() && (entity instanceof EndCrystalEntity)));
+        return (this.animals.getValue().booleanValue() && (entity instanceof Animal)) || (this.hostiles.getValue().booleanValue() && (entity instanceof Monster)) || ((this.players.getValue().booleanValue() && (entity instanceof Player)) || (this.crystals.getValue().booleanValue() && (entity instanceof EndCrystal)));
     }
 
-    public static void drawHitmarkerLine(MatrixStack matrixStack, Color color, float f, float f2, float f3, float f4) {
-        float[] fArr = {color.getRed() / Float.intBitsToFloat(1132396544), color.getGreen() / Float.intBitsToFloat(1132396544), color.getBlue() / Float.intBitsToFloat(1132396544), color.getAlpha() / Float.intBitsToFloat(1132396544)};
-        Matrix4f positionMatrix = matrixStack.peek().getPositionMatrix();
-        BufferBuilder begin = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-        begin.vertex(positionMatrix, f, f2, 0.0f).color(fArr[0], fArr[1], fArr[2], fArr[3]);
-        begin.vertex(positionMatrix, f3, f4, 0.0f).color(fArr[0], fArr[1], fArr[2], fArr[3]);
-        RenderUtil.INSTANCE.enableBlend();
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        BufferRenderer.drawWithGlobalProgram(begin.end());
-        RenderUtil.INSTANCE.disableBlend();
+    public static void drawHitmarkerLine(PoseStack matrixStack, Color color, float f, float f2, float f3, float f4) {
+        float dx = f3 - f;
+        float dy = f4 - f2;
+        int steps = (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)));
+        if (steps <= 0) {
+            Shape2DRenderer.drawRect(matrixStack, f, f2, f + 1.0f, f2 + 1.0f, color);
+            return;
+        }
+        for (int i = 0; i <= steps; i++) {
+            float t = (float) i / (float) steps;
+            float x = f + dx * t;
+            float y = f2 + dy * t;
+            Shape2DRenderer.drawRect(matrixStack, x, y, x + 1.0f, y + 1.0f, color);
+        }
     }
 }

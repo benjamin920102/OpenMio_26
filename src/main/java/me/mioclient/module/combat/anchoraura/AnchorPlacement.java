@@ -3,11 +3,9 @@ package me.mioclient.module.combat.anchoraura;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AnchorPlacement.class */
 public final class AnchorPlacement {
     public final BlockPos blockPos;
     public final Direction direction;
@@ -25,9 +23,6 @@ public final class AnchorPlacement {
         }
         return this;
     }
-
-
-
 
     public BlockPos getBlockPos() {
         return this.blockPos;

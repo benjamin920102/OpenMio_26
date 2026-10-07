@@ -2,13 +2,9 @@ package me.mioclient.network.packet;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.network.codec.NetworkMessage;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChannelJoinPacket.class */
 public class ChannelJoinPacket implements NetworkMessage {
     public String string;
 

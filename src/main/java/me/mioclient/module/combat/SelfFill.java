@@ -15,57 +15,43 @@ import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.concurrent.LockedTaskRunner;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.mode.player.ScaffoldMode_2;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import me.mioclient.mixin.ducks.DuckAbstractBlock;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/SelfFill.class */
 public class SelfFill extends Module {
     public Setting<ScaffoldMode_2> mode = add(new EnumSetting<>("Mode", ScaffoldMode_2.WHITELIST));
     public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true));
     public Setting<Boolean> persistent = add(new BooleanSetting("Persistent", false).setVisible());
     public Setting<Boolean> jumpDisable = add(new BooleanSetting("JumpDisable", true).requiresSettings(this.persistent));
-    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", Registries.BLOCK));
+    public Setting<Set<Block>> whitelist = add(new EntityListObjectSetting<>("Whitelist", BuiltInRegistries.BLOCK));
     public Setting<Boolean> attack = add(new BooleanSetting("Attack", true));
     public Setting<Boolean> noLagBack = add(new BooleanSetting("NoLagBack", false));
     public Entity entity;
@@ -97,18 +83,18 @@ public class SelfFill extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        PlayerPositionLookS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof PlayerPositionLookS2CPacket ? (PlayerPositionLookS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof PlayerPositionLookS2CPacket) {
-            PlayerPositionLookS2CPacket playerPositionLookS2CPacket = packet904;
-            if (minecraftClient.player.getPos().squaredDistanceTo(new Vec3d(playerPositionLookS2CPacket.getX(), playerPositionLookS2CPacket.getY(), playerPositionLookS2CPacket.getZ())) > Double.longBitsToDouble(4621256167635550208L)) {
-                this.val = playerPositionLookS2CPacket.getY();
+        ClientboundPlayerPositionPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundPlayerPositionPacket ? (ClientboundPlayerPositionPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundPlayerPositionPacket) {
+            ClientboundPlayerPositionPacket playerPositionLookS2CPacket = packet904;
+            if (minecraftClient.player.position().distanceToSqr(playerPositionLookS2CPacket.change().position()) > Double.longBitsToDouble(4621256167635550208L)) {
+                this.val = playerPositionLookS2CPacket.change().position().y;
             }
         }
     }
 
     @Listen
     public void onMotion(MotionEvent motionEvent) {
-        if (motionEvent.getPhase() == KeyPearlMode.Post || minecraftClient.player.hasVehicle()) {
+        if (motionEvent.getPhase() == KeyPearlMode.Post || minecraftClient.player.isPassenger()) {
             return;
         }
         int i = 0;
@@ -118,8 +104,8 @@ public class SelfFill extends Module {
                 break;
             }
             if (i2 != 0 && i2 != 1) {
-                BlockPos add = BlockPos.ofFloored(minecraftClient.player.getPos()).add(0, i2, 0);
-                if (minecraftClient.world.getBlockState(add).getCollisionShape(minecraftClient.world, add).isEmpty()) {
+                BlockPos add = BlockPos.containing(minecraftClient.player.position()).offset(0, i2, 0);
+                if (minecraftClient.level.getBlockState(add).getCollisionShape(minecraftClient.level, add).isEmpty()) {
                     i = i2;
                     break;
                 }
@@ -127,12 +113,12 @@ public class SelfFill extends Module {
             i2++;
         }
         BlockPos blockPos1333 = PlayerUtils.getRoundedBlockPos();
-        if (minecraftClient.world.getEntitiesByClass(PlayerEntity.class, new Box(blockPos1333), playerEntity -> {
+        if (minecraftClient.level.getEntities(EntityTypeTest.forClass(Player.class), new AABB(blockPos1333), playerEntity -> {
             return playerEntity != minecraftClient.player;
         }).isEmpty()) {
-            BlockState blockState = minecraftClient.world.getBlockState(blockPos1333);
-            Box expand = minecraftClient.player.getBoundingBox().expand(-BoxMath.val);
-            if (((BlockPos.stream(expand.withMaxY(expand.minY)).count() != 1) && MovementUtils.is2181()) || !blockState.isReplaceable() || blockState.isLiquid() || !minecraftClient.player.isOnGround() || i == 0) {
+            BlockState blockState = minecraftClient.level.getBlockState(blockPos1333);
+            AABB expand = minecraftClient.player.getBoundingBox().inflate(-BoxMath.val);
+            if (((BlockPos.betweenClosedStream(expand.setMaxY(expand.minY)).count() != 1) && MovementUtils.is2181()) || !blockState.canBeReplaced() || blockState.liquid() || !minecraftClient.player.onGround() || i == 0) {
                 return;
             }
             if (this.attack.getValue().booleanValue()) {
@@ -151,9 +137,9 @@ public class SelfFill extends Module {
                 }
                 return false;
             });
-            int i4 = minecraftClient.player.getInventory().selectedSlot;
+            int i4 = minecraftClient.player.getInventory().getSelectedSlot();
             if (i3 == -1) {
-                ChatUtils.sendPrefixedMessage(Text.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+                ChatUtils.sendPrefixedMessage(Component.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                 disable();
                 return;
             }
@@ -187,47 +173,47 @@ public class SelfFill extends Module {
             if (i4 >= 3) {
                 break;
             }
-            if (!minecraftClient.world.getBlockState(blockPos.up(i4)).isReplaceable()) {
+            if (!minecraftClient.level.getBlockState(blockPos.above(i4)).canBeReplaced()) {
                 z = false;
                 break;
             }
             i4++;
         }
         if (z) {
-            minecraftClient.player.setSneaking(false);
-            minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+            minecraftClient.player.setShiftKeyDown(false);
+            { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; minecraftClient.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), true, _cur.sprint()))); };
             InventoryUtils.selectSlot(i2);
-            boolean isCollidable = ((me.mioclient.mixin.ducks.DuckAbstractBlock) ((BlockItem) minecraftClient.player.getMainHandStack().getItem()).getBlock()).isCollidable();
+            boolean isCollidable = ((me.mioclient.mixin.ducks.DuckAbstractBlock)(Object) ((BlockItem) minecraftClient.player.getMainHandItem().getItem()).getBlock()).isCollidable();
             if (isCollidable) {
                 Iterator<Double> it = this.list.iterator();
                 while (it.hasNext()) {
-                    minecraftClient.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(minecraftClient.player.getX(), minecraftClient.player.getY() + it.next().doubleValue(), minecraftClient.player.getZ(), minecraftClient.player.getYaw(), MathConstants.num2, false));
+                    minecraftClient.player.connection.send(new ServerboundMovePlayerPacket.PosRot(minecraftClient.player.getX(), minecraftClient.player.getY() + it.next().doubleValue(), minecraftClient.player.getZ(), minecraftClient.player.getYRot(), MathConstants.num2, false, minecraftClient.player.horizontalCollision));
                 }
             }
-            Box boundingBox = minecraftClient.player.getBoundingBox();
-            minecraftClient.player.setBoundingBox(new Box(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
+            AABB boundingBox = minecraftClient.player.getBoundingBox();
+            minecraftClient.player.setBoundingBox(new AABB(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
             if (this.noLagBack.getValue().booleanValue()) {
-                BlockPlacer.placeBlock(blockPos, (Vec3d) null, direction, false, Hand.MAIN_HAND);
+                BlockPlacer.placeBlock(blockPos, (Vec3) null, direction, false, InteractionHand.MAIN_HAND);
             } else {
-                BlockPlacer.placeBlockPacket(blockPos, direction, false, Hand.MAIN_HAND);
+                BlockPlacer.placeBlockPacket(blockPos, direction, false, InteractionHand.MAIN_HAND);
             }
             minecraftClient.player.setBoundingBox(boundingBox);
             if (isCollidable) {
                 sendPositionAdjustment(i3);
             }
             InventoryUtils.selectSlot(i);
-            minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+            { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; minecraftClient.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), false, _cur.sprint()))); };
             this.flag = true;
         }
     }
 
     public void sendPositionAdjustment(double d) {
         if (!this.noLagBack.getValue().booleanValue()) {
-            minecraftClient.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(minecraftClient.player.getX(), minecraftClient.player.getY() + d, minecraftClient.player.getZ(), minecraftClient.player.getYaw(), MathConstants.num2, false));
+            minecraftClient.player.connection.send(new ServerboundMovePlayerPacket.PosRot(minecraftClient.player.getX(), minecraftClient.player.getY() + d, minecraftClient.player.getZ(), minecraftClient.player.getYRot(), MathConstants.num2, false, minecraftClient.player.horizontalCollision));
         } else {
-            minecraftClient.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(minecraftClient.player.getX(), minecraftClient.player.getY() + Double.longBitsToDouble(4607182418800017408L), minecraftClient.player.getZ(), minecraftClient.player.getYaw(), MathConstants.num2, true));
+            minecraftClient.player.connection.send(new ServerboundMovePlayerPacket.PosRot(minecraftClient.player.getX(), minecraftClient.player.getY() + Double.longBitsToDouble(4607182418800017408L), minecraftClient.player.getZ(), minecraftClient.player.getYRot(), MathConstants.num2, true, minecraftClient.player.horizontalCollision));
             ClientServices.tooltipsHelper.schedule(() -> {
-                minecraftClient.player.setPosition(minecraftClient.player.getX(), minecraftClient.player.getY() + Double.longBitsToDouble(4607182418800017408L), minecraftClient.player.getZ());
+                minecraftClient.player.setPos(minecraftClient.player.getX(), minecraftClient.player.getY() + Double.longBitsToDouble(4607182418800017408L), minecraftClient.player.getZ());
             }, 1);
         }
     }

@@ -9,8 +9,6 @@ import me.mioclient.mode.misc.KeybindMode;
 
 import me.mioclient.api.ClientAccessor;
 import me.mioclient.api.Toggleable;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
 
 import me.mioclient.event.EventBus;
 
@@ -21,17 +19,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.util.registry.CollectionRegistry;
 import me.mioclient.api.Category;
 import me.mioclient.api.Keybind;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.client.EnableEvent;
-import net.minecraft.util.Formatting;
-import me.mioclient.mode.misc.KeybindMode;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Module.class */
 public class Module extends Feature implements ClientAccessor, Toggleable, CollectionRegistry<Setting<?>, List<Setting<?>>>, JsonConfigurable {
     public final Category category;
     public final List<Setting<?>> registry;
@@ -71,7 +64,7 @@ public class Module extends Feature implements ClientAccessor, Toggleable, Colle
         String str;
         String string397 = ClientServices.notificationsHelper.getModuleDisplayName(this);
         if (getInfo() != null) {
-            str = new StringTemplate().arg(String.valueOf(Formatting.GRAY)).arg(getInfo()).arg(String.valueOf(Formatting.WHITE)).arg(String.valueOf(Formatting.GRAY)).format("\u0001 [\u0001\u0001\u0001]");
+            str = new StringTemplate().arg(String.valueOf(ChatFormatting.GRAY)).arg(getInfo()).arg(String.valueOf(ChatFormatting.WHITE)).arg(String.valueOf(ChatFormatting.GRAY)).format("\u0001 [\u0001\u0001\u0001]");
         } else {
             str = "";
         }
@@ -86,7 +79,6 @@ public class Module extends Feature implements ClientAccessor, Toggleable, Colle
         this.keybind = function.apply(this.keybind);
     }
 
-    /* JADX WARN: Can't rename method to resolve collision */
     @Override // me.mioclient.util.registry.CollectionRegistry
     public List<Setting<?>> getRegistry() {
         return this.registry;

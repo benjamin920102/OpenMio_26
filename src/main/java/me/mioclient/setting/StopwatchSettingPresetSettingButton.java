@@ -12,28 +12,16 @@ import me.mioclient.render.shape.Shape2DRenderer;
 import me.mioclient.util.anim.InterpolatedFloat;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.ClosableElement;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
-import me.mioclient.util.anim.InterpolatedFloat;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import me.mioclient.api.Setting;
-import me.mioclient.util.time.Stopwatch;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.mode.client.CursorType;
-import me.mioclient.gui.widget.PanelComponent;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StopwatchSettingPresetSettingButton.class */
 public class StopwatchSettingPresetSettingButton extends SettingPresetSettingButton<Number> {
     public static final NumberFormat numberFormat = NumberFormat.getNumberInstance();
     public final InterpolatedFloat hUDHelper_2;
@@ -196,7 +184,7 @@ public class StopwatchSettingPresetSettingButton extends SettingPresetSettingBut
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         if (isHidden()) {
             if (this.flag2 && getClickGuiScreen().getActiveSettingButton() == this) {
                 getClickGuiScreen().setActiveSetting(null);
@@ -208,7 +196,7 @@ public class StopwatchSettingPresetSettingButton extends SettingPresetSettingBut
         if (this.flag && this.flag2) {
             AbstractClickGuiScreen.cursorType = CursorType.INPUT;
         }
-        Shape2DRenderer.drawRect(matrixStack, this.barX + getPadding(), this.barY + Float.intBitsToFloat(1056964608), (int) (this.barX + MathHelper.clamp(this.hUDHelper_2.getValue(), 0.0f, this.presetEnumSettingHelper.getTotalWidth() - 3) + Float.intBitsToFloat(1073741824)), (this.barY + getFontHeight()) - Float.intBitsToFloat(1056964608), getUI().color.getValue());
+        Shape2DRenderer.drawRect(matrixStack, this.barX + getPadding(), this.barY + Float.intBitsToFloat(1056964608), (int) (this.barX + Mth.clamp(this.hUDHelper_2.getValue(), 0.0f, this.presetEnumSettingHelper.getTotalWidth() - 3) + Float.intBitsToFloat(1073741824)), (this.barY + getFontHeight()) - Float.intBitsToFloat(1056964608), getUI().color.getValue());
         String string2921 = this.flag2 ? this.string == null ? "" : this.string : this.setting.isHoleSnapConfigured() ? new StringTemplate().arg(this.setting.getHoleSnapString()).arg(this.setting.getName()).format("\u0001: \u0001") : new StringTemplate().arg(((NumberSetting) this.setting).getSuffix()).arg(String.format("%s: %s", this.setting.getName(), numberFormat.format(((Number) this.setting.getValue()).doubleValue())).replace(",", ".")).format("\u0001\u0001");
         renderScrolling(matrixStack, formatDisplayText(string2921), () -> {
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, new StringTemplate().arg(getBlinkingCursor()).arg(string2921).format("\u0001\u0001"), this.presetEnumSettingHelper.getX() + 4, ((this.presetEnumSettingHelper.getY() + getTextOffsetY()) - getAnimationOffset()) + this.num, getUI().textColor.getValue());

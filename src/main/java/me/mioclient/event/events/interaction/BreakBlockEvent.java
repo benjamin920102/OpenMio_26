@@ -2,10 +2,8 @@ package me.mioclient.event.events.interaction;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/BreakBlockEvent.class */
 public class BreakBlockEvent extends Event {
     public BlockPos blockPos;
 

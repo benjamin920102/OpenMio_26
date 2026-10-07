@@ -2,8 +2,6 @@ package me.mioclient.event.events.input;
 
 import me.mioclient.event.Event;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/KeyEvent.class */
 public final class KeyEvent extends Event {
     public final int num;
     public final boolean flag;

@@ -8,26 +8,18 @@ import me.mioclient.util.client.SoundIdentifier;
 
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.client.ChatUtils;
-
 import me.mioclient.event.EventBus;
 
 import me.mioclient.render.RenderConstants;
-import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.event.events.input.InputTickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/AutoWalk.class */
 public class AutoWalk extends Module {
     public Setting<Boolean> autoJump = add(new BooleanSetting("AutoJump", false));
     public Setting<Boolean> stuckNotify = add(new BooleanSetting("StuckNotify", false).setVisible());
@@ -53,7 +45,7 @@ public class AutoWalk extends Module {
             return;
         }
         if (!this.flag2 && this.stuckNotify.getValue().booleanValue()) {
-            ChatUtils.sendPrefixedMessage(Text.literal("You are stuck!"), ChatUtils.signatureOfModule(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+            ChatUtils.sendPrefixedMessage(Component.literal("You are stuck!"), ChatUtils.signatureOfModule(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
             ClientServices.killstreakSoundManager.findSoundPlayer(this.sound.getValue()).play(this.volume.getValue().floatValue());
         }
         this.flag2 = true;
@@ -61,19 +53,16 @@ public class AutoWalk extends Module {
 
     @Listen(get219= RenderConstants.num4)
     public void onInputTick(InputTickEvent tickEvent_2) {
-        tickEvent_2.getInput().movementForward = tickEvent_2.hasSpeed() ? tickEvent_2.getSpeed() : Float.intBitsToFloat(1065353216);
-        tickEvent_2.getInput().pressingForward = true;
+        { net.minecraft.client.player.ClientInput _ci = tickEvent_2.getInput(); net.minecraft.world.entity.player.Input _p = _ci.keyPresses; _ci.keyPresses = new net.minecraft.world.entity.player.Input(true, _p.backward(), _p.left(), _p.right(), _p.jump(), _p.shift(), _p.sprint()); }
         if (this.autoJump.getValue().booleanValue()) {
-            tickEvent_2.getInput().jumping = true;
+            { net.minecraft.client.player.ClientInput _ci = tickEvent_2.getInput(); net.minecraft.world.entity.player.Input _p = _ci.keyPresses; _ci.keyPresses = new net.minecraft.world.entity.player.Input(_p.forward(), _p.backward(), _p.left(), _p.right(), true, _p.shift(), _p.sprint()); }
         }
     }
 
     @Listen(get219= RenderConstants.num4)
     public static void onInputTickRelease(InputTickEvent tickEvent_2) {
         if (flag) {
-            tickEvent_2.getInput().movementForward = 0.0f;
-            tickEvent_2.getInput().pressingForward = false;
-            tickEvent_2.getInput().jumping = false;
+            { net.minecraft.client.player.ClientInput _ci = tickEvent_2.getInput(); net.minecraft.world.entity.player.Input _p = _ci.keyPresses; _ci.keyPresses = new net.minecraft.world.entity.player.Input(false, false, _p.left(), _p.right(), false, _p.shift(), _p.sprint()); }
             flag = false;
         }
     }

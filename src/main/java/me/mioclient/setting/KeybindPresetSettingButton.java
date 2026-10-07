@@ -10,24 +10,12 @@ import me.mioclient.mode.client.CursorType;
 import me.mioclient.mode.misc.KeybindMode;
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.widget.ModuleButton;
-import me.mioclient.render.font.ClientTextRenderer;
-
 import java.util.function.Function;
 import me.mioclient.api.Keybind;
 import me.mioclient.api.Setting;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.mode.client.CursorType;
-import me.mioclient.gui.widget.PanelComponent;
-import me.mioclient.mode.misc.KeybindMode;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KeybindPresetSettingButton.class */
 public class KeybindPresetSettingButton extends PanelComponent {
     public final ModuleButton arrayListPresetHelper2;
     public Setting<Keybind> setting;
@@ -81,7 +69,7 @@ public class KeybindPresetSettingButton extends PanelComponent {
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         if (this.flag) {
             AbstractClickGuiScreen.cursorType = CursorType.INPUT;

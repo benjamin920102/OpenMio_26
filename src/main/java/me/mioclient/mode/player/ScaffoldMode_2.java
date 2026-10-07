@@ -2,15 +2,9 @@ package me.mioclient.mode.player;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import java.util.Collection;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ScaffoldMode_2.class */
 public enum ScaffoldMode_2 implements NamedValue {
     ANY("Any"),
     WHITELIST("WhiteList") { // from class: me.mioclient.mode.player.ScaffoldMode_2.Inner

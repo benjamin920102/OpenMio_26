@@ -5,7 +5,6 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import me.mioclient.event.EventBus;
 
@@ -14,10 +13,7 @@ import java.util.Iterator;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlayerSpeedTracker.class */
 public class PlayerSpeedTracker implements ClientAccessor {
     public double val;
     public double val2;
@@ -39,7 +35,7 @@ public class PlayerSpeedTracker implements ClientAccessor {
     @Listen
     public void onTick(TickEvent tickEvent) {
         double d = getInstantSpeed();
-        if (d > 0.0d || minecraftClient.player.age % 4 == 0) {
+        if (d > 0.0d || minecraftClient.player.tickCount % 4 == 0) {
             this.arrayDeque.add(Double.valueOf(d * ClientServices.holeSnapHelper.getTickRate()));
         } else {
             this.arrayDeque.pollFirst();
@@ -70,6 +66,6 @@ public class PlayerSpeedTracker implements ClientAccessor {
     }
 
     public double getInstantSpeed() {
-        return Math.hypot(minecraftClient.player.hasVehicle() ? minecraftClient.player.getVehicle().getX() - minecraftClient.player.getVehicle().prevX : minecraftClient.player.getX() - minecraftClient.player.prevX, minecraftClient.player.hasVehicle() ? minecraftClient.player.getVehicle().getZ() - minecraftClient.player.getVehicle().prevZ : minecraftClient.player.getZ() - minecraftClient.player.prevZ) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L);
+        return Math.hypot(minecraftClient.player.isPassenger() ? minecraftClient.player.getVehicle().getX() - minecraftClient.player.getVehicle().xo : minecraftClient.player.getX() - minecraftClient.player.xo, minecraftClient.player.isPassenger() ? minecraftClient.player.getVehicle().getZ() - minecraftClient.player.getVehicle().zo : minecraftClient.player.getZ() - minecraftClient.player.zo) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L);
     }
 }

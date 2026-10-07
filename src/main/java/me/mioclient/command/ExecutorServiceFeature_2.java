@@ -4,21 +4,16 @@ import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.util.client.ChatUtils;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ExecutorServiceFeature_2.class */
 public class ExecutorServiceFeature_2 extends ExecutorServiceFeature {
     public final DateTimeFormatter dateTimeFormatter;
 
@@ -29,10 +24,10 @@ public class ExecutorServiceFeature_2 extends ExecutorServiceFeature {
     }
 
     @Override // me.mioclient.command.ExecutorServiceFeature, me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("name", StringArgumentType.greedyString()).executes(commandContext -> {
             String str = (String) commandContext.getArgument("name", String.class);
-            ChatUtils.sendMessage(Text.of("Fetching data..."), ChatUtils.signatureOf(this));
+            ChatUtils.sendMessage(Component.literal("Fetching data..."), ChatUtils.signatureOf(this));
             fetchApiData("seen", str).whenComplete((jsonObject, th) -> {
                 String message;
                 if (th != null) {
@@ -55,7 +50,7 @@ public class ExecutorServiceFeature_2 extends ExecutorServiceFeature {
                                 sb.append(this.dateTimeFormatter.format(parse));
                                 sb.append(").");
                             }
-                            ChatUtils.sendMessage(Text.of(sb.toString()), ChatUtils.signatureOf(this));
+                            ChatUtils.sendMessage(Component.literal(sb.toString()), ChatUtils.signatureOf(this));
                             return;
                         }
                         message = "Response data doesn't have a required field: lastSeen.";
@@ -64,7 +59,7 @@ public class ExecutorServiceFeature_2 extends ExecutorServiceFeature {
                     }
                 }
                 if (message != null) {
-                    ChatUtils.sendPrefixedMessage(Text.of(new StringTemplate().arg(message).arg(String.valueOf(Formatting.RED)).format("\u0001\u0001")), ChatUtils.signatureOf(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
+                    ChatUtils.sendPrefixedMessage(Component.literal(new StringTemplate().arg(message).arg(String.valueOf(ChatFormatting.RED)).format("\u0001\u0001")), ChatUtils.signatureOf(this), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
                 }
             });
             return 1;

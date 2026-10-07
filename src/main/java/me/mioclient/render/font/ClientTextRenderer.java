@@ -3,20 +3,28 @@ package me.mioclient.render.font;
 import me.mioclient.api.ClientServices;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 
 import java.awt.Color;
 import java.util.Objects;
 import me.mioclient.module.client.Fonts;
 import me.mioclient.module.player.NameProtect;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ClientTextRenderer.class */
 public class ClientTextRenderer implements ClientAccessor {
-    public static final NameProtect nameprotect = (NameProtect) ClientServices.moduleInjector.getModule(NameProtect.class);
+    /* Resolved lazily — eager static init ran before the module registry was ready. */
+    private static NameProtect nameprotect;
+
+    public static NameProtect getNameProtect() {
+        if (nameprotect == null && ClientServices.moduleInjector != null) {
+            try {
+                nameprotect = (NameProtect) ClientServices.moduleInjector.getModule(NameProtect.class);
+            } catch (Exception e) {
+            }
+        }
+        return nameprotect;
+    }
     public static final ClientTextRenderer INSTANCE = new ClientTextRenderer();
     public static int currentShadowOffset = 0;
     public AdvanceGlyph advanceGlyph;
@@ -54,52 +62,50 @@ public class ClientTextRenderer implements ClientAccessor {
         return AdvanceGlyph.createForFontStyle(fonts.font.getValue(), ((Number) fonts.size.getValue()).intValue(), fonts.style.getValue());
     }
 
-    public void drawText(DrawContext drawContext, String str, float f, float f2, Color color) {
-        drawTextObj(drawContext, Text.of(str), f, f2, color);
+    public void drawText(GuiGraphicsExtractor drawContext, String str, float f, float f2, Color color) {
+        drawTextObj(drawContext, Component.literal(str), f, f2, color);
     }
 
-    public void drawTextObj(DrawContext drawContext, Text text, float f, float f2, Color color) {
+    public void drawTextObj(GuiGraphicsExtractor drawContext, Component text, float f, float f2, Color color) {
         if (Fonts.fonts.isToggled()) {
-            getAdvanceGlyph().renderOrderedText(drawContext.getMatrices(), text.asOrderedText(), f, f2, color.hashCode(), false);
+            getAdvanceGlyph().renderOrderedText(drawContext, text.getVisualOrderText(), f, f2, color.hashCode(), false);
         } else {
-            minecraftClient.textRenderer.draw(text, (int) f, (int) f2, color.hashCode(), false, drawContext.getMatrices().peek().getPositionMatrix(), getAdvanceGlyph().getVertexConsumerProvider(), TextRenderer.TextLayerType.NORMAL, 0, 15728880);
+            drawContext.text(minecraftClient.font, text, (int) f, (int) f2, color.hashCode(), false);
         }
     }
 
-    public void drawTextShadow(DrawContext drawContext, String str, float f, float f2, Color color) {
-        drawTextShadowObj(drawContext, Text.of(str), f, f2, color);
+    public void drawTextShadow(GuiGraphicsExtractor drawContext, String str, float f, float f2, Color color) {
+        drawTextShadowObj(drawContext, Component.literal(str), f, f2, color);
     }
 
-    public void drawTextShadowObj(DrawContext drawContext, Text text, float f, float f2, Color color) {
+    public void drawTextShadowObj(GuiGraphicsExtractor drawContext, Component text, float f, float f2, Color color) {
         if (Fonts.fonts.isToggled()) {
-            getAdvanceGlyph().renderOrderedText(drawContext.getMatrices(), text.asOrderedText(), f, f2, color.hashCode(), true);
+            getAdvanceGlyph().renderOrderedText(drawContext, text.getVisualOrderText(), f, f2, color.hashCode(), true);
         } else {
-            minecraftClient.textRenderer.draw(text, (int) f, (int) f2, color.hashCode(), true, drawContext.getMatrices().peek().getPositionMatrix(), getAdvanceGlyph().getVertexConsumerProvider(), TextRenderer.TextLayerType.NORMAL, 0, 15728880);
+            drawContext.text(minecraftClient.font, text, (int) f, (int) f2, color.hashCode(), true);
         }
     }
 
-    public void drawScaledText(DrawContext drawContext, String str, float f, float f2, float f3, Color color) {
-        drawScaledTextObj(drawContext, Text.of(str), f, f2, f3, color);
+    public void drawScaledText(GuiGraphicsExtractor drawContext, String str, float f, float f2, float f3, Color color) {
+        drawScaledTextObj(drawContext, Component.literal(str), f, f2, f3, color);
     }
 
-    public void drawScaledTextObj(DrawContext drawContext, Text text, float f, float f2, float f3, Color color) {
-        drawContext.getMatrices().push();
-        drawContext.getMatrices().scale(f3, f3, f3);
+    public void drawScaledTextObj(GuiGraphicsExtractor drawContext, Component text, float f, float f2, float f3, Color color) {
+        drawContext.pose().pushMatrix();
+        drawContext.pose().scale(f3, f3);
         drawTextObj(drawContext, text, f / f3, f2 / f3, color);
-        drawContext.getMatrices().scale(1.0f / f3, 1.0f / f3, 1.0f / f3);
-        drawContext.getMatrices().pop();
+        drawContext.pose().popMatrix();
     }
 
-    public void drawScaledTextShadow(DrawContext drawContext, String str, float f, float f2, float f3, Color color) {
-        drawScaledTextShadowObj(drawContext, Text.of(str), f, f2, f3, color);
+    public void drawScaledTextShadow(GuiGraphicsExtractor drawContext, String str, float f, float f2, float f3, Color color) {
+        drawScaledTextShadowObj(drawContext, Component.literal(str), f, f2, f3, color);
     }
 
-    public void drawScaledTextShadowObj(DrawContext drawContext, Text text, float f, float f2, float f3, Color color) {
-        drawContext.getMatrices().push();
-        drawContext.getMatrices().scale(f3, f3, f3);
+    public void drawScaledTextShadowObj(GuiGraphicsExtractor drawContext, Component text, float f, float f2, float f3, Color color) {
+        drawContext.pose().pushMatrix();
+        drawContext.pose().scale(f3, f3);
         drawTextShadowObj(drawContext, text, f / f3, f2 / f3, color);
-        drawContext.getMatrices().scale(1.0f / f3, 1.0f / f3, 1.0f / f3);
-        drawContext.getMatrices().pop();
+        drawContext.pose().popMatrix();
     }
 
     public void resetShadowOffset() {
@@ -107,20 +113,21 @@ public class ClientTextRenderer implements ClientAccessor {
     }
 
     public float getStringWidth(String str) {
-        if (nameprotect != null && nameprotect.isToggled() && !isNotInGame()) {
-            str = str.replace(minecraftClient.player.getName().getString(), nameprotect.name.getValue());
+        NameProtect nameprotect_lcl = getNameProtect();
+        if (nameprotect_lcl != null && nameprotect_lcl.isToggled() && !isNotInGame()) {
+            str = str.replace(minecraftClient.player.getName().getString(), nameprotect_lcl.name.getValue());
         }
-        return (Fonts.fonts != null && Fonts.fonts.isToggled()) ? getAdvanceGlyph().measureStringWidth(str) : minecraftClient.textRenderer.getWidth(str);
+        return (Fonts.fonts != null && Fonts.fonts.isToggled()) ? getAdvanceGlyph().measureStringWidth(str) : minecraftClient.font.width(str);
     }
 
     public int getFontHeight() {
         if (Fonts.fonts != null && Fonts.fonts.isToggled()) {
             return getAdvanceGlyph().getHalfLineHeight() - 1;
         }
-        if (minecraftClient.textRenderer == null) {
+        if (minecraftClient.font == null) {
             return 9;
         }
-        Objects.requireNonNull(minecraftClient.textRenderer);
+        Objects.requireNonNull(minecraftClient.font);
         return 9;
     }
 

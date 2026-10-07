@@ -1,14 +1,13 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({KeyBinding.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckKeyBinding.class */
+/* 26.2 port: Yarn KeyMapping -> MojMap KeyMapping, boundKey -> key, InputConstants.Key -> InputConstants.Key. */
+@Mixin({KeyMapping.class})
 public interface DuckKeyBinding {
-    @Accessor("boundKey")
-    InputUtil.Key getKey();
+    @Accessor("key")
+    InputConstants.Key getKey();
 }

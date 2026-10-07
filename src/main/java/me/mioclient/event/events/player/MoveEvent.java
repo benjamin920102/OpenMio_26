@@ -1,37 +1,32 @@
 package me.mioclient.event.events.player;
 
-import me.mioclient.util.math.Vec3dUtils;
-
-import me.mioclient.util.math.Vec3dUtils;
-
 import me.mioclient.event.Event;
 
-import net.minecraft.entity.MovementType;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/MoveEvent.class */
+/* 26.2 port: Yarn MovementType -> MojMap MoverType, mutable Vec3 -> immutable Vec3. */
 public class MoveEvent extends Event {
-    public final Vec3d vec3d;
-    public final Vec3d vec3d2;
-    public MovementType movementType;
+    public final Vec3 vec3d;
+    public Vec3 vec3d2;
+    public MoverType movementType;
 
-    public MoveEvent(Vec3d vec3d, MovementType movementType) {
-        this.vec3d = new Vec3d(vec3d.x, vec3d.y, vec3d.z);
+    public MoveEvent(Vec3 vec3d, MoverType movementType) {
+        this.vec3d = new Vec3(vec3d.x, vec3d.y, vec3d.z);
         this.vec3d2 = vec3d;
         this.movementType = movementType;
     }
 
-    public Vec3d getMovement() {
+    public Vec3 getMovement() {
         return this.vec3d2;
     }
 
-    public void setMovement(Vec3d vec3d) {
-        Vec3dUtils.setVectorComponents(this.vec3d2, vec3d.x, vec3d.y, vec3d.z);
+    public void setMovement(Vec3 vec3d) {
+        this.vec3d2 = new Vec3(vec3d.x, vec3d.y, vec3d.z);
     }
 
     public void setHorizontal(double d, double d2) {
-        setMovement(new Vec3d(d, getY(), d2));
+        setMovement(new Vec3(d, getY(), d2));
     }
 
     public double getX() {
@@ -43,22 +38,22 @@ public class MoveEvent extends Event {
     }
 
     public void setY(double d) {
-        setMovement(new Vec3d(getX(), d, getZ()));
+        setMovement(new Vec3(getX(), d, getZ()));
     }
 
     public double getZ() {
         return this.vec3d2.z;
     }
 
-    public MovementType getMovementType() {
+    public MoverType getMovementType() {
         return this.movementType;
     }
 
-    public void setMovementType(MovementType movementType) {
+    public void setMovementType(MoverType movementType) {
         this.movementType = movementType;
     }
 
-    public Vec3d getOriginalMovement() {
+    public Vec3 getOriginalMovement() {
         return this.vec3d;
     }
 }

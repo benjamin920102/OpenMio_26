@@ -4,10 +4,8 @@ import me.mioclient.manager.ConfigManager;
 
 import java.awt.Desktop;
 import java.io.IOException;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_17.class */
 public final class OpenFolderCommand extends CommandFeature {
     public OpenFolderCommand() {
         super("folder");
@@ -15,7 +13,7 @@ public final class OpenFolderCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.executes(commandContext -> {
             try {
                 Desktop.getDesktop().open(ConfigManager.path.toFile());

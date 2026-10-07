@@ -7,9 +7,6 @@ import me.mioclient.gui.screen.HudEditorScreen;
 import me.mioclient.mode.client.ModuleListMode;
 import me.mioclient.render.hud.DraggableHudElement;
 
-import me.mioclient.gui.screen.HudEditorScreen;
-import me.mioclient.render.hud.DraggableHudElement;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.awt.Color;
@@ -18,21 +15,31 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.HUD;
-import net.minecraft.client.gui.DrawContext;
-import me.mioclient.mode.client.ModuleListMode;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModuleList.class */
 public abstract class HudModule extends Module {
     public static final EnumJsonConverter enumSettingConverter = new EnumJsonConverter(ModuleListMode.class);
-    public static HUD hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+    /* Resolved lazily — HUD registers after the first HudModule subclass, so an eager
+       static lookup ran before it was registered and left the ref null (NPE in
+       getHudColor, crashing HUD elements right after enable). */
+    private static HUD hud;
+
+    public static HUD getHud() {
+        if (hud == null && ClientServices.moduleInjector != null) {
+            try {
+                hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+            } catch (Exception e) {
+            }
+        }
+        return hud;
+    }
     public DraggableHudElement moduleListSearchHelper4;
 
     public HudModule(String str, String... strArr) {
         super(str, Category.HUD, strArr);
     }
 
-    public void renderContent(DrawContext drawContext) {
+    public void renderContent(GuiGraphicsExtractor drawContext) {
     }
 
     public float[] getSize() {
@@ -82,7 +89,7 @@ public abstract class HudModule extends Module {
     }
 
     public boolean isInHudEditor() {
-        return minecraftClient.currentScreen instanceof HudEditorScreen;
+        return minecraftClient.gui.screen() instanceof HudEditorScreen;
     }
 
     public ModuleListMode getAnchor() {
@@ -90,7 +97,11 @@ public abstract class HudModule extends Module {
     }
 
     public Color getHudColor(float f) {
-        return hud.setting8.getValue().computeColor(hud, f);
+        HUD hud_lcl = getHud();
+        if (hud_lcl == null || hud_lcl.setting8 == null || hud_lcl.setting8.getValue() == null) {
+            return Color.WHITE;
+        }
+        return hud_lcl.setting8.getValue().computeColor(hud_lcl, f);
     }
 
     public void setAnchor(ModuleListMode moduleListMode) {

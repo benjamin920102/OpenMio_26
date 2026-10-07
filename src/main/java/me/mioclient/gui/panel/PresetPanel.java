@@ -11,30 +11,20 @@ import me.mioclient.manager.PresetEntry;
 import me.mioclient.mode.misc.PresetHelperMode;
 import me.mioclient.mode.misc.PresetMode;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.manager.PresetEntry;
 import me.mioclient.gui.ClosableElement;
 import me.mioclient.gui.GuiComponent;
-import me.mioclient.gui.screen.PresetScreen;
 import me.mioclient.manager.PresetFileRegistry;
 
 import com.google.gson.JsonElement;
 import java.io.IOException;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.setting.EnumSetting;
-import me.mioclient.mode.misc.PresetHelperMode;
-import me.mioclient.mode.misc.PresetMode;
 import me.mioclient.setting.PresetPresetSettingButton;
-import me.mioclient.gui.widget.ActionButton;
 import me.mioclient.setting.PresetSettingPresetSettingButton;
-import me.mioclient.setting.StringSettingRow;
 import me.mioclient.setting.StringSetting;
 import me.mioclient.api.Setting;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Preset.class */
 public class PresetPanel extends ClickGuiPanel {
     public Setting<String> setting;
     public Setting<PresetHelperMode> setting2;
@@ -70,7 +60,7 @@ public class PresetPanel extends ClickGuiPanel {
     }
 
     @Override // me.mioclient.gui.panel.ClickGuiPanel, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         if (this.flag) {
             do34();
             this.flag = false;

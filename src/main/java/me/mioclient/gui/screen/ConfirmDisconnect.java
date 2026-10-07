@@ -5,16 +5,13 @@ import me.mioclient.api.ClientAccessor;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
-import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/ConfirmDisconnect.class */
 public class ConfirmDisconnect extends ConfirmScreen {
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/feature/ConfirmDisconnect$BooleanConsumer.class */
+    
     private static final class BooleanConsumer implements it.unimi.dsi.fastutil.booleans.BooleanConsumer, ClientAccessor {
         public final Runnable runnable;
 
@@ -23,14 +20,11 @@ public class ConfirmDisconnect extends ConfirmScreen {
         }
 
         public void accept(boolean z) {
-            minecraftClient.setScreen((Screen) null);
+            minecraftClient.gui.setScreen(null);
             if (z) {
                 this.runnable.run();
             }
         }
-
-
-
 
         public Runnable getDisconnectAction() {
             return this.runnable;
@@ -38,6 +32,6 @@ public class ConfirmDisconnect extends ConfirmScreen {
     }
 
     public ConfirmDisconnect(Runnable runnable) {
-        super(new BooleanConsumer(runnable), Text.literal("Confirm Disconnect"), Text.literal("Are you sure that you want to disconnect?"));
+        super(new BooleanConsumer(runnable), Component.literal("Confirm Disconnect"), Component.literal("Are you sure that you want to disconnect?"));
     }
 }

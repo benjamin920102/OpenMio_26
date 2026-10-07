@@ -1,19 +1,17 @@
 package me.mioclient.render.mesh;
 
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.util.BufferAllocator;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TrajectoriesVertexConsumer.class */
 public class TrajectoriesVertexConsumer implements VertexConsumer {
     public static final boolean flag;
-    public final BufferAllocator bufferAllocator;
+    public final ByteBufferBuilder byteBufferBuilder;
     public BufferBuilder bufferBuilder;
-    public VertexFormat.DrawMode drawMode;
+    public PrimitiveTopology primitiveTopology;
     public VertexFormat vertexFormat;
 
     public static TrajectoriesVertexConsumer createDefault() {
@@ -25,88 +23,115 @@ public class TrajectoriesVertexConsumer implements VertexConsumer {
     }
 
     public TrajectoriesVertexConsumer(int i) {
-        this.bufferAllocator = new BufferAllocator(i);
+        this.byteBufferBuilder = new ByteBufferBuilder(i);
     }
 
-    public TrajectoriesVertexConsumer setDefaultFormat(VertexFormat.DrawMode drawMode, VertexFormat vertexFormat) {
-        this.drawMode = drawMode;
-        this.vertexFormat = vertexFormat;
+    public TrajectoriesVertexConsumer setDefaultFormat(PrimitiveTopology topology, VertexFormat format) {
+        this.primitiveTopology = topology;
+        this.vertexFormat = format;
         return this;
     }
 
-    public VertexConsumer vertex(float f, float f2, float f3) {
-        return getOrCreateBuffer().vertex(f, f2, f3);
+    @Override
+    public VertexConsumer addVertex(float x, float y, float z) {
+        return getOrCreateBuffer().addVertex(x, y, z);
     }
 
-    public VertexConsumer color(int i, int i2, int i3, int i4) {
-        return getOrCreateBuffer().color(i, i2, i3, i4);
+    @Override
+    public VertexConsumer setColor(int r, int g, int b, int a) {
+        return getOrCreateBuffer().setColor(r, g, b, a);
     }
 
-    public VertexConsumer texture(float f, float f2) {
-        return getOrCreateBuffer().texture(f, f2);
+    @Override
+    public VertexConsumer setColor(int color) {
+        return getOrCreateBuffer().setColor(color);
     }
 
-    public VertexConsumer overlay(int i, int i2) {
-        return getOrCreateBuffer().overlay(i, i2);
+    @Override
+    public VertexConsumer setUv(float u, float v) {
+        return getOrCreateBuffer().setUv(u, v);
     }
 
-    public VertexConsumer light(int i, int i2) {
-        return getOrCreateBuffer().light(i, i2);
+    @Override
+    public VertexConsumer setUv1(int u, int v) {
+        return getOrCreateBuffer().setUv1(u, v);
     }
 
-    public VertexConsumer normal(float f, float f2, float f3) {
-        return getOrCreateBuffer().normal(f, f2, f3);
+    @Override
+    public VertexConsumer setUv2(int u, int v) {
+        return getOrCreateBuffer().setUv2(u, v);
+    }
+
+    @Override
+    public VertexConsumer setNormal(float x, float y, float z) {
+        return getOrCreateBuffer().setNormal(x, y, z);
+    }
+
+    @Override
+    public VertexConsumer setLineWidth(float width) {
+        return getOrCreateBuffer().setLineWidth(width);
     }
 
     public boolean isBuilding() {
         return this.bufferBuilder != null;
     }
 
-    public BufferBuilder beginBuffer(VertexFormat.DrawMode drawMode, VertexFormat vertexFormat) {
-        this.bufferBuilder = new BufferBuilder(this.bufferAllocator, drawMode, vertexFormat);
+    public BufferBuilder beginBuffer(PrimitiveTopology topology, VertexFormat format) {
+        this.primitiveTopology = topology;
+        this.vertexFormat = format;
+        this.bufferBuilder = new BufferBuilder(this.byteBufferBuilder, topology, format);
         return this.bufferBuilder;
     }
 
     public BufferBuilder getOrCreateBuffer() {
         if (this.bufferBuilder == null) {
-            if (this.drawMode == null || this.vertexFormat == null) {
+            if (this.primitiveTopology == null || this.vertexFormat == null) {
                 throw new IllegalArgumentException("Tried to invoke empty not caching buffer");
             }
-            this.bufferBuilder = new BufferBuilder(this.bufferAllocator, this.drawMode, this.vertexFormat);
+            this.bufferBuilder = new BufferBuilder(this.byteBufferBuilder, this.primitiveTopology, this.vertexFormat);
         }
         return this.bufferBuilder;
     }
 
-    public BuiltBuffer endBuffer() {
+    public MeshData endBuffer() {
         if (this.bufferBuilder == null) {
             throw new IllegalArgumentException("Tried to end empty buffer");
         }
-        BuiltBuffer endNullable = this.bufferBuilder.endNullable();
+        MeshData built = this.bufferBuilder.build();
         this.bufferBuilder = null;
-        return endNullable;
+        return built;
     }
 
     public void drawBuffer() {
         if (this.bufferBuilder == null) {
             return;
         }
-        endAndDraw(this.bufferBuilder);
+        MeshData built = this.bufferBuilder.build();
         this.bufferBuilder = null;
-    }
-
-    public static void flush(TrajectoriesVertexConsumer trajectoriesVertexConsumer) {
-        if (trajectoriesVertexConsumer.isBuilding()) {
-            endAndDraw(trajectoriesVertexConsumer.bufferBuilder);
-            trajectoriesVertexConsumer.bufferBuilder = null;
+        if (built != null) {
+            built.close();
         }
     }
 
-    public static void endAndDraw(BufferBuilder bufferBuilder) {
-        BuiltBuffer endNullable;
-        if (bufferBuilder == null || (endNullable = bufferBuilder.endNullable()) == null) {
+    public static void flush(TrajectoriesVertexConsumer consumer) {
+        if (consumer.isBuilding()) {
+            MeshData built = consumer.bufferBuilder.build();
+            consumer.bufferBuilder = null;
+            if (built != null) {
+                built.close();
+            }
+        }
+    }
+
+    public static void endAndDraw(BufferBuilder builder) {
+        if (builder == null) {
             return;
         }
-        BufferRenderer.drawWithGlobalProgram(endNullable);
+        MeshData built = builder.build();
+        if (built == null) {
+            return;
+        }
+        built.close();
     }
 
     static {

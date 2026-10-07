@@ -3,16 +3,11 @@ package me.mioclient.gui.widget;
 import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.render.shape.Shape2DRenderer;
 
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.render.shape.Shape2DRenderer;
-
 import java.util.function.Supplier;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.setting.PresetPresetSettingButton;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetPresetActionButton.class */
 public class ActionButton extends PresetPresetSettingButton {
     public final java.lang.Runnable runnable;
 
@@ -29,7 +24,7 @@ public class ActionButton extends PresetPresetSettingButton {
     }
 
     @Override // me.mioclient.setting.PresetPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         if (isHighlighted()) {
             Shape2DRenderer.drawRect(matrixStack, this.presetEnumSettingHelper.getX() + 1, this.presetEnumSettingHelper.getY() + this.num + Float.intBitsToFloat(1056964608), (this.presetEnumSettingHelper.getX() + this.presetEnumSettingHelper.getTotalWidth()) - 1, ((this.presetEnumSettingHelper.getY() + this.num) + getFontHeight()) - Float.intBitsToFloat(1056964608), getUI().color.getValue());
         }

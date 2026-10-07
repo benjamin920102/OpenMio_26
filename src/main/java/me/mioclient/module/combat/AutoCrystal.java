@@ -33,23 +33,12 @@ import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.combat.autocrystal.CrystalAttackTarget;
 import me.mioclient.module.combat.autocrystal.CrystalPlacement;
 import me.mioclient.module.combat.autocrystal.PlacementValidator;
 import me.mioclient.module.combat.autocrystal.SpawnedEntityEntry;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.combat.ExplosionDamageCalculator;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.inventory.ItemTypeUtils;
-import me.mioclient.util.concurrent.LockedTaskRunner;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -64,75 +53,87 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import me.mioclient.mode.player.AutoCraftMode;
-import me.mioclient.module.combat.autocrystal.AutoCrystalDataMode;
 import me.mioclient.ducks.DuckPlayerListEntry;
 import me.mioclient.ducks.DuckLivingEntityServerDead;
-import me.mioclient.module.combat.autocrystal.AutoCrystalMode;
-import me.mioclient.mode.combat.AutoCrystalMode_2;
-import me.mioclient.module.combat.autocrystal.AutoCrystalMode_3;
-import me.mioclient.module.combat.autocrystal.AutoCrystalMode_4;
-import me.mioclient.module.combat.autocrystal.AutoCrystalMode_5;
-import me.mioclient.mode.combat.CrystalRotationMode;
-import me.mioclient.module.combat.autocrystal.DamageOutcome;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.event.events.render.MatrixStackEvent;
-import me.mioclient.mode.combat.ScaffoldHelperMode;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.ducks.DuckEndCrystalEntity;
-import me.mioclient.event.events.interaction.SlotChangeEvent;
-import me.mioclient.mode.player.SpeedMineMode_2;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.render.RenderEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.mixin.ducks.DuckEntityStatusS2CPacket;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.misc.KillEffects;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.RaycastContext;
-import me.mioclient.mode.setting.HoleSnapMode;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Position;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.ClipContext;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoCrystal.class */
 public class AutoCrystal extends Module {
     public static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
-    public static SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
-    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static AnchorAura anchorAura = (AnchorAura) ClientServices.moduleInjector.getModule(AnchorAura.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null. */
+    private static SpeedMine speedmine;
+    private static AntiCheat antiCheat;
+    private static AnchorAura anchorAura;
+
+    public static SpeedMine getSpeedmine() {
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedmine;
+    }
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static AnchorAura getAnchorAura() {
+        if (anchorAura == null && ClientServices.moduleInjector != null) {
+            try {
+                anchorAura = (AnchorAura) ClientServices.moduleInjector.getModule(AnchorAura.class);
+            } catch (Exception e) {
+            }
+        }
+        return anchorAura;
+    }
     public Setting<Boolean> place2 = add(new BooleanSetting("Place", true).setVisible());
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 0, 0, 1000).setSuffix("ms").requiresSettings(this.place2));
     public Setting<Float> range = add(new NumberSetting<>("Range", 6.0f, 0.0f, 6.0f).setSuffix("m").requiresSettings(this.place2));
@@ -206,7 +207,7 @@ public class AutoCrystal extends Module {
     public Setting<Boolean> hBFix = add(new BooleanSetting("HBFix", false).requiresSettings(this.misc));
     public final Stopwatch stopwatch;
     public final AtomicReference<CrystalPlacement> atomicReference;
-    public final AtomicReference<Vec3d> atomicReference2;
+    public final AtomicReference<Vec3> atomicReference2;
     public final AtomicBoolean atomicBoolean;
     public final Stopwatch stopwatch2;
     public final Stopwatch stopwatch3;
@@ -218,7 +219,7 @@ public class AutoCrystal extends Module {
     public final Stopwatch stopwatch9;
     public final LinkedList<Long> linkedList;
     public final List<Integer> list;
-    public final BlockPos.Mutable mutable;
+    public final BlockPos.MutableBlockPos mutable;
     public CompletableFuture<CrystalPlacement> completableFuture;
     public volatile BlockPos blockPos;
     public volatile BlockPos blockPos2;
@@ -236,8 +237,8 @@ public class AutoCrystal extends Module {
     public boolean skip;
     public float[] floatArr;
     public SpawnedEntityEntry autoCrystalData_3;
-    public PlayerEntity playerEntity;
-    public PlayerEntity playerEntity2;
+    public Player playerEntity;
+    public Player playerEntity2;
 
     public AutoCrystal() {
         super("AutoCrystal", "Kills people with end crystals (if you're good).", Category.COMBAT, "crystalaura", "ca", "ac");
@@ -255,7 +256,7 @@ public class AutoCrystal extends Module {
         this.stopwatch9 = new Stopwatch();
         this.linkedList = new LinkedList<>();
         this.list = Collections.synchronizedList(new ArrayList());
-        this.mutable = new BlockPos.Mutable();
+        this.mutable = new BlockPos.MutableBlockPos();
         this.num = -1;
         ClientServices.antiPhaseBlockHelper.register(new BlockHighlightRenderer.Record(this, this.fill, this.outline, this.lineWidth, this.fadeTime, this.multiFade, this.fade, 1000));
         this.delay.setConfigName("PlaceDelay");
@@ -310,10 +311,10 @@ public class AutoCrystal extends Module {
                 return;
             }
             this.flag3 = false;
-            PlayerEntity playerEntity = (this.playerEntity != null || isTargetInvalid(this.playerEntity2)) ? this.playerEntity : this.playerEntity2;
+            Player playerEntity = (this.playerEntity != null || isTargetInvalid(this.playerEntity2)) ? this.playerEntity : this.playerEntity2;
             if (playerEntity == null) {
                 double longBitsToDouble = Double.longBitsToDouble(9218868437227405311L);
-                for (PlayerEntity playerEntity2 : minecraftClient.world.getPlayers()) {
+                for (Player playerEntity2 : minecraftClient.level.players()) {
                     double distanceTo = minecraftClient.player.distanceTo((Entity) playerEntity2);
                     if (!isTargetInvalid((LivingEntity) playerEntity2) && distanceTo <= longBitsToDouble) {
                         longBitsToDouble = distanceTo;
@@ -326,12 +327,12 @@ public class AutoCrystal extends Module {
                     this.playerEntity = playerEntity;
                 }
             }
-            for (Entity entity : minecraftClient.world.getEntities()) {
+            for (Entity entity : minecraftClient.level.entitiesForRendering()) {
                 if (entity instanceof ItemEntity) {
                     ItemEntity itemEntity = (ItemEntity) entity;
-                    if (itemEntity.getStack().getItem() == Items.OBSIDIAN && itemEntity.getStack().getCount() >= 8 && entity.isAlive()) {
-                        Box boundingBox = playerEntity.getBoundingBox();
-                        if (entity.getBoundingBox().intersects(boundingBox.withMinY(boundingBox.getCenter().getY()).expand(MathConstants.val2, 0.0d, MathConstants.val2))) {
+                    if (itemEntity.getItem().getItem() == Items.OBSIDIAN && itemEntity.getItem().getCount() >= 8 && entity.isAlive()) {
+                        AABB boundingBox = playerEntity.getBoundingBox();
+                        if (entity.getBoundingBox().intersects(boundingBox.setMinY(boundingBox.getCenter().y).inflate(MathConstants.val2, 0.0d, MathConstants.val2))) {
                             this.flag3 = true;
                             return;
                         }
@@ -370,14 +371,14 @@ public class AutoCrystal extends Module {
         synchronized (this.list) {
             Iterator<Integer> it = this.list.iterator();
             while (it.hasNext()) {
-                Entity entityById2336 = minecraftClient.world.getEntityById(it.next().intValue());
-                DuckEndCrystalEntity entityById = entityById2336 instanceof EndCrystalEntity ? (DuckEndCrystalEntity) entityById2336 : null;
-                if (entityById instanceof EndCrystalEntity) {
+                Entity entityById2336 = minecraftClient.level.getEntity(it.next().intValue());
+                DuckEndCrystalEntity entityById = entityById2336 instanceof EndCrystal ? (DuckEndCrystalEntity) entityById2336 : null;
+                if (entityById instanceof EndCrystal) {
                     entityById.setMioAttacked(true);
                 }
             }
             this.list.removeIf(num -> {
-                return minecraftClient.world.getEntityById(num.intValue()) != null;
+                return minecraftClient.level.getEntity(num.intValue()) != null;
             });
         }
     }
@@ -386,11 +387,11 @@ public class AutoCrystal extends Module {
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
         this.flag2 = false;
         this.blockPos2 = null;
-        Entity entityById = minecraftClient.world.getEntityById(this.num);
+        Entity entityById = minecraftClient.level.getEntity(this.num);
         if (entityById == null || !entityById.isAlive()) {
             this.num2 = 0;
         }
-        if (minecraftClient.player.age % 4 == 0) {
+        if (minecraftClient.player.tickCount % 4 == 0) {
             long currentTimeMillis = System.currentTimeMillis();
             while (!this.linkedList.isEmpty() && this.linkedList.get(0) != null && currentTimeMillis - this.linkedList.get(0).longValue() > 1000) {
                 try {
@@ -410,13 +411,13 @@ public class AutoCrystal extends Module {
         if (this.stopwatch3.hasElapsedMs(this.delay.getValue().intValue())) {
             LockedTaskRunner.executeLocked(this::executePlacementTick);
         }
-        Vec3d vec3d = this.atomicReference2.get();
+        Vec3 vec3d = this.atomicReference2.get();
         if (this.rotate.getValue().booleanValue()) {
             if (vec3d == null || (RotationManager.is1144() && !isAttackOnCooldown())) {
                 if (!RotationManager.is1144() || isAttackOnCooldown() || this.floatArr == null) {
                     return;
                 }
-                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), this.floatArr[0], this.floatArr[1], minecraftClient.player.isOnGround());
+                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), this.floatArr[0], this.floatArr[1], minecraftClient.player.onGround());
                 this.floatArr = null;
                 return;
             }
@@ -439,9 +440,9 @@ public class AutoCrystal extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof EntitySpawnS2CPacket) {
-            EntitySpawnS2CPacket entitySpawnS2CPacket = packet904;
+        ClientboundAddEntityPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundAddEntityPacket ? (ClientboundAddEntityPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundAddEntityPacket) {
+            ClientboundAddEntityPacket entitySpawnS2CPacket = packet904;
             this.autoCrystalData_3 = SpawnedEntityEntry.fromPacket(entitySpawnS2CPacket);
             if (!isSwapOnCooldown()) {
                 try {
@@ -454,17 +455,16 @@ public class AutoCrystal extends Module {
                 }
             }
         }
-        // JADX hoisted this duck cast above its instanceof guard, so every inbound packet was
         // cast to DuckEntityStatusS2CPacket and all but one type threw ClassCastException,
         // killing this listener for the rest of the event.
-        if (channelRead0Event.getPacket() instanceof EntityStatusS2CPacket) {
-            EntityStatusS2CPacket entityStatusS2CPacket = (EntityStatusS2CPacket) channelRead0Event.getPacket();
+        if (channelRead0Event.getPacket() instanceof ClientboundEntityEventPacket) {
+            ClientboundEntityEventPacket entityStatusS2CPacket = (ClientboundEntityEventPacket) channelRead0Event.getPacket();
             DuckEntityStatusS2CPacket duckEntityStatusS2CPacket = (DuckEntityStatusS2CPacket) entityStatusS2CPacket;
-            if (entityStatusS2CPacket.getStatus() == 3 && this.playerEntity != null && duckEntityStatusS2CPacket.getId() == this.playerEntity.getId()) {
+            if (entityStatusS2CPacket.getEventId() == 3 && this.playerEntity != null && duckEntityStatusS2CPacket.getId() == this.playerEntity.getId()) {
                 ((DuckLivingEntityServerDead) this.playerEntity).setServerSideDead(true);
             }
         }
-        if (channelRead0Event.getPacket() instanceof DeathMessageS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundPlayerCombatKillPacket) {
             this.forceSuicide.setValue(false);
         }
     }
@@ -486,15 +486,15 @@ public class AutoCrystal extends Module {
 
     @Override // me.mioclient.module.Module
     public String getInfo() {
-        return (this.playerEntity == null || isTargetInvalid(this.playerEntity)) ? super.getInfo() : "%s, %.1f, %d".formatted(this.playerEntity.getGameProfile().getName(), Float.valueOf(this.val), Integer.valueOf(this.linkedList.size()));
+        return (this.playerEntity == null || isTargetInvalid(this.playerEntity)) ? super.getInfo() : "%s, %.1f, %d".formatted(this.playerEntity.getGameProfile().name(), Float.valueOf(this.val), Integer.valueOf(this.linkedList.size()));
     }
 
-    public void do1130(EntitySpawnS2CPacket entitySpawnS2CPacket) {
-        if (entitySpawnS2CPacket.getEntityType() != EntityType.END_CRYSTAL || this.playerEntity == null) {
+    public void do1130(ClientboundAddEntityPacket entitySpawnS2CPacket) {
+        if (entitySpawnS2CPacket.getType() != EntityTypes.END_CRYSTAL || this.playerEntity == null) {
             return;
         }
-        Vec3d vec3d = new Vec3d(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
-        if (this.blockPos != null && vec3d.squaredDistanceTo(this.blockPos.toCenterPos()) <= Double.longBitsToDouble(4621256167635550208L)) {
+        Vec3 vec3d = new Vec3(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
+        if (this.blockPos != null && vec3d.distanceToSqr(Vec3.atCenterOf(this.blockPos)) <= Double.longBitsToDouble(4621256167635550208L)) {
             this.linkedList.add(Long.valueOf(System.currentTimeMillis()));
         }
         if (this.instant.getValue() == AutoCrystalMode.NONE || !this.break_.getValue().booleanValue() || isPlayerInSpawnGrace(this.playerEntity)) {
@@ -503,7 +503,7 @@ public class AutoCrystal extends Module {
         if (isMineIgnoreActive() && shouldAwaitBeforeBreak()) {
             return;
         }
-        if (minecraftClient.player.getEyePos().distanceTo(vec3d) > (WorldUtils.isPositionVisible(vec3d) ? this.range2.getValue() : this.wallRange2.getValue()).floatValue()) {
+        if (minecraftClient.player.getEyePosition().distanceTo(vec3d) > (WorldUtils.isPositionVisible(vec3d) ? this.range2.getValue() : this.wallRange2.getValue()).floatValue()) {
             return;
         }
         double d = ExplosionDamageCalculator.getCrystalDamage(vec3d, this.playerEntity);
@@ -514,22 +514,23 @@ public class AutoCrystal extends Module {
                 if (AutoCrystalMode_3.HIT.shouldSkipAttack(this.playerEntity, d2, d, autoCrystalMode_71882)) {
                     return;
                 }
-                BlockPos ofFloored = BlockPos.ofFloored((Position) vec3d);
+                BlockPos ofFloored = BlockPos.containing((Position) vec3d);
                 if (this.instant.getValue() == AutoCrystalMode.STRICT && this.blockPos4.equals(ofFloored)) {
                     return;
                 }
                 if (this.rotate.getValue().booleanValue() && this.break_2.getValue().booleanValue()) {
                     rotateToTarget(vec3d);
                 }
-                if (ClientServices.scaffoldHelper.sendAttackPacket(entitySpawnS2CPacket.getEntityId(), true)) {
+                if (ClientServices.scaffoldHelper.sendAttackPacket(entitySpawnS2CPacket.getId(), true)) {
                     this.blockPos2 = ofFloored;
                     this.blockPos4 = ofFloored;
-                    this.num = entitySpawnS2CPacket.getEntityId();
+                    this.num = entitySpawnS2CPacket.getId();
                     this.num2 = 0;
                     this.stopwatch9.reset();
                 }
                 boolean z = minecraftClient.player.isHolding(Items.END_CRYSTAL) || EntityUtil.getPlayerHealth() >= Float.intBitsToFloat(1090519040);
-                if (!antiCheat.isF2b2t()) {
+                AntiCheat antiCheat_lcl = getAntiCheat();
+                if (antiCheat_lcl == null || !antiCheat_lcl.isF2b2t()) {
                     z = true;
                 }
                 if (this.sequential.getValue().isActiveCrystalMode() && !this.flag && z) {
@@ -539,7 +540,7 @@ public class AutoCrystal extends Module {
                         this.flag = true;
                     }
                 }
-                sendFactorAttacks(entitySpawnS2CPacket.getEntityId());
+                sendFactorAttacks(entitySpawnS2CPacket.getId());
             }
         }
     }
@@ -548,7 +549,8 @@ public class AutoCrystal extends Module {
         CrystalPlacement autoCrystalData = this.atomicReference.get();
         CrystalAttackTarget autoCrystalData_4 = null;
         CrystalPlacement autoCrystalData2 = null;
-        PlacementValidator autoCrystalSearchHelper42080 = new PlacementValidator().getAutoCrystalSearchHelper42071(this.f112.getValue().booleanValue()).getAutoCrystalSearchHelper42075(this.lowerHitBox.getValue().booleanValue()).withHitboxFix(this.hBFix.getValue().booleanValue() && !isMineIgnoreActive()).withBasePlace(this.basePlace.getValue().booleanValue() && isBasePlaceNeeded()).getAutoCrystalSearchHelper42078(isMineIgnoreActive() && speedmine.rebreak2.getValue() != SpeedMineMode_2.INSTANT).getAutoCrystalSearchHelper42079(this.extrapolation.getValue().booleanValue() ? this.ticks.getValue().intValue() : 0).getAutoCrystalSearchHelper42080(this.range2.getValue().floatValue());
+        SpeedMine speedmine_lcl_search = getSpeedmine();
+        PlacementValidator autoCrystalSearchHelper42080 = new PlacementValidator().getAutoCrystalSearchHelper42071(this.f112.getValue().booleanValue()).getAutoCrystalSearchHelper42075(this.lowerHitBox.getValue().booleanValue()).withHitboxFix(this.hBFix.getValue().booleanValue() && !isMineIgnoreActive()).withBasePlace(this.basePlace.getValue().booleanValue() && isBasePlaceNeeded()).getAutoCrystalSearchHelper42078(isMineIgnoreActive() && speedmine_lcl_search != null && speedmine_lcl_search.rebreak2.getValue() != SpeedMineMode_2.INSTANT).getAutoCrystalSearchHelper42079(this.extrapolation.getValue().booleanValue() ? this.ticks.getValue().intValue() : 0).getAutoCrystalSearchHelper42080(this.range2.getValue().floatValue());
         if (autoCrystalData != null) {
             if (autoCrystalSearchHelper42080.isPositionValid(autoCrystalData.getBlockPos())) {
                 autoCrystalData_4 = findBestTarget(autoCrystalData.getBlockPos(), WorldUtils.isBedrockOrObsidian(autoCrystalData.getBlockPos()));
@@ -571,11 +573,11 @@ public class AutoCrystal extends Module {
                             this.mutable.set(minecraftClient.player.getX() + d2, minecraftClient.player.getEyeY() + d4, minecraftClient.player.getZ() + d6);
                             boolean isBedrockOrObsidian = WorldUtils.isBedrockOrObsidian(this.mutable);
                             if (autoCrystalData2 == null || autoCrystalData2.getDataMode() == AutoCrystalDataMode.OBSIDIAN || isBedrockOrObsidian) {
-                                double distanceTo = minecraftClient.player.getEyePos().distanceTo(this.mutable.toCenterPos());
+                                double distanceTo = minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(this.mutable));
                                 if (distanceTo <= this.range.getValue().floatValue() && autoCrystalSearchHelper42080.isPositionValid(this.mutable)) {
                                     boolean isAnyPositionVisible = WorldUtils.isAnyPositionVisible(this.multipoint.getValue().getWorldCorners(this.mutable));
                                     if ((isAnyPositionVisible || distanceTo <= this.wallRange.getValue().floatValue() || this.smartTrace.getValue().booleanValue()) && (!this.strictDirection.getValue().booleanValue() || !BlockPlacer.getInteractableSides(this.mutable).isEmpty())) {
-                                        double d7 = ExplosionDamageCalculator.getExplosionDamage(Vec3d.ofCenter(this.mutable, Double.longBitsToDouble(4607182418800017408L)), minecraftClient.player, getTargetBox(minecraftClient.player), Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, this.mutable);
+                                        double d7 = ExplosionDamageCalculator.getExplosionDamage(Vec3.atCenterOf(this.mutable).add(0.0d, 0.5d, 0.0d), minecraftClient.player, getTargetBox(minecraftClient.player), Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, this.mutable);
                                         CrystalAttackTarget autoCrystalData_41147 = findBestTarget(this.mutable, isBedrockOrObsidian);
                                         if (autoCrystalData_41147 != null) {
                                             if (!AutoCrystalMode_3.PLACE.shouldSkipAttack(autoCrystalData_41147.getPlayerTarget(), d7, autoCrystalData_41147.getDamage(), DamageOutcome.evaluate(autoCrystalData_41147.getPlayerTarget(), autoCrystalData_41147.getDamage()))) {
@@ -586,7 +588,7 @@ public class AutoCrystal extends Module {
                                                     }
                                                     boolean store = true;
                                                     if (this.basePlace.getValue().booleanValue() && !isBedrockOrObsidian) {
-                                                        if (getTargetBox(autoCrystalData_41147.getPlayerTarget()).union(autoCrystalData_41147.getPlayerTarget().getBoundingBox()).intersects(new Box(this.mutable))) {
+                                                        if (getTargetBox(autoCrystalData_41147.getPlayerTarget()).minmax(autoCrystalData_41147.getPlayerTarget().getBoundingBox()).intersects(new AABB(this.mutable))) {
                                                             store = false;
                                                         } else if (!BlockPlacer.isSpaceFree(this.mutable, false)) {
                                                             store = false;
@@ -597,7 +599,7 @@ public class AutoCrystal extends Module {
                                                         }
                                                     }
                                                     if (store) {
-                                                        autoCrystalData2 = new CrystalPlacement(this.mutable.toImmutable(), autoCrystalData_41147.getPlayerTarget(), autoCrystalData_41147.getDamage(), autoCrystalDataMode).preferOver(autoCrystalData2);
+                                                        autoCrystalData2 = new CrystalPlacement(this.mutable.immutable(), autoCrystalData_41147.getPlayerTarget(), autoCrystalData_41147.getDamage(), autoCrystalDataMode).preferOver(autoCrystalData2);
                                                     }
                                                 }
                                             }
@@ -632,7 +634,7 @@ public class AutoCrystal extends Module {
         if (this.atomicBoolean.get()) {
             return;
         }
-        boolean z = minecraftClient.player.getOffHandStack().getItem() == Items.END_CRYSTAL;
+        boolean z = minecraftClient.player.getOffhandItem().getItem() == Items.END_CRYSTAL;
         boolean isHolding = minecraftClient.player.isHolding(Items.END_CRYSTAL);
         if ((this.damageSync.getValue().booleanValue() || this.flag3) && this.val < this.minDamage2.getValue().floatValue() && this.val < Float.intBitsToFloat(1084227584)) {
             if (!this.stopwatch3.hasElapsedMs(getBasePlaceDelay())) {
@@ -650,7 +652,8 @@ public class AutoCrystal extends Module {
             return;
         }
         double d = AutoCrystalMode_3.PLACE.getMinDamageThreshold(this.playerEntity);
-        double d2 = ExplosionDamageCalculator.getExplosionDamage(Vec3d.ofCenter((Vec3i) blockPos12, Double.longBitsToDouble(4607182418800017408L)), this.playerEntity, getTargetBox(this.playerEntity), Double.longBitsToDouble(4618441417868443648L), true, isMineIgnoreActive() ? speedmine.getBreakingPos() : null, blockPos12);
+        SpeedMine speedmine_lcl_place = getSpeedmine();
+        double d2 = ExplosionDamageCalculator.getExplosionDamage(Vec3.atCenterOf(blockPos12).add(0.0d, 0.5d, 0.0d), this.playerEntity, getTargetBox(this.playerEntity), Double.longBitsToDouble(4618441417868443648L), true, (isMineIgnoreActive() && speedmine_lcl_place != null) ? speedmine_lcl_place.getBreakingPos() : null, blockPos12);
         if (this.extrapolation.getValue().booleanValue() && this.ticks.getValue().intValue() > 0 && d2 > Double.longBitsToDouble(4611686018427387904L) && d2 < d) {
             d2 = Math.max(d2, calcExplosionDamage(blockPos12, this.playerEntity, BoxMath.getServerBox(this.playerEntity), true));
         }
@@ -672,19 +675,20 @@ public class AutoCrystal extends Module {
                 return;
             }
         }
-        if (minecraftClient.world.getBlockState(blockPos12.up()).getBlock() == Blocks.FIRE) {
-            minecraftClient.player.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, blockPos12.up(), Direction.DOWN));
-            minecraftClient.player.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, blockPos12.up(), Direction.DOWN));
+        if (minecraftClient.level.getBlockState(blockPos12.above()).getBlock() == Blocks.FIRE) {
+            minecraftClient.player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, blockPos12.above(), Direction.DOWN));
+            minecraftClient.player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, blockPos12.above(), Direction.DOWN));
             return;
         }
         boolean z2 = false;
         boolean z3 = is1144() && this.silent.getValue() == AutoCrystalMode_4.ALTERNATIVE;
         boolean z4 = false;
-        if (!isHolding && isMineIgnoreActive() && speedmine.swapReset.getValue().booleanValue() && speedmine.alternative.getValue().booleanValue()) {
+        SpeedMine speedmine_lcl_swap = getSpeedmine();
+        if (!isHolding && isMineIgnoreActive() && speedmine_lcl_swap != null && speedmine_lcl_swap.swapReset.getValue().booleanValue() && speedmine_lcl_swap.alternative.getValue().booleanValue()) {
             z3 = true;
             z4 = true;
         }
-        if (z3 && (!this.skip || !minecraftClient.player.currentScreenHandler.getCursorStack().isEmpty())) {
+        if (z3 && (!this.skip || !minecraftClient.player.containerMenu.getCarried().isEmpty())) {
             this.skip = true;
             return;
         }
@@ -692,16 +696,19 @@ public class AutoCrystal extends Module {
             i2 = InventoryUtils.findSlot(Items.END_CRYSTAL);
         }
         if (this.autoSwap.getValue() != AutoCrystalMode_2.NONE && !isHolding && !isAutoSwapOnCooldown() && i2 != -1) {
-            i = minecraftClient.player.getInventory().selectedSlot;
+            i = minecraftClient.player.getInventory().getSelectedSlot();
             if (z3) {
                 InventoryUtils.swapToHotbar(i2);
                 z2 = true;
                 this.atomicBoolean.set(z4);
             } else if (is1144() && this.silent.getValue() == AutoCrystalMode_4.PICK) {
-                minecraftClient.interactionManager.pickFromInventory(i2);
+                minecraftClient.player.getInventory().pickSlot(i2);
             } else {
                 if (this.autoSwap.getValue() == AutoCrystalMode_2.SILENT) {
-                    speedmine.flag2 = true;
+                    SpeedMine speedmine_lcl_flag = getSpeedmine();
+                    if (speedmine_lcl_flag != null) {
+                        speedmine_lcl_flag.flag2 = true;
+                    }
                     incrementSwapCounter();
                 }
                 if (shouldSwapBack()) {
@@ -720,7 +727,7 @@ public class AutoCrystal extends Module {
                     InventoryUtils.swapToHotbar(i2);
                 } else if (this.autoSwap.getValue() == AutoCrystalMode_2.SILENT) {
                     if (is1144() && this.silent.getValue() == AutoCrystalMode_4.PICK) {
-                        minecraftClient.interactionManager.pickFromInventory(i2);
+                        minecraftClient.player.getInventory().pickSlot(i2);
                     } else {
                         incrementSwapCounter();
                         InventoryUtils.selectSlot(i);
@@ -743,18 +750,18 @@ public class AutoCrystal extends Module {
             if (!list3031.isEmpty()) {
                 direction2 = list3031.get(0);
             }
-            Vec3d offset = blockPos.toCenterPos().offset(direction2, MathConstants.val2);
+            Vec3 offset = Vec3.atCenterOf(blockPos).relative(direction2, MathConstants.val2);
             double longBitsToDouble = Double.longBitsToDouble(9218868437227405311L);
             double[] dArr = {Double.longBitsToDouble(4587366580439587226L), Double.longBitsToDouble(4606732058837280358L)};
             for (double d : dArr) {
                 for (double d2 : new double[]{Double.longBitsToDouble(4587366580439587226L), Double.longBitsToDouble(4606732058837280358L), Double.longBitsToDouble(4607092346807469998L)}) {
                     for (double d3 : dArr) {
-                        Vec3d add = Vec3d.of((Vec3i) blockPos).add(d, d2, d3);
-                        BlockHitResult raycast = minecraftClient.world.raycast(new RaycastContext(minecraftClient.player.getEyePos(), add, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, minecraftClient.player));
-                        double distanceTo = raycast.getPos().distanceTo(minecraftClient.player.getEyePos());
-                        if ((raycast.getType() == HitResult.Type.MISS || raycast.getBlockPos().equals(blockPos)) && add.distanceTo(minecraftClient.player.getEyePos()) <= this.range.getValue().floatValue() && distanceTo < longBitsToDouble && (list3031.contains(raycast.getSide()) || !this.strictDirection.getValue().booleanValue())) {
-                            offset = raycast.getPos();
-                            direction2 = raycast.getSide();
+                        Vec3 add = Vec3.atLowerCornerOf( blockPos).add(d, d2, d3);
+                        BlockHitResult raycast = minecraftClient.level.clip(new ClipContext(minecraftClient.player.getEyePosition(), add, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraftClient.player));
+                        double distanceTo = raycast.getLocation().distanceTo(minecraftClient.player.getEyePosition());
+                        if ((raycast.getType() == HitResult.Type.MISS || raycast.getBlockPos().equals(blockPos)) && add.distanceTo(minecraftClient.player.getEyePosition()) <= this.range.getValue().floatValue() && distanceTo < longBitsToDouble && (list3031.contains(raycast.getDirection()) || !this.strictDirection.getValue().booleanValue())) {
+                            offset = raycast.getLocation();
+                            direction2 = raycast.getDirection();
                             longBitsToDouble = distanceTo;
                         }
                     }
@@ -763,9 +770,9 @@ public class AutoCrystal extends Module {
             if (this.place.getValue().booleanValue() && this.rotate.getValue().booleanValue() && !this.flag2) {
                 rotateToTarget(offset);
             }
-            Hand hand = z ? Hand.OFF_HAND : Hand.MAIN_HAND;
-            PacketSender.sendInteractBlock(hand, new BlockHitResult(blockPos.toCenterPos().offset(direction2, MathConstants.val2), direction2, blockPos, false));
-            minecraftClient.player.swingHand(hand);
+            InteractionHand hand = z ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+            PacketSender.sendInteractBlock(hand, new BlockHitResult(Vec3.atCenterOf(blockPos).relative(direction2, MathConstants.val2), direction2, blockPos, false));
+            minecraftClient.player.swing(hand);
             this.blockPos = blockPos;
             if (this.render.getValue().booleanValue()) {
                 ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, blockPos);
@@ -780,13 +787,15 @@ public class AutoCrystal extends Module {
             if (this.autoSwap.getValue() == AutoCrystalMode_2.SILENT && this.silent.getValue() == AutoCrystalMode_4.ALTERNATIVE) {
                 i = InventoryUtils.findSlot(Items.END_CRYSTAL);
             }
-            if (minecraftClient.player.getOffHandStack().isOf(Items.END_CRYSTAL) || i != -1) {
-                int i2 = minecraftClient.player.getInventory().selectedSlot;
+            if (minecraftClient.player.getOffhandItem().is(Items.END_CRYSTAL) || i != -1) {
+                int i2 = minecraftClient.player.getInventory().getSelectedSlot();
                 int i3 = InventoryUtils.findInHotbar(Items.OBSIDIAN);
                 Direction direction3029 = BlockPlacer.findSupportSide(blockPos, this.strictDirection.getValue().booleanValue());
-                boolean z = (is1144() && this.silent.getValue() == AutoCrystalMode_4.ALTERNATIVE) || (this.silent.getValue() == AutoCrystalMode_4.PICK && isMineIgnoreActive() && speedmine.getBreakingPos() != null);
-                boolean z2 = this.air.getValue().booleanValue() && direction3029 == null && antiCheat.isF2b2t();
-                Hand hand = Hand.MAIN_HAND;
+                SpeedMine speedmine_lcl_base = getSpeedmine();
+                AntiCheat antiCheat_lcl_base = getAntiCheat();
+                boolean z = (is1144() && this.silent.getValue() == AutoCrystalMode_4.ALTERNATIVE) || (this.silent.getValue() == AutoCrystalMode_4.PICK && isMineIgnoreActive() && speedmine_lcl_base != null && speedmine_lcl_base.getBreakingPos() != null);
+                boolean z2 = this.air.getValue().booleanValue() && direction3029 == null && antiCheat_lcl_base != null && antiCheat_lcl_base.isF2b2t();
+                InteractionHand hand = InteractionHand.MAIN_HAND;
                 if (z && i3 == -1) {
                     i3 = InventoryUtils.findSlot(Items.OBSIDIAN);
                 }
@@ -796,15 +805,18 @@ public class AutoCrystal extends Module {
                             if (z) {
                                 InventoryUtils.swapToHotbar(i3);
                             } else if (is1144() && this.silent.getValue() == AutoCrystalMode_4.PICK) {
-                                minecraftClient.interactionManager.pickFromInventory(i3);
+                                minecraftClient.player.getInventory().pickSlot(i3);
                             } else {
-                                speedmine.flag2 = true;
+                                SpeedMine speedmine_lcl_flag2 = getSpeedmine();
+                                if (speedmine_lcl_flag2 != null) {
+                                    speedmine_lcl_flag2.flag2 = true;
+                                }
                                 InventoryUtils.selectSlot(i3);
                             }
                         }
                         if (z2) {
                             PacketSender.sendSwapOffhand();
-                            hand = Hand.OFF_HAND;
+                            hand = InteractionHand.OFF_HAND;
                         }
                         BlockPlacer.placeBlockPacket(blockPos, direction3029, this.air.getValue().booleanValue(), hand);
                         this.stopwatch9.reset();
@@ -812,9 +824,9 @@ public class AutoCrystal extends Module {
                             PacketSender.sendSwapOffhand();
                         }
                         if (this.place.getValue().booleanValue() && this.rotate.getValue().booleanValue()) {
-                            Vec3d centerPos = blockPos.toCenterPos();
+                            Vec3 centerPos = Vec3.atCenterOf(blockPos);
                             if (direction3029 != null) {
-                                centerPos = centerPos.offset(direction3029, Double.longBitsToDouble(4602678819172646912L));
+                                centerPos = centerPos.relative(direction3029, Double.longBitsToDouble(4602678819172646912L));
                             }
                             rotateToTarget(centerPos);
                         }
@@ -825,7 +837,7 @@ public class AutoCrystal extends Module {
                         if (z) {
                             InventoryUtils.swapToHotbar(i3);
                         } else if (is1144() && this.silent.getValue() == AutoCrystalMode_4.PICK) {
-                            minecraftClient.interactionManager.pickFromInventory(i3);
+                            minecraftClient.player.getInventory().pickSlot(i3);
                         } else {
                             InventoryUtils.selectSlot(i2);
                         }
@@ -851,23 +863,24 @@ public class AutoCrystal extends Module {
                 Entity entity = null;
                 double longBitsToDouble = Double.longBitsToDouble(-4569777033223077888L);
                 boolean isMineIgnoreActive = isMineIgnoreActive();
-                if (!WorldUtils.isBreakable(speedmine.getBreakingPos())) {
+                SpeedMine speedmine_lcl_break = getSpeedmine();
+                if (speedmine_lcl_break == null || !WorldUtils.isBreakable(speedmine_lcl_break.getBreakingPos())) {
                     isMineIgnoreActive = false;
                 }
-                BlockPos blockPos1051 = speedMine.getBreakingPos();
-                if (!WorldUtils.isBreakable(blockPos1051)) {
+                BlockPos blockPos1051 = speedMine != null ? speedMine.getBreakingPos() : (speedmine_lcl_break != null ? speedmine_lcl_break.getBreakingPos() : null);
+                if (blockPos1051 == null || !WorldUtils.isBreakable(blockPos1051)) {
                     blockPos1051 = null;
                 }
-                for (Entity entity2 : minecraftClient.world.getEntities()) {
-                    if (entity2 instanceof EndCrystalEntity) {
-                        if (isCrystalValid((EndCrystalEntity) entity2)) {
-                            double d = this.skip ? ExplosionDamageCalculator.getCrystalDamage(entity2.getPos(), this.playerEntity, getTargetBox(this.playerEntity)) : calcExplosionDamage(BlockPos.ofFloored(entity2.getPos()).down(), this.playerEntity, getTargetBox(this.playerEntity), false);
-                            double d2 = ExplosionDamageCalculator.getCrystalDamage(entity2.getPos(), minecraftClient.player, minecraftClient.player.getBoundingBox());
+                for (Entity entity2 : minecraftClient.level.entitiesForRendering()) {
+                    if (entity2 instanceof EndCrystal) {
+                        if (isCrystalValid((EndCrystal) entity2)) {
+                            double d = this.skip ? ExplosionDamageCalculator.getCrystalDamage(entity2.position(), this.playerEntity, getTargetBox(this.playerEntity)) : calcExplosionDamage(BlockPos.containing(entity2.position()).below(), this.playerEntity, getTargetBox(this.playerEntity), false);
+                            double d2 = ExplosionDamageCalculator.getCrystalDamage(entity2.position(), minecraftClient.player, minecraftClient.player.getBoundingBox());
                             DamageOutcome autoCrystalMode_71882 = DamageOutcome.evaluate(this.playerEntity, d);
                             if (!this.balance.getValue().booleanValue() || d > d2 || this.forceSuicide.getValue().booleanValue() || autoCrystalMode_71882.flag) {
                                 if (!AutoCrystalMode_3.HIT.shouldSkipAttack(this.playerEntity, d2, d, autoCrystalMode_71882)) {
                                     if (this.blockPos != null) {
-                                        if (entity2.getBoundingBox().intersects(new Box(this.blockPos.up()).stretch(0.0d, Double.longBitsToDouble(4607182418800017408L), 0.0d)) && entity == null && (!isMineIgnoreActive || blockPos1051 == null)) {
+                                        if (entity2.getBoundingBox().intersects(new AABB(this.blockPos.above()).expandTowards(0.0d, Double.longBitsToDouble(4607182418800017408L), 0.0d)) && entity == null && (!isMineIgnoreActive || blockPos1051 == null)) {
                                             entity = entity2;
                                         }
                                     }
@@ -883,12 +896,12 @@ public class AutoCrystal extends Module {
                 if (entity == null) {
                     return;
                 }
-                attackCrystal((EndCrystalEntity) entity, minecraftClient.player.getOffHandStack().getItem() == Items.END_CRYSTAL);
+                attackCrystal((EndCrystal) entity, minecraftClient.player.getOffhandItem().getItem() == Items.END_CRYSTAL);
             }
         }
     }
 
-    public void attackCrystal(EndCrystalEntity endCrystalEntity, boolean z) {
+    public void attackCrystal(EndCrystal endCrystalEntity, boolean z) {
         if (endCrystalEntity.getId() == this.num && this.stopwatch8.hasElapsedMs(500L) && endCrystalEntity.isAlive() && !endCrystalEntity.isRemoved()) {
             this.num2++;
         } else {
@@ -906,7 +919,7 @@ public class AutoCrystal extends Module {
         if (attackAccepted) {
             ((DuckEndCrystalEntity) endCrystalEntity).setMioAttacked(true);
             sendFactorAttacks(endCrystalEntity.getId());
-            this.blockPos2 = endCrystalEntity.getBlockPos().down();
+            this.blockPos2 = BlockPos.containing(endCrystalEntity.position()).below();
             if (this.break_2.getValue().booleanValue() && this.rotate.getValue().booleanValue()) {
                 rotateToTarget(BoxMath.getCenter(endCrystalEntity.getBoundingBox()));
                 this.flag2 = true;
@@ -916,18 +929,19 @@ public class AutoCrystal extends Module {
         }
     }
 
-    public boolean isCrystalValid(EndCrystalEntity endCrystalEntity) {
-        if ((endCrystalEntity.age < this.ticksExisted.getValue().intValue() && !isMineIgnoreActive()) || endCrystalEntity.isRemoved() || this.playerEntity == null) {
+    public boolean isCrystalValid(EndCrystal endCrystalEntity) {
+        if ((endCrystalEntity.tickCount < this.ticksExisted.getValue().intValue() && !isMineIgnoreActive()) || endCrystalEntity.isRemoved() || this.playerEntity == null) {
             return false;
         }
-        return minecraftClient.player.getEyePos().distanceTo(endCrystalEntity.getPos()) <= ((double) (minecraftClient.player.canSee((Entity) endCrystalEntity) ? this.range2.getValue() : this.wallRange2.getValue()).floatValue());
+        return minecraftClient.player.getEyePosition().distanceTo(endCrystalEntity.position()) <= ((double) (minecraftClient.player.hasLineOfSight((Entity) endCrystalEntity) ? this.range2.getValue() : this.wallRange2.getValue()).floatValue());
     }
 
-    public void rotateToTarget(Vec3d vec3d) {
+    public void rotateToTarget(Vec3 vec3d) {
         if (vec3d == null) {
             return;
         }
-        if (RotationManager.is724() && antiCheat.rotations.getValue() == CrystalRotationMode.SILENT && !isOnCooldown(100L)) {
+        AntiCheat antiCheat_lcl_rot = getAntiCheat();
+        if (RotationManager.is724() && antiCheat_lcl_rot != null && antiCheat_lcl_rot.rotations.getValue() == CrystalRotationMode.SILENT && !isOnCooldown(100L)) {
             float[] floatArray2484 = RotationManager.getRotationsTo(vec3d);
             ClientServices.RotationManager.applyRotations(floatArray2484);
             this.floatArr = floatArray2484;
@@ -940,21 +954,22 @@ public class AutoCrystal extends Module {
         if (this.factor.isAtMinimum()) {
             return;
         }
+        AntiCheat antiCheat_lcl_factor = getAntiCheat();
         for (int i2 = 1; i2 < this.factor.getValue().intValue(); i2++) {
             int i3 = i + i2;
-            if (antiCheat.movementSync.getValue().booleanValue()) {
+            if (antiCheat_lcl_factor != null && antiCheat_lcl_factor.movementSync.getValue().booleanValue()) {
                 i3--;
             }
-            for (Entity entity : minecraftClient.world.getEntities()) {
+            for (Entity entity : minecraftClient.level.entitiesForRendering()) {
                 if (((entity instanceof LivingEntity) && entity.isRemoved()) || !entity.isAlive()) {
                     return;
                 }
             }
-            if (this.autoCrystalData_3 != null && this.autoCrystalData_3.getEntityType() != EntityType.END_CRYSTAL && this.autoCrystalData_3.getEntityId() == i3) {
+            if (this.autoCrystalData_3 != null && this.autoCrystalData_3.getEntityType() != EntityTypes.END_CRYSTAL && this.autoCrystalData_3.getEntityId() == i3) {
                 return;
             }
             PacketSender.sendInteractEntity(i3);
-            PacketSender.sendHandSwing(Hand.MAIN_HAND);
+            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
             this.list.add(Integer.valueOf(i3));
         }
     }
@@ -992,13 +1007,15 @@ public class AutoCrystal extends Module {
         if (minecraftClient.player.isUsingItem() && this.eating.getValue().booleanValue()) {
             return true;
         }
-        if ((minecraftClient.interactionManager.isBreakingBlock() || (WorldUtils.isBreakable(speedmine.getMineTargetPos()) && speedmine.isToggled())) && this.mining.getValue().booleanValue()) {
+        SpeedMine speedmine_lcl_929 = getSpeedmine();
+        AnchorAura anchorAura_lcl = getAnchorAura();
+        if ((minecraftClient.gameMode.isDestroying() || (speedmine_lcl_929 != null && speedmine_lcl_929.isToggled() && speedmine_lcl_929.getMineTargetPos() != null && WorldUtils.isBreakable(speedmine_lcl_929.getMineTargetPos()))) && this.mining.getValue().booleanValue()) {
             return true;
         }
         if (this.forceSuicide.getValue().booleanValue()) {
             return false;
         }
-        if (!anchorAura.isToggled() || anchorAura.atomicReference.get() == null || anchorAura.autoCrystalData_2 == null || this.atomicReference.get() == null || anchorAura.autoCrystalData_2.getDamage() <= this.atomicReference.get().getDamage()) {
+        if (anchorAura_lcl == null || !anchorAura_lcl.isToggled() || anchorAura_lcl.atomicReference.get() == null || anchorAura_lcl.autoCrystalData_2 == null || this.atomicReference.get() == null || anchorAura_lcl.autoCrystalData_2.getDamage() <= this.atomicReference.get().getDamage()) {
             if (EntityUtil.getPlayerHealth() < this.health.getValue().floatValue() && !this.forceSuicide.getValue().booleanValue()) {
                 return true;
             }
@@ -1024,33 +1041,34 @@ public class AutoCrystal extends Module {
         return this.autoSwap.getValue() == AutoCrystalMode_2.SILENT;
     }
 
-    public Box getTargetBox(PlayerEntity playerEntity) {
+    public AABB getTargetBox(Player playerEntity) {
         if (!this.extrapolation.getValue().booleanValue()) {
             return BoxMath.getServerBox((LivingEntity) playerEntity);
         }
         return ClientServices.mainhandHelper.getPredictedBox(playerEntity, BoxMath.getSnapDivisions(playerEntity, this.ticks));
     }
 
-    public double calcExplosionDamage(BlockPos blockPos, LivingEntity livingEntity, Box box, boolean z) {
-        return ExplosionDamageCalculator.getExplosionDamage(Vec3d.ofCenter((Vec3i) blockPos, Double.longBitsToDouble(4607182418800017408L)), livingEntity, box, Double.longBitsToDouble(4618441417868443648L), true, isMineIgnoreActive() ? speedmine.getBreakingPos() : null, z ? blockPos.toImmutable() : null);
+    public double calcExplosionDamage(BlockPos blockPos, LivingEntity livingEntity, AABB box, boolean z) {
+        SpeedMine speedmine_lcl_calc = getSpeedmine();
+        return ExplosionDamageCalculator.getExplosionDamage(Vec3.atCenterOf(blockPos).add(0.0d, 0.5d, 0.0d), livingEntity, box, Double.longBitsToDouble(4618441417868443648L), true, (isMineIgnoreActive() && speedmine_lcl_calc != null) ? speedmine_lcl_calc.getBreakingPos() : null, z ? blockPos.immutable() : null);
     }
 
     public CrystalAttackTarget findBestTarget(BlockPos blockPos, boolean z) {
         CrystalAttackTarget autoCrystalData_4 = null;
-        Iterator it = new ArrayList(minecraftClient.world.getPlayers()).iterator();
+        Iterator it = new ArrayList(minecraftClient.level.players()).iterator();
         while (it.hasNext()) {
-            LivingEntity livingEntity = (AbstractClientPlayerEntity) it.next();
-            if (!isTargetInvalid(livingEntity) && (blockPos.getY() <= ((AbstractClientPlayerEntity) livingEntity).getY() + Double.longBitsToDouble(4609434218613702656L) || z)) {
-                Box box1145 = getTargetBox((PlayerEntity) livingEntity);
-                double d = AutoCrystalMode_3.PLACE.getMinDamageThreshold((PlayerEntity) livingEntity);
+            LivingEntity livingEntity = (AbstractClientPlayer) it.next();
+            if (!isTargetInvalid(livingEntity) && (blockPos.getY() <= ((AbstractClientPlayer) livingEntity).getY() + Double.longBitsToDouble(4609434218613702656L) || z)) {
+                AABB box1145 = getTargetBox((Player) livingEntity);
+                double d = AutoCrystalMode_3.PLACE.getMinDamageThreshold((Player) livingEntity);
                 double d2 = calcExplosionDamage(blockPos, livingEntity, box1145, true);
                 DamageOutcome autoCrystalMode_71882 = DamageOutcome.evaluate(livingEntity, d2);
                 if (!this.ignoreNakeds.getValue().booleanValue() || PlayerUtils.hasArmor(livingEntity)) {
-                    if (BoxMath.getBottomCenter(box1145).distanceTo(Vec3d.ofBottomCenter((Vec3i) blockPos)) <= this.crystalRange.getValue().floatValue() || autoCrystalMode_71882.flag || this.flag3) {
-                        if (!ClientServices.socialManager.isFriendEntity((PlayerEntity) livingEntity) || livingEntity == minecraftClient.player) {
+                    if (BoxMath.getBottomCenter(box1145).distanceTo(Vec3.atBottomCenterOf( blockPos)) <= this.crystalRange.getValue().floatValue() || autoCrystalMode_71882.flag || this.flag3) {
+                        if (!ClientServices.socialManager.isFriendEntity((Player) livingEntity) || livingEntity == minecraftClient.player) {
                             if ((d <= d2 && d2 >= MathConstants.val2) || autoCrystalMode_71882.flag) {
                                 if (autoCrystalData_4 == null || d2 > autoCrystalData_4.getDamage()) {
-                                    autoCrystalData_4 = new CrystalAttackTarget((PlayerEntity) livingEntity, d2, AutoCrystalDataMode.NONE, autoCrystalMode_71882);
+                                    autoCrystalData_4 = new CrystalAttackTarget((Player) livingEntity, d2, AutoCrystalDataMode.NONE, autoCrystalMode_71882);
                                 }
                             }
                         } else if (this.antiFriendKill.getValue().booleanValue() && d2 > EntityUtil.getEntityHealth((Entity) livingEntity)) {
@@ -1073,7 +1091,7 @@ public class AutoCrystal extends Module {
         if (livingEntity == null) {
             return true;
         }
-        return this.forceSuicide.getValue().booleanValue() ? livingEntity != minecraftClient.player : ClientServices.socialManager.isFriendEntity((PlayerEntity) livingEntity) || !livingEntity.isAlive() || livingEntity.isDead() || livingEntity.distanceTo(minecraftClient.player) > this.targetRange.getValue().floatValue() || ((DuckLivingEntityServerDead) livingEntity).isServerSideDead() || minecraftClient.player == livingEntity || livingEntity.isSpectator() || ((PlayerEntity) livingEntity).getAbilities().creativeMode;
+        return this.forceSuicide.getValue().booleanValue() ? livingEntity != minecraftClient.player : ClientServices.socialManager.isFriendEntity((Player) livingEntity) || !livingEntity.isAlive() || livingEntity.isRemoved() || livingEntity.distanceTo(minecraftClient.player) > this.targetRange.getValue().floatValue() || ((DuckLivingEntityServerDead) livingEntity).isServerSideDead() || minecraftClient.player == livingEntity || livingEntity.isSpectator() || ((Player) livingEntity).getAbilities().instabuild;
     }
 
     public boolean shouldSwapBack() {
@@ -1086,14 +1104,14 @@ public class AutoCrystal extends Module {
                 return true;
             }
             boolean isAnyPositionVisible = WorldUtils.isAnyPositionVisible(this.multipoint.getValue().getWorldCorners(this.blockPos3));
-            double distanceTo = minecraftClient.player.getEyePos().distanceTo(this.blockPos3.toCenterPos());
+            double distanceTo = minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(this.blockPos3));
             if (distanceTo > this.range.getValue().floatValue()) {
                 return true;
             }
             if (!isAnyPositionVisible && distanceTo > this.wallRange.getValue().floatValue() && !this.smartTrace.getValue().booleanValue()) {
                 return true;
             }
-            Vec3d ofCenter = Vec3d.ofCenter(this.blockPos3, Double.longBitsToDouble(4607182418800017408L));
+            Vec3 ofCenter = Vec3.atCenterOf(this.blockPos3).add(0.0d, 0.5d, 0.0d);
             LivingEntity livingEntity = this.playerEntity;
             if (ExplosionDamageCalculator.getExplosionDamage(ofCenter, livingEntity, getTargetBox(this.playerEntity), Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, (BlockPos) null) >= AutoCrystalMode_3.PLACE.getMinDamageThreshold(this.playerEntity)) {
                 return false;
@@ -1118,20 +1136,24 @@ public class AutoCrystal extends Module {
         return !this.assumeInvincibility.getValue().booleanValue() ? Float.intBitsToFloat(-1082130432) : this.timeout.getValue().floatValue();
     }
 
-    public boolean isPlayerInSpawnGrace(PlayerEntity playerEntity) {
+    public boolean isPlayerInSpawnGrace(Player playerEntity) {
         if (isSelfInSpawnGracePeriod()) {
             return false;
         }
-        DuckPlayerListEntry playerListEntry = (DuckPlayerListEntry)(minecraftClient.player.networkHandler.getPlayerListEntry(playerEntity.getGameProfile().getId()));
+        DuckPlayerListEntry playerListEntry = (DuckPlayerListEntry)(minecraftClient.player.connection.getPlayerInfo(playerEntity.getGameProfile().id()));
         return playerListEntry != null && ((float) (System.currentTimeMillis() - playerListEntry.mio$getJoinTime())) <= getInvincibilityTimeout() * Float.intBitsToFloat(1148846080);
     }
 
     public boolean isSelfInSpawnGracePeriod() {
-        return this.self.getValue().booleanValue() && ((float) minecraftClient.player.age) / Float.intBitsToFloat(1101004800) < getInvincibilityTimeout();
+        return this.self.getValue().booleanValue() && ((float) minecraftClient.player.tickCount) / Float.intBitsToFloat(1101004800) < getInvincibilityTimeout();
     }
 
     public boolean isMineIgnoreActive() {
-        return this.mineIgnore.getValue().booleanValue() && ((((((double) speedmine.getMiningProgress()) + (speedmine.getCurrentMiningSpeed() * ((double) Float.intBitsToFloat(1075838976)))) > ((double) speedmine.damage.getValue().floatValue()) ? 1 : ((((double) speedmine.getMiningProgress()) + (speedmine.getCurrentMiningSpeed() * ((double) Float.intBitsToFloat(1075838976)))) == ((double) speedmine.damage.getValue().floatValue()) ? 0 : -1)) >= 0 && speedmine.getBreakingPos() != null && WorldUtils.isBreakable(speedmine.getBreakingPos())) || !speedmine.hasCooldownElapsed(100L));
+        SpeedMine speedmine_lcl = getSpeedmine();
+        if (speedmine_lcl == null) {
+            return false;
+        }
+        return this.mineIgnore.getValue().booleanValue() && ((((((double) speedmine_lcl.getMiningProgress()) + (speedmine_lcl.getCurrentMiningSpeed() * ((double) Float.intBitsToFloat(1075838976)))) > ((double) speedmine_lcl.damage.getValue().floatValue()) ? 1 : ((((double) speedmine_lcl.getMiningProgress()) + (speedmine_lcl.getCurrentMiningSpeed() * ((double) Float.intBitsToFloat(1075838976)))) == ((double) speedmine_lcl.damage.getValue().floatValue()) ? 0 : -1)) >= 0 && speedmine_lcl.getBreakingPos() != null && WorldUtils.isBreakable(speedmine_lcl.getBreakingPos())) || !speedmine_lcl.hasCooldownElapsed(100L));
     }
 
     public boolean shouldAwaitBeforeBreak() {

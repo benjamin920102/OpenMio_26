@@ -2,11 +2,9 @@ package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import me.mioclient.module.misc.CustomDeathText;
-import net.minecraft.client.gui.screen.DeathScreen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.DeathScreen;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
@@ -15,9 +13,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified via JDK25 javap): DeathScreen has no 'message' field;
+   death text is 'causeOfDeath'. */
 @Mixin({DeathScreen.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinDeathScreen.class */
+
 public class MixinDeathScreen {
     private static CustomDeathText customdeath;
 
@@ -36,13 +35,13 @@ public class MixinDeathScreen {
     @Mutable
     @Shadow
     @Final
-    private Text field_2450;
+    private Component causeOfDeath;
 
-    @Inject(method = {"<init>"}, at = {@At("RETURN")})
-    public void mio$init(Text text, boolean z, CallbackInfo callbackInfo) {
+    @Inject(method = {"<init>"}, at = {@At("RETURN")}, require = 0)
+    public void mio$init(Component text, boolean z, net.minecraft.client.player.LocalPlayer player, CallbackInfo callbackInfo) {
         if (customdeath == null || !getCustomdeath().isToggled()) {
             return;
         }
-        this.field_2450 = getCustomdeath().getText327();
+        this.causeOfDeath = getCustomdeath().getText327();
     }
 }

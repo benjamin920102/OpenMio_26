@@ -11,46 +11,58 @@ import me.mioclient.util.player.EntityUtil;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.player.EntityUtil;
-import me.mioclient.util.combat.ExplosionDamageCalculator;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
-
 import java.text.DecimalFormat;
 import java.util.Iterator;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.render.RenderEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.exploit.IllegalDisconnect;
 import me.mioclient.module.misc.AutoReconnect;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.vehicle.TntMinecartEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.minecart.MinecartTNT;
+import net.minecraft.world.level.entity.EntityTypeTest;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoLog.class */
 public class AutoLog extends Module {
-    public static final IllegalDisconnect illegaldisconnect = (IllegalDisconnect) ClientServices.moduleInjector.getModule(IllegalDisconnect.class);
-    public static AutoReconnect autoreconnect = (AutoReconnect) ClientServices.moduleInjector.getModule(AutoReconnect.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static IllegalDisconnect illegaldisconnect;
+
+    public static IllegalDisconnect getIllegaldisconnect() {
+        if (illegaldisconnect == null && ClientServices.moduleInjector != null) {
+            try {
+                illegaldisconnect = (IllegalDisconnect) ClientServices.moduleInjector.getModule(IllegalDisconnect.class);
+            } catch (Exception e) {
+            }
+        }
+        return illegaldisconnect;
+    }
+
+    private static AutoReconnect autoreconnect;
+
+    public static AutoReconnect getAutoreconnect() {
+        if (autoreconnect == null && ClientServices.moduleInjector != null) {
+            try {
+                autoreconnect = (AutoReconnect) ClientServices.moduleInjector.getModule(AutoReconnect.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoreconnect;
+    }
     public Setting<Integer> health = add(new NumberSetting<>("Health", 12, 1, 20).setSuffix("hp"));
     public Setting<Float> invincTimeout = add(new NumberSetting<>("InvincTimeout", 0.0f, 0.0f, 4.0f).setSuffix("s"));
     public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", true));
@@ -86,7 +98,7 @@ public class AutoLog extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        if (isNotInGame() || minecraftClient.player.isSpectator() || minecraftClient.player.isInCreativeMode()) {
+        if (isNotInGame() || minecraftClient.player.isSpectator() || minecraftClient.player.isCreative()) {
             return;
         }
         if (!this.gearedOnly.getValue().booleanValue() || PlayerUtils.hasArmor(minecraftClient.player)) {
@@ -98,27 +110,29 @@ public class AutoLog extends Module {
                 triggerDisconnect(new StringTemplate().arg(String.valueOf(this.y.getValue())).format("You are below Y level \u0001"));
                 return;
             }
-            if (minecraftClient.player.age / Float.intBitsToFloat(1101004800) < this.invincTimeout.getValue().floatValue()) {
+            if (minecraftClient.player.tickCount / Float.intBitsToFloat(1101004800) < this.invincTimeout.getValue().floatValue()) {
                 return;
             }
             if (this.onRender.getValue().booleanValue()) {
-                for (PlayerEntity playerEntity : minecraftClient.world.getPlayers()) {
+                for (Player playerEntity : minecraftClient.level.players()) {
                     if (!ClientServices.socialManager.isFriend(playerEntity.getName().getString()) && playerEntity != minecraftClient.player) {
                         triggerDisconnect(new StringTemplate().arg(playerEntity.getName().getString()).format("\u0001 has entered your render distance!"));
                     }
                 }
             }
-            if (!minecraftClient.world.getEntitiesByClass(TntMinecartEntity.class, minecraftClient.player.getBoundingBox().expand(Double.longBitsToDouble(4616189618054758400L), Double.longBitsToDouble(4616189618054758400L), Double.longBitsToDouble(4616189618054758400L)), (v0) -> {
+            if (!minecraftClient.level.getEntities(EntityTypeTest.forClass(MinecartTNT.class), minecraftClient.player.getBoundingBox().inflate(Double.longBitsToDouble(4616189618054758400L), Double.longBitsToDouble(4616189618054758400L), Double.longBitsToDouble(4616189618054758400L)), (v0) -> {
                 return v0.isPrimed();
             }).isEmpty() && this.tNTMinecart.getValue().booleanValue()) {
                 triggerDisconnect("You are at risk of getting blown up by a TNT minecart!");
             }
             if (this.crystal.getValue().booleanValue()) {
-                minecraftClient.world.getEntities().forEach(entity -> {
-                    if (!(entity instanceof EndCrystalEntity) || minecraftClient.player.squaredDistanceTo(entity) > Double.longBitsToDouble(4638707616191610880L)) {
+                minecraftClient.level.getEntities(EntityTypeTest.forClass(EndCrystal.class), minecraftClient.player.getBoundingBox().inflate(12.0d, 12.0d, 12.0d), (v0) -> {
+                    return true;
+                }).forEach(entity -> {
+                    if (!(entity instanceof EndCrystal) || minecraftClient.player.distanceToSqr(entity) > Double.longBitsToDouble(4638707616191610880L)) {
                         return;
                     }
-                    Vec3d pos = entity.getPos();
+                    Vec3 pos = entity.position();
                     LivingEntity livingEntity = minecraftClient.player;
                     if (ExplosionDamageCalculator.getExplosionDamage(pos, livingEntity, minecraftClient.player.getBoundingBox(), Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, (BlockPos) null) >= EntityUtil.getPlayerHealth()) {
                         triggerDisconnect("You are at risk of getting blown up by an end crystal!");
@@ -126,19 +140,19 @@ public class AutoLog extends Module {
                 });
             }
             int i = (int) EntityUtil.getPlayerHealth();
-            if (minecraftClient.player.isDead() || i == 0) {
+            if (minecraftClient.player.isRemoved() || i == 0) {
                 return;
             }
-            if (minecraftClient.isWindowFocused() && this.unfocusedOnly.getValue().booleanValue()) {
+            if (minecraftClient.isWindowActive() && this.unfocusedOnly.getValue().booleanValue()) {
                 return;
             }
-            int sum = minecraftClient.player.getInventory().main.stream().filter(itemStack -> {
+            int sum = minecraftClient.player.getInventory().getNonEquipmentItems().stream().filter(itemStack -> {
                 return itemStack.getItem() == Items.TOTEM_OF_UNDYING;
             }).mapToInt((v0) -> {
                 return v0.getCount();
             }).sum();
-            if (minecraftClient.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING) {
-                sum += minecraftClient.player.getOffHandStack().getCount();
+            if (minecraftClient.player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
+                sum += minecraftClient.player.getOffhandItem().getCount();
             }
             boolean z = sum <= this.totemCount.getValue().intValue();
             if (!this.totems.getValue().booleanValue()) {
@@ -165,14 +179,14 @@ public class AutoLog extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof DisconnectS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundDisconnectPacket) {
             this.runnable = null;
         }
     }
 
     public boolean isElytraLowDurability() {
-        ItemStack armorStack = minecraftClient.player.getInventory().getArmorStack(EquipmentSlot.CHEST.getEntitySlotId());
-        if (!armorStack.isOf(Items.ELYTRA) || !armorStack.isDamageable()) {
+        ItemStack armorStack = minecraftClient.player.getItemBySlot(EquipmentSlot.CHEST);
+        if (!armorStack.is(Items.ELYTRA) || !armorStack.isDamageableItem()) {
             return false;
         }
         if (InventoryUtils.getDurabilityPercent(armorStack) > ((float) this.durability.getValue().intValue())) {
@@ -181,10 +195,10 @@ public class AutoLog extends Module {
         if (!this.assumeInventory.getValue().booleanValue()) {
             return true;
         }
-        Iterator it = minecraftClient.player.getInventory().main.iterator();
+        Iterator it = minecraftClient.player.getInventory().getNonEquipmentItems().iterator();
         while (it.hasNext()) {
             ItemStack itemStack = (ItemStack) it.next();
-            if (itemStack.isOf(Items.ELYTRA) && (!itemStack.isDamageable() || InventoryUtils.getDurabilityPercent(itemStack) > this.durability.getValue().intValue())) {
+            if (itemStack.is(Items.ELYTRA) && (!itemStack.isDamageableItem() || InventoryUtils.getDurabilityPercent(itemStack) > this.durability.getValue().intValue())) {
                 return false;
             }
         }
@@ -195,15 +209,19 @@ public class AutoLog extends Module {
         if (this.autoDisable.getValue().booleanValue()) {
             disable();
         }
-        ClientConnection connection = minecraftClient.player.networkHandler.getConnection();
+        Connection connection = minecraftClient.player.connection.getConnection();
         if (connection != null) {
             ClientServices.holeSnapRenderHelper.flag3 = true;
-            autoreconnect.disable();
+            AutoReconnect autoreconnect_lcl = getAutoreconnect();
+            if (autoreconnect_lcl != null) {
+                autoreconnect_lcl.disable();
+            }
             Runnable runnable = () -> {
-                connection.disconnect(Text.empty().append(Text.of(new StringTemplate().arg(str).arg(String.valueOf(Formatting.RED)).arg(String.valueOf(Formatting.GRAY)).format("\u0001[AutoLog] \u0001\u0001"))));
+                connection.disconnect(Component.empty().append(Component.literal(new StringTemplate().arg(str).arg(String.valueOf(ChatFormatting.RED)).arg(String.valueOf(ChatFormatting.GRAY)).format("\u0001[AutoLog] \u0001\u0001"))));
             };
-            boolean z = (illegaldisconnect.ignoreProxy.getValue().booleanValue() && IllegalDisconnect.isKnownProxy()) ? false : true;
-            if (!illegaldisconnect.isToggled() || !z) {
+            IllegalDisconnect illegaldisconnect_lcl = getIllegaldisconnect();
+            boolean z = (illegaldisconnect_lcl != null && illegaldisconnect_lcl.ignoreProxy.getValue().booleanValue() && IllegalDisconnect.isKnownProxy()) ? false : true;
+            if (illegaldisconnect_lcl == null || !illegaldisconnect_lcl.isToggled() || !z) {
                 runnable.run();
                 return;
             }

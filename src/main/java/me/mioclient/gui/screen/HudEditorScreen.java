@@ -19,17 +19,12 @@ import me.mioclient.util.math.GridPoint;
 import me.mioclient.util.math.Tuple;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.GridPoint;
-import me.mioclient.render.hud.TextRenderState;
 import me.mioclient.module.client.hud.HudEdgeDragHandler;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.hud.DraggableHudElement;
-import me.mioclient.render.shape.Shape2DRenderer;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.math.Tuple;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,16 +32,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.api.Category;
-import me.mioclient.util.anim.AnimationProgress;
-import me.mioclient.render.hud.ResizableHudElement;
-import net.minecraft.client.gui.DrawContext;
-import me.mioclient.module.client.HUD;
-import me.mioclient.mode.client.ModuleListMode;
-import me.mioclient.render.hud.ModuleListRenderer;
-import me.mioclient.setting.StringSettingRow;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/HudEditorScreen.class */
 public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAccessor {
     public static final List<ModuleListRenderer> list = Collections.synchronizedList(new ArrayList());
     public static final TextRenderState helper_22 = new TextRenderState();
@@ -72,25 +59,25 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
         this.arrayList.add(categorySearchHelper4);
     }
 
-    @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public void render(DrawContext drawContext, int i, int i2, float f) {
-        RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), getAlpha());
+    /* 26.2 port: Screen.render() is gone — extractRenderState is the draw path. */
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor drawContext, int i, int i2, float f) {
         helper_22.setActive(false);
         this.lastMouseX = i;
         this.lastMouseY = i2;
-        float scaledWindowWidth = drawContext.getScaledWindowWidth() / Float.intBitsToFloat(1073741824);
-        float scaledWindowHeight = drawContext.getScaledWindowHeight() / Float.intBitsToFloat(1073741824);
-        Color color817 = ColorUtils.withAlphaPercent(Color.white, RenderSystem.getShaderColor()[3] * Float.intBitsToFloat(1053609165));
-        Shape2DRenderer.drawRect(drawContext.getMatrices(), scaledWindowWidth - Float.intBitsToFloat(1056964608), 0.0f, scaledWindowWidth + Float.intBitsToFloat(1056964608), scaledWindowHeight * Float.intBitsToFloat(1073741824), color817);
-        Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, scaledWindowHeight - Float.intBitsToFloat(1056964608), scaledWindowWidth - Float.intBitsToFloat(1056964608), scaledWindowHeight + Float.intBitsToFloat(1056964608), color817);
-        Shape2DRenderer.drawRect(drawContext.getMatrices(), scaledWindowWidth + Float.intBitsToFloat(1056964608), scaledWindowHeight - Float.intBitsToFloat(1056964608), scaledWindowWidth * Float.intBitsToFloat(1073741824), scaledWindowHeight + Float.intBitsToFloat(1056964608), color817);
+        float scaledWindowWidth = drawContext.guiWidth() / Float.intBitsToFloat(1073741824);
+        float scaledWindowHeight = drawContext.guiHeight() / Float.intBitsToFloat(1073741824);
+        Color color817 = ColorUtils.withAlphaPercent(Color.white, getAlpha() * Float.intBitsToFloat(1053609165));
+        drawContext.fill((int) (scaledWindowWidth - Float.intBitsToFloat(1056964608)), 0, (int) (scaledWindowWidth + Float.intBitsToFloat(1056964608)), (int) (scaledWindowHeight * Float.intBitsToFloat(1073741824)), color817.getRGB());
+        drawContext.fill(0, (int) (scaledWindowHeight - Float.intBitsToFloat(1056964608)), (int) (scaledWindowWidth - Float.intBitsToFloat(1056964608)), (int) (scaledWindowHeight + Float.intBitsToFloat(1056964608)), color817.getRGB());
+        drawContext.fill((int) (scaledWindowWidth + Float.intBitsToFloat(1056964608)), (int) (scaledWindowHeight - Float.intBitsToFloat(1056964608)), (int) (scaledWindowWidth * Float.intBitsToFloat(1073741824)), (int) (scaledWindowHeight + Float.intBitsToFloat(1056964608)), color817.getRGB());
         this.zoomHelper_2.do1010(drawContext, i, i2, f);
         renderAll(drawContext, i, i2);
         if (this.isDraggingModule) {
             DraggableHudElement object1989 = getRenderer(ModuleListMode.NONE).getElements().getLast();
             float[] floatArray2950 = object1989.getMeasuredSize();
-            object1989.setRelativeX(Math.max(0.0f, Math.min(drawContext.getScaledWindowWidth() - floatArray2950[0], i - this.dragOffsetX)), true);
-            object1989.setRelativeY(Math.max(0.0f, Math.min(drawContext.getScaledWindowHeight() - floatArray2950[1], i2 - this.dragOffsetY)), true);
+            object1989.setRelativeX(Math.max(0.0f, Math.min(drawContext.guiWidth() - floatArray2950[0], i - this.dragOffsetX)), true);
+            object1989.setRelativeY(Math.max(0.0f, Math.min(drawContext.guiHeight() - floatArray2950[1], i2 - this.dragOffsetY)), true);
             object1989.computeSides();
             if (Math.abs((object1989.getX() + (floatArray2950[0] / Float.intBitsToFloat(1073741824))) - scaledWindowWidth) <= Float.intBitsToFloat(1084227584)) {
                 float intBitsToFloat = scaledWindowWidth - (floatArray2950[0] / Float.intBitsToFloat(1073741824));
@@ -110,11 +97,14 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
         if (helper_22.isActive() || f2 > Double.longBitsToDouble(4591870180066957722L)) {
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, helper_22.getText(), helper_22.getX() + (Float.intBitsToFloat(1092616192) * (Float.intBitsToFloat(1065353216) - f2) * helper_22.getSide()), helper_22.getY(), ColorUtils.withAlpha(Color.white, (int) (f2 * Float.intBitsToFloat(1132396544))));
         }
-        super.render(drawContext, i, i2, f);
+        super.extractRenderState(drawContext, i, i2, f);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public boolean mouseClicked(double d, double d2, int i) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double d = event.x();
+        double d2 = event.y();
+        int i = event.button();
         Tuple holeSnapData_2 = null;
         for (ModuleListRenderer ModuleListRenderer : list) {
             for (int size = ModuleListRenderer.getElements().size() - 1; size >= 0; size--) {
@@ -135,11 +125,14 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
         } else {
             this.zoomHelper_2.mouseClicked(d, d2, i);
         }
-        return super.mouseClicked(d, d2, i);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public boolean mouseReleased(double d, double d2, int i) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double d = event.x();
+        double d2 = event.y();
+        int i = event.button();
         this.zoomHelper_2.mouseReleased(d, d2, i);
         if (this.isDraggingModule) {
             this.isDraggingModule = false;
@@ -165,11 +158,13 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
                 }
             }
         }
-        return super.mouseReleased(d, d2, i);
+        return super.mouseReleased(event);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public boolean keyPressed(int i, int i2, int i3) {
+    public boolean keyPressed(KeyEvent event) {
+        int i = event.key();
+        int i2 = event.scancode();
         boolean z = false;
         Iterator<ClickGuiPanel> it = this.arrayList.iterator();
         while (true) {
@@ -207,7 +202,7 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
                 moduleListSearchHelper4202.computeSides();
             }
         }
-        return super.keyPressed(i, i2, i3);
+        return super.keyPressed(event);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
@@ -242,10 +237,10 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
         return list;
     }
 
-    public void renderAll(DrawContext drawContext, double d, double d2) {
+    public void renderAll(GuiGraphicsExtractor drawContext, double d, double d2) {
         Iterator<ModuleListRenderer> it = getAllRenderers().iterator();
         while (it.hasNext()) {
-            it.next().render(drawContext, drawContext.getMatrices(), d, d2);
+            it.next().render(drawContext, new PoseStack(), d, d2);
         }
         Shape2DRenderer.resetShadowOffset();
     }
@@ -289,17 +284,18 @@ public class HudEditorScreen extends AbstractClickGuiScreen implements ClientAcc
         return null;
     }
 
-    public void drawSnapGuide(DrawContext drawContext, double d, boolean z) {
-        float f = (float) d;
+    public void drawSnapGuide(GuiGraphicsExtractor drawContext, double d, boolean z) {
+        int f = (int) d;
+        int w = (int) Float.intBitsToFloat(1056964608);
         if (z) {
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), f, 0.0f, f + Float.intBitsToFloat(1056964608), drawContext.getScaledWindowHeight(), Color.yellow);
+            drawContext.fill(f, 0, f + w, drawContext.guiHeight(), Color.yellow.getRGB());
         } else {
-            Shape2DRenderer.drawRect(drawContext.getMatrices(), 0.0f, f, drawContext.getScaledWindowWidth(), f + Float.intBitsToFloat(1056964608), Color.yellow);
+            drawContext.fill(0, f, drawContext.guiWidth(), f + w, Color.yellow.getRGB());
         }
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public void renderOverlay(DrawContext drawContext) {
+    public void renderOverlay(GuiGraphicsExtractor drawContext) {
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen

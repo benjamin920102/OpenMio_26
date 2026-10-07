@@ -56,4 +56,9 @@ Same jar serves as the `compileOnly` dep at build time and the runtime mod at la
 
 ## License
 
-Reconstruction for research and education. Original Mio Client copyright belongs to its author.
+GPL-3.0-or-later — see `LICENSE`. Rights granted under GPL-3.0 §2/§10 are
+irrevocable for compliant users; downstream recipients get their license
+automatically from the original licensors. See `NOTICE.md` for provenance and
+the anti-takedown statement.
+
+Deobfed + ported from 1.21.1 to 26.2. ALOT OF BUGS. Research/education use.

@@ -1,0 +1,161 @@
+{
+  "targets": {
+    "swap": {}
+  },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "mio:program/outline",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "minecraft:main",
+          "bilinear": true
+        }
+      ],
+      "output": "swap",
+      "uniforms": {
+        "OutlineConfig": [
+          {
+            "name": "Config",
+            "type": "vec4",
+            "value": [
+              2.0,
+              0.2,
+              1.0,
+              1.0
+            ]
+          }
+        ],
+        "EspSettings": [
+          {
+            "name": "Rgb0",
+            "type": "vec4",
+            "value": [
+              0.75,
+              0.6,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Rgb1",
+            "type": "vec4",
+            "value": [
+              0.45,
+              0.25,
+              0.95,
+              1.0
+            ]
+          },
+          {
+            "name": "Rgb2",
+            "type": "vec4",
+            "value": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Rgb3",
+            "type": "vec4",
+            "value": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Params0",
+            "type": "vec4",
+            "value": [
+              0.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Params1",
+            "type": "vec4",
+            "value": [
+              1.0,
+              0.5,
+              1.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Params2",
+            "type": "vec4",
+            "value": [
+              3.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "ScreenData",
+            "type": "vec4",
+            "value": [
+              1920.0,
+              1080.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Extra",
+            "type": "vec4",
+            "value": [
+              1.0,
+              10.0,
+              0.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Opacities",
+            "type": "vec4",
+            "value": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "minecraft:post/blit",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap",
+          "bilinear": true
+        }
+      ],
+      "output": "minecraft:main",
+      "uniforms": {
+        "BlitConfig": [
+          {
+            "name": "ColorModulate",
+            "type": "vec4",
+            "value": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

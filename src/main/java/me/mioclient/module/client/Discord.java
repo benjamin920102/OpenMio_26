@@ -7,24 +7,18 @@ import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-
 import com.jagrosh.discordipc.IPCClient;
 import com.jagrosh.discordipc.entities.DiscordBuild;
+import com.jagrosh.discordipc.entities.PartyPrivacy;
 import com.jagrosh.discordipc.entities.RichPresence;
 import java.util.concurrent.CompletableFuture;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.event.events.client.ClientTickEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.multiplayer.ServerData;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/Discord.class */
 public class Discord extends Module {
     public Setting<Boolean> uid = add(new BooleanSetting("UID", false));
     public Setting<Boolean> server = add(new BooleanSetting("Server", false));
@@ -80,21 +74,21 @@ public class Discord extends Module {
                     return;
                 }
                 RichPresence.Builder builder = new RichPresence.Builder();
-                builder.setLargeImage("https://me.mioclient.me/assets/dcrpc3.png", getClientVersion());
+                builder.setLargeImageWithTooltip("https://me.mioclient.me/assets/dcrpc3.png", getClientVersion());
                 builder.setStartTimestamp(this.num);
                 if (this.uid.getValue().booleanValue()) {
                     builder.setDetails(new StringTemplate().arg(ClientServices.welcomerHelper.getRank()).format("uid \u0001"));
                 }
                 if (this.server.getValue().booleanValue()) {
-                    ServerInfo serverInfo = null;
+                    ServerData serverInfo = null;
                     String str = "Not playing";
                     if (!isNotInGame()) {
-                        serverInfo = minecraftClient.player.networkHandler.getServerInfo();
-                        str = new StringTemplate().arg((minecraftClient.isInSingleplayer() || serverInfo == null) ? "singleplayer" : serverInfo.address).format("Playing \u0001");
+                        serverInfo = minecraftClient.player.connection.getServerData();
+                        str = new StringTemplate().arg((minecraftClient.hasSingleplayerServer() || serverInfo == null) ? "singleplayer" : serverInfo.ip).format("Playing \u0001");
                     }
                     builder.setState(str);
                     if (serverInfo != null && serverInfo.players != null) {
-                        builder.setParty(Integer.toString(str.hashCode()), serverInfo.players.online(), serverInfo.players.max(), 0);
+                        builder.setParty(Integer.toString(str.hashCode()), serverInfo.players.online(), serverInfo.players.max(), PartyPrivacy.Private);
                     }
                 }
                 now.sendRichPresence(builder.build());

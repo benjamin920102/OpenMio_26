@@ -1,9 +1,4 @@
-/*
- * Decompiled with CFR 0.2.2 (FabricMC 7c48b8c4).
- * 
- * Could not load the following classes:
- *  net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint
- */
+
 package nick;
 
 import java.lang.reflect.Field;

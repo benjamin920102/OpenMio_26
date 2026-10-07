@@ -2,19 +2,15 @@ package me.mioclient.render.shape;
 
 import me.mioclient.util.math.ColorUtils;
 
-import me.mioclient.util.math.ColorUtils;
-
 import java.awt.Color;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
 import me.mioclient.manager.RotationManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FadingBoxRenderer.class */
 public class FadingBoxRenderer {
-    public Box box;
+    public AABB box;
     public long num;
     public float val = Float.intBitsToFloat(1065353216);
 
@@ -23,10 +19,10 @@ public class FadingBoxRenderer {
     }
 
     public void setBlockPos(BlockPos blockPos) {
-        this.box = new Box(blockPos);
+        this.box = new AABB(blockPos);
     }
 
-    public void setBoundingBox(Box box) {
+    public void setBoundingBox(AABB box) {
         this.box = box;
     }
 
@@ -34,7 +30,7 @@ public class FadingBoxRenderer {
         this.val = f;
     }
 
-    public void renderFadingBox(MatrixStack matrixStack, Color color, Color color2, float f, boolean z) {
+    public void renderFadingBox(PoseStack matrixStack, Color color, Color color2, float f, boolean z) {
         if (this.box == null || !RotationManager.isInFrustum(this.box)) {
             return;
         }
@@ -47,10 +43,10 @@ public class FadingBoxRenderer {
     }
 
     public float getFadeProgress(float f) {
-        return MathHelper.clamp(Float.intBitsToFloat(1065353216) - (((float) Math.max(System.currentTimeMillis() - this.num, 0L)) / f), 0.0f, Float.intBitsToFloat(1065353216));
+        return Mth.clamp(Float.intBitsToFloat(1065353216) - (((float) Math.max(System.currentTimeMillis() - this.num, 0L)) / f), 0.0f, Float.intBitsToFloat(1065353216));
     }
 
-    public Box getBox() {
+    public AABB getBox() {
         return this.box;
     }
 }

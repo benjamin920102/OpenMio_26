@@ -1,7 +1,5 @@
 package me.mioclient.module.render.esp;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EspBoxRenderer.class */
 public final class EspBoxRenderer {
     public static final String string = "dev.tr7zw.entityculling.versionless.EntityCullingVersionlessBase";
     public static final EspBoxEdge eSPHelper_3;

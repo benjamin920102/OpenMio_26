@@ -12,11 +12,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
-import net.minecraft.command.CommandSource;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ExecutorServiceFeature.class */
 public class ExecutorServiceFeature extends CommandFeature {
     public final ExecutorService executorService;
     public final HttpClient httpClient;
@@ -29,7 +26,7 @@ public class ExecutorServiceFeature extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
     }
 
     public CompletableFuture<JsonObject> fetchApiData(String str, String str2) {

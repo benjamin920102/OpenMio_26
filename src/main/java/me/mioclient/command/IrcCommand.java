@@ -5,31 +5,25 @@ import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.client.ChatUtils;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_39.class */
 public final class IrcCommand extends CommandFeature {
     public IrcCommand() {
         super("irc");
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.literal("ping").then(CommandFeature.argument("pos", new ExamplesArgumentType()).executes(commandContext -> {
-            sharePositionToIrc(BlockPos.ofFloored((Vec3d) commandContext.getArgument("pos", Vec3d.class)));
+            sharePositionToIrc(BlockPos.containing((Vec3) commandContext.getArgument("pos", Vec3.class)));
             return 1;
         })).executes(commandContext2 -> {
-            BlockHitResult blockHitResult = (minecraftClient.crosshairTarget) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.crosshairTarget) : null;
+            BlockHitResult blockHitResult = (minecraftClient.hitResult) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.hitResult) : null;
             if (!(blockHitResult instanceof BlockHitResult)) {
                 return 1;
             }
@@ -42,12 +36,12 @@ public final class IrcCommand extends CommandFeature {
             }
             for (String str : ClientServices.nameTagsManager.getSharedSecret()) {
                 i--;
-                ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(str).arg(ClientCommandRegistry.getPrefix()).format("\u0001irc \u0001")), ChatUtils.createSignature(i));
+                ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(str).arg(ClientCommandRegistry.getPrefix()).format("\u0001irc \u0001")), ChatUtils.createSignature(i));
             }
             return 1;
         }));
         addSubCommand(new IgnoreCommand(), literalArgumentBuilder);
-        if (is3098((CommandSource) null)) {
+        if (is3098((CommandSourceStack) null)) {
             literalArgumentBuilder.then(CommandFeature.literal("online").requires(this::is3098).executes(commandContext4 -> {
                 ClientServices.nameTagsManager.sendKeepAlive();
                 return 1;
@@ -74,7 +68,7 @@ public final class IrcCommand extends CommandFeature {
     public void sharePositionToIrc(BlockPos blockPos) {
         String str = null;
         try {
-            str = minecraftClient.getNetworkHandler().getConnection().getAddress().toString();
+            str = minecraftClient.getConnection().getConnection().getRemoteAddress().toString();
             int indexOf = str.indexOf(47);
             if (indexOf > 0) {
                 str = str.substring(0, indexOf);
@@ -90,7 +84,7 @@ public final class IrcCommand extends CommandFeature {
         ClientServices.nameTagsManager.sendPlayerPosition(ClientServices.welcomerHelper.getUsername(), str, blockPos);
     }
 
-    public boolean is3098(CommandSource commandSource) {
+    public boolean is3098(CommandSourceStack commandSource) {
         return ClientServices.welcomerHelper.isFullFeatures();
     }
 }

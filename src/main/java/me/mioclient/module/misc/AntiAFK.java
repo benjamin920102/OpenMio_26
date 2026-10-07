@@ -9,34 +9,25 @@ import me.mioclient.util.client.ChatUtils;
 import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.math.MathConstants;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.network.AddMessageEvent;
 import me.mioclient.event.events.input.KeyEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.event.events.input.InputTickEvent;
 import me.mioclient.event.events.input.UpdateMouseEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiAFK.class */
 public class AntiAFK extends Module {
     public Setting<Float> delay = add(new NumberSetting<>("Delay", 15.0f, 1.0f, 60.0f).setSuffix("s"));
     public Setting<Boolean> autoReply = add(new BooleanSetting("AutoReply", false));
@@ -65,8 +56,8 @@ public class AntiAFK extends Module {
     @Listen
     public void onTick(TickEvent tickEvent) {
         if (isActionReady()) {
-            if (minecraftClient.options.jumpKey.isPressed() && this.jump.getValue().booleanValue()) {
-                minecraftClient.options.jumpKey.setPressed(false);
+            if (minecraftClient.options.keyJump.isDown() && this.jump.getValue().booleanValue()) {
+                minecraftClient.options.keyJump.setDown(false);
             }
             if (this.stopwatch2.hasElapsed(this.delay.getValue().floatValue(), TimeUnit.SECONDS)) {
                 List<Runnable> list1582 = buildAntiAfkActions();
@@ -82,8 +73,8 @@ public class AntiAFK extends Module {
     @Listen(get219= RenderConstants.num2)
     public void onAddMessage(AddMessageEvent addMessageEvent) {
         if (this.autoReply.getValue().booleanValue() && isActionReady() && addMessageEvent.getPhase() == KeyPearlMode.Pre && addMessageEvent.getText() != null && ChatUtils.isIncomingWhisper(addMessageEvent.getText().getString())) {
-            minecraftClient.executeSync(() -> {
-                minecraftClient.player.networkHandler.sendChatCommand(new StringTemplate().arg((int) Math.floor(Math.random() * Double.longBitsToDouble(4666723172467343360L))).arg(minecraftClient.player.getName().getString()).format("r Hello! This is auto reply talking. \u0001 is currently AFK :'). [\u0001]"));
+            minecraftClient.execute(() -> {
+                minecraftClient.player.connection.sendCommand(new StringTemplate().arg((int) Math.floor(Math.random() * Double.longBitsToDouble(4666723172467343360L))).arg(minecraftClient.player.getName().getString()).format("r Hello! This is auto reply talking. \u0001 is currently AFK :'). [\u0001]"));
             });
         }
     }
@@ -100,11 +91,14 @@ public class AntiAFK extends Module {
 
     @Listen
     public void onInputTick(InputTickEvent tickEvent_2) {
+        net.minecraft.client.player.ClientInput ci = tickEvent_2.getInput();
         if (this.flag) {
-            tickEvent_2.getInput().jumping = true;
+            net.minecraft.world.entity.player.Input cur = ci.keyPresses;
+            ci.keyPresses = new net.minecraft.world.entity.player.Input(cur.forward(), cur.backward(), cur.left(), cur.right(), true, cur.shift(), cur.sprint());
         }
         if (this.flag2) {
-            tickEvent_2.getInput().sneaking = true;
+            net.minecraft.world.entity.player.Input cur = ci.keyPresses;
+            ci.keyPresses = new net.minecraft.world.entity.player.Input(cur.forward(), cur.backward(), cur.left(), cur.right(), cur.jump(), true, cur.sprint());
         }
         this.flag2 = false;
         this.flag = false;
@@ -125,8 +119,8 @@ public class AntiAFK extends Module {
         if (this.rotate.getValue().booleanValue()) {
             Random random = new Random();
             arrayList.add(() -> {
-                minecraftClient.player.setYaw(random.nextFloat(MathConstants.num3));
-                minecraftClient.player.setPitch(random.nextFloat(Float.intBitsToFloat(1127481344)) - MathConstants.num2);
+                minecraftClient.player.setYRot(random.nextFloat(MathConstants.num3));
+                minecraftClient.player.setXRot(random.nextFloat(Float.intBitsToFloat(1127481344)) - MathConstants.num2);
             });
         }
         if (this.attack.getValue().booleanValue()) {
@@ -134,7 +128,7 @@ public class AntiAFK extends Module {
                 if (!this.onlySwing.getValue().booleanValue()) {
                     ((me.mioclient.mixin.ducks.DuckMinecraftClient) (Object) minecraftClient).attack();
                 } else {
-                    minecraftClient.player.swingHand(Hand.MAIN_HAND);
+                    minecraftClient.player.swing(InteractionHand.MAIN_HAND);
                 }
             });
         }

@@ -2,15 +2,10 @@ package me.mioclient.module.player.scaffold;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.NamedValue;
-import me.mioclient.util.inventory.InventoryUtils;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ScaffoldMode_3.class */
 public enum ScaffoldMode_3 implements ClientAccessor, NamedValue {
     NONE("None"),
     NORMAL("Normal") { // from class: me.mioclient.module.player.scaffold.ScaffoldMode_3.Inner_2
@@ -23,7 +18,7 @@ public enum ScaffoldMode_3 implements ClientAccessor, NamedValue {
     SILENT("Silent") { // from class: me.mioclient.module.player.scaffold.ScaffoldMode_3.Inner
         @Override // me.mioclient.module.player.scaffold.ScaffoldMode_3
         public void selectSlotAndRun(int i, java.lang.Runnable runnable) {
-            int i2 = minecraftClient.player.getInventory().selectedSlot;
+            int i2 = minecraftClient.player.getInventory().getSelectedSlot();
             InventoryUtils.selectSlot(i);
             runnable.run();
             InventoryUtils.selectSlot(i2);
@@ -42,7 +37,7 @@ public enum ScaffoldMode_3 implements ClientAccessor, NamedValue {
     }
 
     public void selectSlotAndRun(int i, java.lang.Runnable runnable) {
-        if (minecraftClient.player.getInventory().selectedSlot != i) {
+        if (minecraftClient.player.getInventory().getSelectedSlot() != i) {
             return;
         }
         runnable.run();

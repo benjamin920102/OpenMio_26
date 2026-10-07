@@ -3,13 +3,10 @@ package me.mioclient.module.player.speedmine;
 import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SpeedMineRunnable.class */
 public class SlotRestoreTask implements java.lang.Runnable, ClientAccessor {
     public final SpeedMine speedMine;
     public final long num = System.currentTimeMillis();
@@ -27,7 +24,7 @@ public class SlotRestoreTask implements java.lang.Runnable, ClientAccessor {
     @Override // java.lang.Runnable
     public void run() {
         if (this.speedMine.getSlotRestoreTask() == null || this.speedMine.getSlotRestoreTask().equals(this)) {
-            if (minecraftClient.player.getInventory().getStack(this.num3).isOf(this.item)) {
+            if (minecraftClient.player.getInventory().getItem(this.num3).is(this.item)) {
                 return;
             }
             InventoryUtils.swapToHotbar(this.num2);

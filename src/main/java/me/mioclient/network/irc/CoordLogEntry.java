@@ -2,11 +2,9 @@ package me.mioclient.network.irc;
 
 import me.mioclient.api.ClientAccessor;
 
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CoordLogEntry.class */
 public final class CoordLogEntry {
     public transient long spawnTime = System.currentTimeMillis();
     public final String string;
@@ -37,7 +35,7 @@ public final class CoordLogEntry {
     }
 
     public String getStrippedName() {
-        return Formatting.strip(this.string);
+        return ChatFormatting.stripFormatting(this.string);
     }
 
     public String getServer() {
@@ -74,7 +72,7 @@ public final class CoordLogEntry {
     public boolean isOnSameServer() {
         String str = null;
         try {
-            str = ClientAccessor.minecraftClient.getNetworkHandler().getConnection().getAddress().toString();
+            str = ClientAccessor.minecraftClient.getConnection().getConnection().getRemoteAddress().toString();
             int indexOf = str.indexOf(47);
             if (indexOf > 0) {
                 str = str.substring(0, indexOf);

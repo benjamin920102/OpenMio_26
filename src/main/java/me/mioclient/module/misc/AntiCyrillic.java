@@ -5,33 +5,23 @@ import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 
 import java.util.Map;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.network.ChatEvent;
-import me.mioclient.mixin.ducks.DuckCommandExecutionC2SPacket;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
 import me.mioclient.module.Chat;
 import me.mioclient.setting.EnumSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiCyrillic.class */
 public class AntiCyrillic extends Module {
     public Setting<AntiCyrillicMode> mode = add(new EnumSetting<>("Mode", AntiCyrillicMode.CHAT));
     public static final Map<Character, String> map = new HashMap();
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiCyrillic$AntiCyrillicMode.class */
+    
     public enum AntiCyrillicMode implements NamedValue {
         CHAT("Chat"),
         COMMANDS("Commands"),
@@ -49,8 +39,7 @@ public class AntiCyrillic extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/AntiCyrillic$HashMap.class */
+    
     static class HashMap extends java.util.HashMap<Character, String> {
         public HashMap() {
             put((char) 1049, "u'");
@@ -145,11 +134,13 @@ public class AntiCyrillic extends Module {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        CommandExecutionC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof CommandExecutionC2SPacket ? (CommandExecutionC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof CommandExecutionC2SPacket) {
-            CommandExecutionC2SPacket commandExecutionC2SPacket = packet904;
+        ServerboundChatCommandPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundChatCommandPacket ? (ServerboundChatCommandPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundChatCommandPacket) {
+            ServerboundChatCommandPacket commandExecutionC2SPacket = packet904;
             if (this.mode.getValue() != AntiCyrillicMode.CHAT) {
-                ((DuckCommandExecutionC2SPacket)(Object) commandExecutionC2SPacket).setCommand(replaceCyrillic(commandExecutionC2SPacket.command()));
+                // 26.2 port (verified): record(String command) is immutable — cancel + resend.
+                sendImmediatelyEvent.cancel();
+                minecraftClient.player.connection.send(new ServerboundChatCommandPacket(replaceCyrillic(commandExecutionC2SPacket.command())));
             }
         }
     }

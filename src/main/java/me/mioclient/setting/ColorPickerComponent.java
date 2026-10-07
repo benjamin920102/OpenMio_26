@@ -14,36 +14,22 @@ import me.mioclient.util.anim.InterpolatedFloat;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.ClosableElement;
 import me.mioclient.gui.GuiComponent;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.shape.Shape2DRenderer;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.anim.InterpolatedFloat;
 
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import me.mioclient.api.Setting;
-import me.mioclient.util.anim.AnimationProgress;
-import me.mioclient.util.time.Stopwatch;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
-import me.mioclient.mode.client.CursorType;
-import me.mioclient.gui.widget.PanelComponent;
-import me.mioclient.gui.widget.PanelComponentFlag;
-import me.mioclient.gui.widget.PanelTextButton;
 import me.mioclient.setting.ProgressSettingPresetSettingButton;
 import me.mioclient.setting.SettingPresetSettingButton;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ColorPickerComponent.class */
 public class ColorPickerComponent extends SettingPresetSettingButton<Color> implements ClosableElement {
     public final List<GuiComponent> list;
     public final Stopwatch stopwatch;
@@ -61,8 +47,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
     public final InterpolatedFloat hUDHelper_24;
     public final AnimationProgress progress;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/StopwatchPresetHelper2$Inner.class */
+    
     private static class Inner extends ProgressSettingPresetSettingButton {
         public Inner(ColorPickerComponent stopwatchPresetHelper2) {
             super(stopwatchPresetHelper2.presetEnumSettingHelper, stopwatchPresetHelper2, new BooleanSetting("", Boolean.valueOf(((ColorSetting) stopwatchPresetHelper2.setting).isRainbow())));
@@ -73,7 +58,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
 
         @Override // me.mioclient.setting.ProgressSettingPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-        public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+        public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
             super.render(drawContext, matrixStack, d, d2);
             String str = "Rainbow";
             renderScrolling(matrixStack, "Rainbow", () -> {
@@ -82,13 +67,12 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/StopwatchPresetHelper2$Inner_2.class */
+    
     private static class Inner_2 extends PanelTextButton {
         public Inner_2(int i, ColorPickerComponent stopwatchPresetHelper2) {
             super(i, stopwatchPresetHelper2, "Paste", () -> {
                 try {
-                    Color color828 = ColorUtils.colorFromHex(minecraftClient.keyboard.getClipboard().trim());
+                    Color color828 = ColorUtils.colorFromHex(minecraftClient.keyboardHandler.getClipboard().trim());
                     stopwatchPresetHelper2.syncHsbFromColor(color828);
                     stopwatchPresetHelper2.getSetting().setValue(color828);
                     stopwatchPresetHelper2.stopwatch2.reset();
@@ -99,7 +83,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
 
         @Override // me.mioclient.gui.widget.PanelTextButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-        public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+        public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
             if (this.stopwatchPresetHelper2.isHidden()) {
                 return;
             }
@@ -123,8 +107,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/StopwatchPresetHelper2$Inner_3.class */
+    
     private static class Inner_3 extends ProgressSettingPresetSettingButton {
         public Inner_3(ColorPickerComponent stopwatchPresetHelper2) {
             super(stopwatchPresetHelper2.presetEnumSettingHelper, stopwatchPresetHelper2, new BooleanSetting("", Boolean.valueOf(((ColorSetting) stopwatchPresetHelper2.setting).isSyncToTheme())));
@@ -135,7 +118,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
 
         @Override // me.mioclient.setting.ProgressSettingPresetSettingButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-        public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+        public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
             super.render(drawContext, matrixStack, d, d2);
             String str = "Sync";
             renderScrolling(matrixStack, "Sync", () -> {
@@ -149,18 +132,17 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/StopwatchPresetHelper2$Inner_4.class */
+    
     private static class Inner_4 extends PanelTextButton {
         public Inner_4(int i, ColorPickerComponent stopwatchPresetHelper2) {
             super(i, stopwatchPresetHelper2, "Copy", () -> {
-                minecraftClient.keyboard.setClipboard(ColorUtils.colorToHex(stopwatchPresetHelper2.getColor(), true));
+                minecraftClient.keyboardHandler.setClipboard(ColorUtils.colorToHex(stopwatchPresetHelper2.getColor(), true));
                 stopwatchPresetHelper2.stopwatch3.reset();
             });
         }
 
         @Override // me.mioclient.gui.widget.PanelTextButton, me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-        public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+        public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
             if (this.stopwatchPresetHelper2.isHidden()) {
                 return;
             }
@@ -206,7 +188,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         if (isHidden() || !this.flag) {
             this.hUDHelper_2.setImmediate(0.0f);
@@ -230,8 +212,8 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
             int i = getRowHeight();
             if (this.flag3) {
                 AbstractClickGuiScreen.cursorType = CursorType.POINTER;
-                this.floatArr[1] = (float) MathHelper.clamp(((d - getX()) - Double.longBitsToDouble(4617315517961601024L)) / (getPanel().getTotalWidth() - 8), 0.0d, Double.longBitsToDouble(4607182418800017408L));
-                this.floatArr[2] = Float.intBitsToFloat(1065353216) - ((float) MathHelper.clamp((((d2 - getY()) - i) - Double.longBitsToDouble(4613937818241073152L)) / (getPanel().getTotalWidth() - 8), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
+                this.floatArr[1] = (float) Mth.clamp(((d - getX()) - Double.longBitsToDouble(4617315517961601024L)) / (getPanel().getTotalWidth() - 8), 0.0d, Double.longBitsToDouble(4607182418800017408L));
+                this.floatArr[2] = Float.intBitsToFloat(1065353216) - ((float) Mth.clamp((((d2 - getY()) - i) - Double.longBitsToDouble(4613937818241073152L)) / (getPanel().getTotalWidth() - 8), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
             } else if (this.flag4) {
                 AbstractClickGuiScreen.cursorType = CursorType.POINTER;
                 this.floatArr[0] = Math.min((((float) Math.min(Math.max(getX(), d - Double.longBitsToDouble(4607182418800017408L)), getX() + (getPanel().getTotalWidth() - 4))) - getX()) / (getPanel().getTotalWidth() - 4), Float.intBitsToFloat(1065353216));
@@ -244,9 +226,9 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
             float intBitsToFloat2 = ((HSBtoRGB >> 8) & 255) / Float.intBitsToFloat(1132396544);
             float intBitsToFloat3 = (HSBtoRGB & 255) / Float.intBitsToFloat(1132396544);
             int hashCode = this.flag3 ? -1 : getUI().color.getValue().hashCode();
-            Shape2DRenderer.drawGradientRect(matrixStack.peek().getPositionMatrix(), getX() + Float.intBitsToFloat(1075838976), getY() + i + Float.intBitsToFloat(1056964608), getPanel().getTotalWidth() - 3, getPanel().getTotalWidth() - 3, hashCode, hashCode, hashCode, hashCode);
-            Shape2DRenderer.drawGradientRect(matrixStack.peek().getPositionMatrix(), getX() + Float.intBitsToFloat(1077936128), getY() + i + Float.intBitsToFloat(1065353216), getPanel().getTotalWidth() - 4, getPanel().getTotalWidth() - 4, -1, HSBtoRGB, -16777216, -16777216);
-            Matrix4f positionMatrix = matrixStack.peek().getPositionMatrix();
+            Shape2DRenderer.drawGradientRect(matrixStack.last().pose(), getX() + Float.intBitsToFloat(1075838976), getY() + i + Float.intBitsToFloat(1056964608), getPanel().getTotalWidth() - 3, getPanel().getTotalWidth() - 3, hashCode, hashCode, hashCode, hashCode);
+            Shape2DRenderer.drawGradientRect(matrixStack.last().pose(), getX() + Float.intBitsToFloat(1077936128), getY() + i + Float.intBitsToFloat(1065353216), getPanel().getTotalWidth() - 4, getPanel().getTotalWidth() - 4, -1, HSBtoRGB, -16777216, -16777216);
+            Matrix4f positionMatrix = matrixStack.last().pose();
             float f = getX() + Float.intBitsToFloat(1075838976);
             float f2 = ((getY() + getPanel().getTotalWidth()) + i) - Float.intBitsToFloat(1056964608);
             float f3 = getPanel().getTotalWidth() - 3;
@@ -255,13 +237,13 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
             iArr[0] = this.flag4 ? -1 : getAccentColor().hashCode();
             iArr[1] = this.flag4 ? -1 : getAccentColor().hashCode();
             Shape2DRenderer.drawMultiGradientRect(positionMatrix, f, f2, f3, intBitsToFloat4, iArr);
-            Shape2DRenderer.drawMultiGradientRect(matrixStack.peek().getPositionMatrix(), getX() + Float.intBitsToFloat(1077936128), getY() + getPanel().getTotalWidth() + i, getPanel().getTotalWidth() - 4, Float.intBitsToFloat(1086324736), -65536, -256, -16711936, -16711681, -16776961, -65281, -65536);
+            Shape2DRenderer.drawMultiGradientRect(matrixStack.last().pose(), getX() + Float.intBitsToFloat(1077936128), getY() + getPanel().getTotalWidth() + i, getPanel().getTotalWidth() - 4, Float.intBitsToFloat(1086324736), -65536, -256, -16711936, -16711681, -16776961, -65281, -65536);
             applyAnimatedValue(this.hUDHelper_23, this.floatArr[0] * (getPanel().getTotalWidth() - 2));
-            float clamp = MathHelper.clamp(this.hUDHelper_23.getValue(), Float.intBitsToFloat(1077936128), getPanel().getTotalWidth() - 3);
+            float clamp = Mth.clamp(this.hUDHelper_23.getValue(), Float.intBitsToFloat(1077936128), getPanel().getTotalWidth() - 3);
             Shape2DRenderer.drawRect(matrixStack, ((int) (getX() + clamp)) - Float.intBitsToFloat(1056964608), ((int) ((getY() + getPanel().getTotalWidth()) + i)) - Float.intBitsToFloat(1056964608), ((int) (getX() + clamp + Float.intBitsToFloat(1073741824))) + Float.intBitsToFloat(1056964608), (int) (getY() + getPanel().getTotalWidth() + i + Float.intBitsToFloat(1087373312)), this.flag3 ? -1 : getAccentColor().hashCode());
             Shape2DRenderer.drawRect(matrixStack, (int) (getX() + clamp), (int) (getY() + getPanel().getTotalWidth() + i), (int) (getX() + clamp + Float.intBitsToFloat(1073741824)), (int) (getY() + getPanel().getTotalWidth() + i + Float.intBitsToFloat(1087373312)), -1);
             if (!this.setting.flag3) {
-                Matrix4f positionMatrix2 = matrixStack.peek().getPositionMatrix();
+                Matrix4f positionMatrix2 = matrixStack.last().pose();
                 float f4 = getX() + Float.intBitsToFloat(1075838976);
                 float f5 = ((int) getY()) + getPanel().getTotalWidth() + i + Float.intBitsToFloat(1089470464);
                 float f6 = getPanel().getTotalWidth() - 3;
@@ -272,8 +254,8 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
                 Shape2DRenderer.drawMultiGradientRect(positionMatrix2, f4, f5, f6, intBitsToFloat5, iArr2);
                 drawAlphaSlider(matrixStack, ((int) getX()) + 3, ((int) getY()) + getPanel().getTotalWidth() + i + 8, getPanel().getTotalWidth() - 4, 6, intBitsToFloat, intBitsToFloat2, intBitsToFloat3, alpha / Float.intBitsToFloat(1132396544));
             }
-            applyAnimatedValue(this.hUDHelper_2, MathHelper.clamp(this.floatArr[1], 0.0f, Float.intBitsToFloat(1065353216)) * (getPanel().getTotalWidth() - 8));
-            applyAnimatedValue(this.hUDHelper_22, (Float.intBitsToFloat(1065353216) - MathHelper.clamp(this.floatArr[2], 0.0f, Float.intBitsToFloat(1065353216))) * (getPanel().getTotalWidth() - 8));
+            applyAnimatedValue(this.hUDHelper_2, Mth.clamp(this.floatArr[1], 0.0f, Float.intBitsToFloat(1065353216)) * (getPanel().getTotalWidth() - 8));
+            applyAnimatedValue(this.hUDHelper_22, (Float.intBitsToFloat(1065353216) - Mth.clamp(this.floatArr[2], 0.0f, Float.intBitsToFloat(1065353216))) * (getPanel().getTotalWidth() - 8));
             float f7 = getX() + Float.intBitsToFloat(1084227584) + this.hUDHelper_2.getValue();
             float f8 = getY() + i + Float.intBitsToFloat(1077936128) + this.hUDHelper_22.getValue();
             this.progress.animateToggle(this.flag3);
@@ -284,7 +266,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
             this.list.forEach(presetHelper_5 -> {
                 presetHelper_5.render(drawContext, matrixStack, d, d2);
             });
-            this.setting.setValue(ColorUtils.withAlpha(new Color(Color.HSBtoRGB(this.floatArr[0], this.floatArr[1], this.floatArr[2])), MathHelper.clamp(alpha, 0, 255)));
+            this.setting.setValue(ColorUtils.withAlpha(new Color(Color.HSBtoRGB(this.floatArr[0], this.floatArr[1], this.floatArr[2])), Mth.clamp(alpha, 0, 255)));
             if (((ColorSetting) this.setting).isRainbow()) {
                 this.floatArr[0] = Color.RGBtoHSB(((Color) this.setting.getValue()).getRed(), ((Color) this.setting.getValue()).getGreen(), ((Color) this.setting.getValue()).getBlue(), (float[]) null)[0];
             }
@@ -302,7 +284,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
         }
     }
 
-    public void drawAlphaSlider(MatrixStack matrixStack, int i, int i2, int i3, int i4, float f, float f2, float f3, float f4) {
+    public void drawAlphaSlider(PoseStack matrixStack, int i, int i2, int i3, int i4, float f, float f2, float f3, float f4) {
         boolean z = true;
         int i5 = i4 / 2;
         int i6 = -i5;
@@ -324,7 +306,7 @@ public class ColorPickerComponent extends SettingPresetSettingButton<Color> impl
             z = !z;
             i6 = i7 + i5;
         }
-        Shape2DRenderer.drawMultiGradientRect(matrixStack.peek().getPositionMatrix(), i, i2, i3, i4, new Color(f, f2, f3, Float.intBitsToFloat(1065353216)).hashCode(), 0);
+        Shape2DRenderer.drawMultiGradientRect(matrixStack.last().pose(), i, i2, i3, i4, new Color(f, f2, f3, Float.intBitsToFloat(1065353216)).hashCode(), 0);
         applyAnimatedValue(this.hUDHelper_24, i3 - ((i3 - 2) * f4));
         float f5 = (i + this.hUDHelper_24.getValue()) - Float.intBitsToFloat(1065353216);
         Shape2DRenderer.drawRect(matrixStack, f5 - Float.intBitsToFloat(1069547520), i2 - Float.intBitsToFloat(1056964608), f5 + Float.intBitsToFloat(1069547520), i2 + i4 + Float.intBitsToFloat(1056964608), this.flag5 ? Color.white : getAccentColor());

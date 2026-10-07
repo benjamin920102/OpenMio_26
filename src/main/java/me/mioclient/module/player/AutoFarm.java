@@ -6,52 +6,44 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CropBlock;
-import net.minecraft.block.SaplingBlock;
-import net.minecraft.block.SugarCaneBlock;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.BlockStateRaycastContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.SaplingBlock;
+import net.minecraft.world.level.block.SugarCaneBlock;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.ClipContext;
 import me.mioclient.module.render.Crosshair;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoFarm.class */
 public class AutoFarm extends Module {
     public Setting<AutoFarmMode> mode = add(new EnumSetting<>("Mode", AutoFarmMode.autoFarmMode));
     public Setting<Float> range = add(new NumberSetting<>("Range", 4.0f, 1.0f, 6.0f, v -> this.mode.getValue() == AutoFarm.AutoFarmMode.autoFarmMode2));
@@ -73,19 +65,18 @@ public class AutoFarm extends Module {
     public final Stopwatch stopwatch2;
     public int num;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoFarm$AutoFarmMode.class */
+    
     public static enum AutoFarmMode implements NamedValue {
         autoFarmMode("Crosshair") {
             @Override
             public List<BlockPos> getTargetBlocks(AutoFarm autoFarm) {
-                return Collections.singletonList(BlockPos.ofFloored(ClientAccessor.minecraftClient.crosshairTarget.getPos()));
+                return Collections.singletonList(BlockPos.containing(ClientAccessor.minecraftClient.hitResult.getLocation()));
             }
         },
         autoFarmMode2("Sphere") {
             @Override
             public List<BlockPos> getTargetBlocks(AutoFarm autoFarm) {
-                return WorldUtils.getBlocksInRadius(ClientAccessor.minecraftClient.player.getPos(), autoFarm.range.getValue().floatValue(), true);
+                return WorldUtils.getBlocksInRadius(ClientAccessor.minecraftClient.player.position(), autoFarm.range.getValue().floatValue(), true);
             }
         };
 
@@ -117,28 +108,26 @@ public class AutoFarm extends Module {
             if (this.num >= this.bpt.getValue().intValue()) {
                 break;
             }
-            do1849(blockPos, minecraftClient.world.raycast(new BlockStateRaycastContext(minecraftClient.player.getEyePos(), blockPos.toCenterPos(), blockState -> {
-                return true;
-            })).getSide());
+            do1849(blockPos, minecraftClient.level.clip(new ClipContext(minecraftClient.player.getEyePosition(), Vec3.atCenterOf(blockPos), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, minecraftClient.player)).getDirection());
         }
         this.num = 0;
     }
 
     public void do1849(BlockPos blockPos, Direction direction) {
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        boolean isOf = blockState.isOf(Blocks.SUGAR_CANE);
-        Hand hand1855 = findHandMatching(itemStack -> {
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        boolean isOf = blockState.is(Blocks.SUGAR_CANE);
+        InteractionHand hand1855 = findHandMatching(itemStack -> {
             return isPlantableCrop(itemStack.getItem());
         });
         if (this.place.getValue().booleanValue() && hand1855 != null) {
-            if (is1853(blockPos, blockState, minecraftClient.player.getStackInHand(hand1855).getItem())) {
+            if (is1853(blockPos, blockState, minecraftClient.player.getItemInHand(hand1855).getItem())) {
                 do1851(blockPos, hand1855);
                 return;
             }
         }
         if (isPlantableCrop(blockState.getBlock().asItem())) {
             boolean is1854 = is1854(blockState, blockPos);
-            Hand hand450 = getHandWith(Items.BONE_MEAL);
+            InteractionHand hand450 = getHandWith(Items.BONE_MEAL);
             if (!this.fertilize.getValue().booleanValue() || is1854 || hand450 == null || isOf) {
                 do1850(blockPos, direction, is1854);
             } else {
@@ -148,38 +137,38 @@ public class AutoFarm extends Module {
     }
 
     public void do1850(BlockPos blockPos, Direction direction, boolean z) {
-        if (!(minecraftClient.world.getBlockState(blockPos).getBlock() instanceof SaplingBlock) && this.remove.getValue().booleanValue()) {
+        if (!(minecraftClient.level.getBlockState(blockPos).getBlock() instanceof SaplingBlock) && this.remove.getValue().booleanValue()) {
             if (this.stopwatch.hasElapsed(this.removeDelay.getValue().floatValue(), TimeUnit.SECONDS)) {
                 if (z || !this.onlyGrown.getValue().booleanValue()) {
-                    minecraftClient.interactionManager.updateBlockBreakingProgress(blockPos, direction);
-                    minecraftClient.player.swingHand(Hand.MAIN_HAND);
+                    minecraftClient.gameMode.continueDestroyBlock(blockPos, direction);
+                    minecraftClient.player.swing(InteractionHand.MAIN_HAND);
                     this.stopwatch2.reset();
                     this.num++;
                     this.stopwatch.reset();
                     if (this.rotate.getValue().booleanValue()) {
-                        ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(blockPos.toCenterPos()), 0);
+                        ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(Vec3.atCenterOf(blockPos)), 0);
                     }
                 }
             }
         }
     }
 
-    public void do1851(BlockPos blockPos, Hand hand) {
-        minecraftClient.interactionManager.interactBlock(minecraftClient.player, hand, new BlockHitResult(blockPos.toCenterPos(), Direction.UP, blockPos, false));
-        minecraftClient.player.swingHand(hand);
+    public void do1851(BlockPos blockPos, InteractionHand hand) {
+        minecraftClient.gameMode.useItemOn(minecraftClient.player, hand, new BlockHitResult(Vec3.atCenterOf(blockPos), Direction.UP, blockPos, false));
+        minecraftClient.player.swing(hand);
         this.stopwatch2.reset();
         this.num++;
         if (this.rotate.getValue().booleanValue()) {
-            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(blockPos.toCenterPos()), 0);
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(Vec3.atCenterOf(blockPos)), 0);
         }
     }
 
-    public void do1852(BlockPos blockPos, Hand hand) {
+    public void do1852(BlockPos blockPos, InteractionHand hand) {
         if (this.rotate.getValue().booleanValue()) {
-            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(Vec3d.ofBottomCenter((Vec3i) blockPos)), 0);
+            ClientServices.RotationManager.requestRotations(RotationManager.getRotationsTo(Vec3.atBottomCenterOf( blockPos)), 0);
         }
-        minecraftClient.interactionManager.interactBlock(minecraftClient.player, hand, new BlockHitResult(Vec3d.ofBottomCenter((Vec3i) blockPos), Direction.UP, blockPos, false));
-        minecraftClient.player.swingHand(hand);
+        minecraftClient.gameMode.useItemOn(minecraftClient.player, hand, new BlockHitResult(Vec3.atBottomCenterOf( blockPos), Direction.UP, blockPos, false));
+        minecraftClient.player.swing(hand);
         this.stopwatch2.reset();
         this.num++;
     }
@@ -190,8 +179,8 @@ public class AutoFarm extends Module {
         }
         BlockItem blockItem = (BlockItem) item;
         if (blockItem.getBlock() instanceof CropBlock) {
-            if (blockState.isOf(Blocks.FARMLAND)) {
-                if (minecraftClient.world.getBlockState(blockPos.up()).isOf(Blocks.AIR)) {
+            if (blockState.is(Blocks.FARMLAND)) {
+                if (minecraftClient.level.getBlockState(blockPos.above()).is(Blocks.AIR)) {
                     return true;
                 }
             }
@@ -200,18 +189,18 @@ public class AutoFarm extends Module {
         if (!(blockItem.getBlock() instanceof SugarCaneBlock)) {
             return false;
         }
-        if (!minecraftClient.world.getBlockState(blockPos.up()).isOf(Blocks.AIR)) {
+        if (!minecraftClient.level.getBlockState(blockPos.above()).is(Blocks.AIR)) {
             return false;
         }
-        if (!blockState.isIn(BlockTags.DIRT) && !blockState.isIn(BlockTags.SAND)) {
+        if (!blockState.is(BlockTags.DIRT) && !blockState.is(BlockTags.SAND)) {
             return false;
         }
-        Iterator it = Direction.Type.HORIZONTAL.iterator();
+        Iterator it = Direction.Plane.HORIZONTAL.iterator();
         while (it.hasNext()) {
             Direction direction = (Direction) it.next();
-            FluidState fluidState = minecraftClient.world.getFluidState(blockPos.offset(direction));
-            BlockState blockState2 = minecraftClient.world.getBlockState(blockPos.offset(direction));
-            if (fluidState.isIn(FluidTags.WATER) || blockState2.isOf(Blocks.FROSTED_ICE)) {
+            FluidState fluidState = minecraftClient.level.getFluidState(blockPos.relative(direction));
+            BlockState blockState2 = minecraftClient.level.getBlockState(blockPos.relative(direction));
+            if (fluidState.is(FluidTags.WATER) || blockState2.is(Blocks.FROSTED_ICE)) {
                 return true;
             }
         }
@@ -228,23 +217,23 @@ public class AutoFarm extends Module {
             return cropBlock.getAge(blockState) == cropBlock.getMaxAge();
         }
         if (blockState.getBlock() instanceof SugarCaneBlock) {
-            return minecraftClient.world.getBlockState(blockPos.down()).isOf(Blocks.SUGAR_CANE);
+            return minecraftClient.level.getBlockState(blockPos.below()).is(Blocks.SUGAR_CANE);
         }
         return false;
     }
 
-    public Hand getHandWith(Item item) {
+    public InteractionHand getHandWith(Item item) {
         return findHandMatching(itemStack -> {
-            return itemStack.isOf(item);
+            return itemStack.is(item);
         });
     }
 
-    public Hand findHandMatching(Predicate<ItemStack> predicate) {
-        if (predicate.test(minecraftClient.player.getMainHandStack())) {
-            return Hand.MAIN_HAND;
+    public InteractionHand findHandMatching(Predicate<ItemStack> predicate) {
+        if (predicate.test(minecraftClient.player.getMainHandItem())) {
+            return InteractionHand.MAIN_HAND;
         }
-        if (predicate.test(minecraftClient.player.getOffHandStack())) {
-            return Hand.OFF_HAND;
+        if (predicate.test(minecraftClient.player.getOffhandItem())) {
+            return InteractionHand.OFF_HAND;
         }
         return null;
     }

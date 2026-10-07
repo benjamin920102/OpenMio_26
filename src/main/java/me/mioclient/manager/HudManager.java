@@ -34,11 +34,7 @@ import me.mioclient.module.TextRadar;
 import me.mioclient.module.Totems;
 import me.mioclient.module.Watermark;
 import me.mioclient.module.Welcomer;
-import me.mioclient.event.events.client.ClientInitEvent;
-import me.mioclient.module.HudModule;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchHelper4_20.class */
 public final class HudManager implements ClientAccessor, JsonConfigurable {
     public HudManager() {
         eventBus.register(this);

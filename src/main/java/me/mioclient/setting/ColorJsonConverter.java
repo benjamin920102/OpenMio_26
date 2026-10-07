@@ -5,8 +5,6 @@ import com.google.gson.JsonElement;
 import java.awt.Color;
 import org.jetbrains.annotations.NotNull;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Converter.class */
 public class ColorJsonConverter extends com.google.common.base.Converter<Color, JsonElement> {
     @NotNull
     /* renamed from: getJsonElement2090, reason: merged with bridge method [inline-methods] */

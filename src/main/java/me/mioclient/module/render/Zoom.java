@@ -3,9 +3,6 @@ package me.mioclient.module.render;
 import me.mioclient.util.anim.ValueAnimator;
 
 import me.mioclient.module.render.zoom.ZoomFovListener;
-import me.mioclient.util.anim.ValueAnimator;
-
-import me.mioclient.event.EventBus;
 
 import me.mioclient.render.RenderConstants;
 import me.mioclient.api.Category;
@@ -13,13 +10,10 @@ import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.input.MouseScrollEvent;
 import me.mioclient.module.Module;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.ducks.DuckSimpleOption;
+import net.minecraft.util.Mth;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Zoom.class */
 public class Zoom extends Module {
     public Setting<Boolean> smooth = add(new BooleanSetting("Smooth", true));
     public Setting<Boolean> smoothCamera = add(new BooleanSetting("SmoothCamera", true));
@@ -46,7 +40,7 @@ public class Zoom extends Module {
         }
         this.zoomHelper.animateTo(0.0f, getAnimationDuration(100));
         this.zoomHelper2.animateTo(0.0f, getAnimationDuration(100));
-        minecraftClient.options.smoothCameraEnabled = this.flag;
+        minecraftClient.options.smoothCamera = this.flag;
     }
 
     @Override // me.mioclient.module.Module
@@ -57,10 +51,10 @@ public class Zoom extends Module {
         }
         eventBus.register(this.zoomSearchHelper4);
         if (!this.flag2) {
-            this.num = ((Integer) minecraftClient.options.getFov().getValue()).intValue();
+            this.num = minecraftClient.options.fov().get();
         }
         this.zoomHelper.animateTo(Float.intBitsToFloat(1065353216), getAnimationDuration(RenderConstants.num));
-        this.flag = minecraftClient.options.smoothCameraEnabled;
+        this.flag = minecraftClient.options.smoothCamera;
     }
 
     @Listen
@@ -69,17 +63,17 @@ public class Zoom extends Module {
             return;
         }
         int abs = (int) (this.num - (Math.abs((75 / this.amount.getValue().intValue()) - this.num) * getSmoothProgress()));
-        this.zoomHelper2.animateTo((int) MathHelper.clamp((float) (this.zoomHelper2.getValue() + (mouseScrollEvent.getVertical() * Double.longBitsToDouble(4621819117588971520L))), abs - this.num, abs - 10), getAnimationDuration(100));
+        this.zoomHelper2.animateTo((int) Mth.clamp((float) (this.zoomHelper2.getValue() + (mouseScrollEvent.getVertical() * Double.longBitsToDouble(4621819117588971520L))), abs - this.num, abs - 10), getAnimationDuration(100));
         mouseScrollEvent.cancel();
     }
 
     public void forceSetFov(int i) {
-        ((me.mioclient.ducks.DuckSimpleOption) (Object) minecraftClient.options.getFov()).forceSetValue(Integer.valueOf(i));
+        minecraftClient.options.fov().set(i);
     }
 
     public int getZoomTargetFov() {
         int abs = (int) (this.num - (Math.abs((75 / this.amount.getValue().intValue()) - this.num) * getSmoothProgress()));
-        return this.scroll.getValue().booleanValue() ? (int) MathHelper.clamp(abs - this.zoomHelper2.getValue(), Float.intBitsToFloat(1092616192), Float.intBitsToFloat(1125515264)) : abs;
+        return this.scroll.getValue().booleanValue() ? (int) Mth.clamp(abs - this.zoomHelper2.getValue(), Float.intBitsToFloat(1092616192), Float.intBitsToFloat(1125515264)) : abs;
     }
 
     public float getSmoothProgress() {

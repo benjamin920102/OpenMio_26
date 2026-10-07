@@ -8,31 +8,35 @@ import me.mioclient.util.math.BoxMath;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.movement.velocity.VelocityModeHandler;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ExplosionVelocityEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
-import me.mioclient.mixin.ducks.DuckEntityVelocityUpdateS2CPacket;
 import me.mioclient.module.movement.FastWeb;
 import me.mioclient.module.movement.Velocity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AntiCheatVelocityHandler.class */
 public class AntiCheatVelocityHandler extends VelocityModeHandler {
-    public static final FastWeb fastWeb = (FastWeb) ClientServices.moduleInjector.getModule(FastWeb.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static FastWeb fastWeb;
+
+    public static FastWeb getFastWeb() {
+        if (fastWeb == null && ClientServices.moduleInjector != null) {
+            try {
+                fastWeb = (FastWeb) ClientServices.moduleInjector.getModule(FastWeb.class);
+            } catch (Exception e) {
+            }
+        }
+        return fastWeb;
+    }
     public final List<Long> list;
     public final Stopwatch stopwatch;
     public boolean flag;
@@ -45,20 +49,21 @@ public class AntiCheatVelocityHandler extends VelocityModeHandler {
 
     @Override // me.mioclient.module.movement.velocity.VelocityModeHandler
     public void handlePacketReceive(PacketReceiveEvent channelRead0Event) {
-        EntityVelocityUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntityVelocityUpdateS2CPacket ? (EntityVelocityUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof EntityVelocityUpdateS2CPacket) {
-            EntityVelocityUpdateS2CPacket entityVelocityUpdateS2CPacket = packet904;
-            if (entityVelocityUpdateS2CPacket.getEntityId() == minecraftClient.player.getId() && is951()) {
-                boolean z = fastWeb.isToggled() && fastWeb.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player);
-                DuckEntityVelocityUpdateS2CPacket duckEntityVelocityUpdateS2CPacket = (DuckEntityVelocityUpdateS2CPacket) entityVelocityUpdateS2CPacket;
-                duckEntityVelocityUpdateS2CPacket.setZ((int) (entityVelocityUpdateS2CPacket.getVelocityZ() * Double.longBitsToDouble(4665518107723300864L) * 0.0f));
-                duckEntityVelocityUpdateS2CPacket.setX((int) (entityVelocityUpdateS2CPacket.getVelocityX() * Double.longBitsToDouble(4665518107723300864L) * 0.0f));
-                if ((this.flag || z) && entityVelocityUpdateS2CPacket.getVelocityY() > 0.0d) {
-                    duckEntityVelocityUpdateS2CPacket.setY((int) (entityVelocityUpdateS2CPacket.getVelocityY() * Double.longBitsToDouble(-4557853929131474944L)));
+        if (channelRead0Event.getPacket() instanceof ClientboundSetEntityMotionPacket entityVelocityUpdateS2CPacket) {
+            if (entityVelocityUpdateS2CPacket.id() == minecraftClient.player.getId() && is951()) {
+                FastWeb fastWeb_lcl = getFastWeb();
+                boolean z = fastWeb_lcl != null && fastWeb_lcl.isToggled() && fastWeb_lcl.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player);
+                Vec3 m = entityVelocityUpdateS2CPacket.movement();
+                // 26.2 port: record immutable - cancel + apply zeroed/inverted motion directly.
+                double ny = m.y;
+                if ((this.flag || z) && m.y > 0.0d) {
+                    ny = -m.y;
                 }
+                channelRead0Event.cancel();
+                minecraftClient.player.setDeltaMovement(new Vec3(0.0d, ny, 0.0d));
             }
         }
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             this.list.add(Long.valueOf(System.currentTimeMillis()));
         }
     }
@@ -88,7 +93,8 @@ public class AntiCheatVelocityHandler extends VelocityModeHandler {
     }
 
     public boolean is951() {
-        if (fastWeb.isToggled() && fastWeb.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player)) {
+        FastWeb fastWeb_lcl = getFastWeb();
+        if (fastWeb_lcl != null && fastWeb_lcl.isToggled() && fastWeb_lcl.isGrimMode() && PlayerUtils.isInCobweb(minecraftClient.player)) {
             return true;
         }
         return this.stopwatch.hasElapsedMs(500L) && this.flag;
@@ -108,16 +114,18 @@ public class AntiCheatVelocityHandler extends VelocityModeHandler {
     }
 
     public static boolean is1886() {
-        return BlockPos.stream(minecraftClient.player.getBoundingBox().shrink(BoxMath.val, 0.0d, BoxMath.val).withMaxY(minecraftClient.player.getY()).offset(0.0d, Double.longBitsToDouble(4591870180174331904L), 0.0d)).anyMatch(AntiCheatVelocityHandler::hasCollisionShape);
+        // 26.2: BlockPos.stream -> betweenClosedStream, AABB.shrink -> deflate,
+        // AABB.withMaxY -> setMaxY, AABB.offset -> move
+        return BlockPos.betweenClosedStream(minecraftClient.player.getBoundingBox().deflate(BoxMath.val, 0.0d, BoxMath.val).setMaxY(minecraftClient.player.getY()).move(0.0d, Double.longBitsToDouble(4591870180174331904L), 0.0d)).anyMatch(AntiCheatVelocityHandler::hasCollisionShape);
     }
 
     public static BlockPos getBlockPosAtOffset(float f, float f2) {
-        ClientPlayerEntity clientPlayerEntity = minecraftClient.player;
-        float lengthX = (float) (clientPlayerEntity.getBoundingBox().getLengthX() / Double.longBitsToDouble(4611686018427387904L));
-        return BlockPos.ofFloored(clientPlayerEntity.getX() + (f * lengthX * Float.intBitsToFloat(1065353224)), Math.round(clientPlayerEntity.getY()), clientPlayerEntity.getZ() + (f2 * lengthX * Float.intBitsToFloat(1065353224)));
+        LocalPlayer clientPlayerEntity = minecraftClient.player;
+        float lengthX = (float) (clientPlayerEntity.getBoundingBox().getXsize() / Double.longBitsToDouble(4611686018427387904L));
+        return BlockPos.containing(clientPlayerEntity.getX() + (f * lengthX * Float.intBitsToFloat(1065353224)), Math.round(clientPlayerEntity.getY()), clientPlayerEntity.getZ() + (f2 * lengthX * Float.intBitsToFloat(1065353224)));
     }
 
     public static boolean hasCollisionShape(BlockPos blockPos) {
-        return !minecraftClient.world.getBlockState(blockPos).getCollisionShape(minecraftClient.world, blockPos).isEmpty();
+        return !minecraftClient.level.getBlockState(blockPos).getCollisionShape(minecraftClient.level, blockPos).isEmpty();
     }
 }

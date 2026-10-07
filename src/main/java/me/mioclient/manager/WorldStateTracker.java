@@ -14,9 +14,6 @@ import me.mioclient.util.world.BlockStateSnapshot;
 import me.mioclient.util.world.TimedBlockEntry;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.BlockStateSnapshot;
-import me.mioclient.util.world.TimedBlockEntry;
 
 import me.mioclient.event.EventBus;
 
@@ -30,42 +27,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.mixin.ducks.DuckAbstractBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ExperienceOrbEntity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.projectile.ArrowEntity;
-import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
-import net.minecraft.entity.projectile.thrown.ExperienceBottleEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ChunkLoadDistanceS2CPacket;
-import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.shape.VoxelShapes;
-import me.mioclient.event.events.interaction.SlotChangeEvent;
-import me.mioclient.event.events.world.BlockCollisionShapeEvent;
-import me.mioclient.util.world.WorldUtils;
+import net.minecraft.world.level.entity.EntityTypeTest;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownExperienceBottle;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundSetChunkCacheRadiusPacket;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.Shapes;
 import me.mioclient.render.RenderConstants;
 import me.mioclient.manager.RotationManager;
-import me.mioclient.render.RenderConstants;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/WorldStateTracker.class */
 public class WorldStateTracker implements ClientAccessor {
     public ItemStack itemStack;
     public ItemStack itemStack2;
@@ -104,7 +93,7 @@ public class WorldStateTracker implements ClientAccessor {
             this.unconfirmedBreak = null;
         }
         this.set.removeIf(blockPos -> {
-            return !blockPos.isWithinDistance(minecraftClient.player.getBlockPos(), Double.longBitsToDouble(4638707616191610880L));
+            return !blockPos.closerThan(minecraftClient.player.blockPosition(), Double.longBitsToDouble(4638707616191610880L));
         });
         synchronized (this.map) {
             ArrayList arrayList = new ArrayList();
@@ -125,13 +114,13 @@ public class WorldStateTracker implements ClientAccessor {
                 return Objects.isNull(v0);
             });
             this.list.sort(Comparator.comparing(blockEntity -> {
-                return Double.valueOf(minecraftClient.player.getPos().squaredDistanceTo(blockEntity.getPos().toCenterPos()));
+                return Double.valueOf(minecraftClient.player.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(blockEntity.getBlockPos())));
             }));
         }
         synchronized (this.set3) {
             for (BlockStateSnapshot blockStateSearchHelper4 : this.set3) {
                 if (blockStateSearchHelper4.isInvalid()) {
-                    minecraftClient.world.setBlockState(blockStateSearchHelper4.getBlockPos(), blockStateSearchHelper4.getBlockState());
+                    minecraftClient.level.setBlock(blockStateSearchHelper4.getBlockPos(), blockStateSearchHelper4.getBlockState(), 3);
                 }
             }
         }
@@ -142,14 +131,14 @@ public class WorldStateTracker implements ClientAccessor {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        PlayerInteractBlockC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractBlockC2SPacket ? (PlayerInteractBlockC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerInteractBlockC2SPacket) {
-            PlayerInteractBlockC2SPacket playerInteractBlockC2SPacket = packet904;
+        ServerboundUseItemOnPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundUseItemOnPacket ? (ServerboundUseItemOnPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundUseItemOnPacket) {
+            ServerboundUseItemOnPacket playerInteractBlockC2SPacket = packet904;
             BlockItem item = (getHandItemStack(playerInteractBlockC2SPacket.getHand()).getItem()) instanceof BlockItem ? (BlockItem) (getHandItemStack(playerInteractBlockC2SPacket.getHand()).getItem()) : null;
             if (item instanceof BlockItem) {
                 BlockItem blockItem = item;
-                BlockHitResult blockHitResult = playerInteractBlockC2SPacket.getBlockHitResult();
-                BlockPos offset = blockHitResult.getBlockPos().offset(blockHitResult.getSide());
+                BlockHitResult blockHitResult = playerInteractBlockC2SPacket.getHitResult();
+                BlockPos offset = blockHitResult.getBlockPos().relative(blockHitResult.getDirection());
                 this.map.put(offset, TimedBlockEntry.getBlockData2589(blockItem.getBlock()));
                 this.set2.add(offset);
                 syncHandStacks();
@@ -164,13 +153,13 @@ public class WorldStateTracker implements ClientAccessor {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        BlockUpdateS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof BlockUpdateS2CPacket) {
-            BlockUpdateS2CPacket blockUpdateS2CPacket = packet904;
+        ClientboundBlockUpdatePacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundBlockUpdatePacket ? (ClientboundBlockUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundBlockUpdatePacket) {
+            ClientboundBlockUpdatePacket blockUpdateS2CPacket = packet904;
             this.set3.removeIf(blockStateSearchHelper4 -> {
                 return blockStateSearchHelper4.getBlockPos().equals(blockUpdateS2CPacket.getPos());
             });
-            if (blockUpdateS2CPacket.getState().isAir()) {
+            if (blockUpdateS2CPacket.getBlockState().isAir()) {
                 this.set.remove(blockUpdateS2CPacket.getPos());
                 this.map.remove(blockUpdateS2CPacket.getPos());
             } else {
@@ -179,21 +168,21 @@ public class WorldStateTracker implements ClientAccessor {
                 }
             }
         }
-        ChunkDeltaUpdateS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof ChunkDeltaUpdateS2CPacket ? (ChunkDeltaUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof ChunkDeltaUpdateS2CPacket) {
-            packet9042.visitUpdates((blockPos, blockState) -> {
+        ClientboundSectionBlocksUpdatePacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundSectionBlocksUpdatePacket ? (ClientboundSectionBlocksUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundSectionBlocksUpdatePacket) {
+            packet9042.runUpdates((blockPos, blockState) -> {
                 this.set3.removeIf(blockStateLlamaRenderHelper -> {
                     return blockStateLlamaRenderHelper.getBlockPos().equals(blockPos);
                 });
             });
         }
-        GameJoinS2CPacket packet9043 = (channelRead0Event.getPacket()) instanceof GameJoinS2CPacket ? (GameJoinS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9043 instanceof GameJoinS2CPacket) {
-            this.num = packet9043.viewDistance();
+        ClientboundLoginPacket packet9043 = (channelRead0Event.getPacket()) instanceof ClientboundLoginPacket ? (ClientboundLoginPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9043 instanceof ClientboundLoginPacket) {
+            this.num = packet9043.chunkRadius();
         }
-        ChunkLoadDistanceS2CPacket packet9044 = (channelRead0Event.getPacket()) instanceof ChunkLoadDistanceS2CPacket ? (ChunkLoadDistanceS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9044 instanceof ChunkLoadDistanceS2CPacket) {
-            this.num = packet9044.getDistance();
+        ClientboundSetChunkCacheRadiusPacket packet9044 = (channelRead0Event.getPacket()) instanceof ClientboundSetChunkCacheRadiusPacket ? (ClientboundSetChunkCacheRadiusPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9044 instanceof ClientboundSetChunkCacheRadiusPacket) {
+            this.num = packet9044.getRadius();
         }
     }
 
@@ -207,25 +196,25 @@ public class WorldStateTracker implements ClientAccessor {
             if (blockData == null || blockData.getBlockState() == null) {
                 return;
             }
-            Box box = new Box(voxelShapeEvent.getBlockPos());
-            if (minecraftClient.player.getBoundingBox().intersects(box) || !((DuckAbstractBlock) blockData.getBlockState()).isCollidable()) {
+            AABB box = new AABB(voxelShapeEvent.getBlockPos());
+            if (minecraftClient.player.getBoundingBox().intersects(box) || !((DuckAbstractBlock)(Object) blockData.getBlockState()).isCollidable()) {
                 return;
             }
-            if (!minecraftClient.world.getEntitiesByClass(Entity.class, box, entity -> {
-                return ((entity instanceof ExperienceBottleEntity) || (entity instanceof ItemEntity) || (entity instanceof ExperienceOrbEntity) || (entity instanceof ArrowEntity) || (entity instanceof EnderPearlEntity)) ? false : true;
+            if (!minecraftClient.level.getEntities(EntityTypeTest.forClass(Entity.class), box, entity -> {
+                return ((entity instanceof ThrownExperienceBottle) || (entity instanceof ItemEntity) || (entity instanceof ExperienceOrb) || (entity instanceof Arrow) || (entity instanceof ThrownEnderpearl)) ? false : true;
             }).isEmpty()) {
                 return;
             }
-            voxelShapeEvent.setShape(blockData.getBlockState().getDefaultState().getOutlineShape(minecraftClient.world, voxelShapeEvent.getBlockPos()));
+            voxelShapeEvent.setShape(blockData.getBlockState().defaultBlockState().getShape(minecraftClient.level, voxelShapeEvent.getBlockPos()));
         }
         if (RotationManager.is724() && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(300L) && voxelShapeEvent.getBlockPos().equals(this.unconfirmedBreak)) {
-            voxelShapeEvent.setShape(VoxelShapes.empty());
+            voxelShapeEvent.setShape(Shapes.empty());
         }
     }
 
     public void breakBlockWithSnapshot(BlockPos blockPos) {
         this.set3.add(BlockStateSnapshot.getBlockStateSearchHelper42779(blockPos));
-        minecraftClient.interactionManager.breakBlock(blockPos);
+        minecraftClient.gameMode.destroyBlock(blockPos);
     }
 
     public void setUnconfirmedBreak(BlockPos blockPos) {
@@ -241,13 +230,13 @@ public class WorldStateTracker implements ClientAccessor {
         return this.map;
     }
 
-    public ItemStack getHandItemStack(Hand hand) {
-        return hand == Hand.MAIN_HAND ? this.itemStack : this.itemStack2;
+    public ItemStack getHandItemStack(InteractionHand hand) {
+        return hand == InteractionHand.MAIN_HAND ? this.itemStack : this.itemStack2;
     }
 
     public void syncHandStacks() {
-        this.itemStack = minecraftClient.player.getMainHandStack().copy();
-        this.itemStack2 = minecraftClient.player.getOffHandStack().copy();
+        this.itemStack = minecraftClient.player.getMainHandItem().copy();
+        this.itemStack2 = minecraftClient.player.getOffhandItem().copy();
     }
 
     public List<BlockEntity> getLoadedBlockEntities() {
@@ -259,7 +248,7 @@ public class WorldStateTracker implements ClientAccessor {
     }
 
     public boolean isBlockSolid(BlockPos blockPos) {
-        return !minecraftClient.world.getBlockState(blockPos).isReplaceable() || this.set2.contains(blockPos);
+        return !minecraftClient.level.getBlockState(blockPos).canBeReplaced() || this.set2.contains(blockPos);
     }
 
     public int getViewDistance() {

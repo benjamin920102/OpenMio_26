@@ -2,23 +2,23 @@ package me.mioclient.event.events.render;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MatrixStackEvent.class */
 public class MatrixStackEvent extends Event {
-    public MatrixStack matrixStack;
+    public PoseStack matrixStack;
     public float val;
-    public DrawContext drawContext;
+    public GuiGraphicsExtractor drawContext;
+    /* Set by the world-render driver (MixinLevelRenderer); null outside world rendering. */
+    public CameraRenderState cameraState;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/MatrixStackEvent$Inner.class */
+    
     public static class Inner extends MatrixStackEvent {
         public static final Inner inner = new Inner();
 
-        public static Inner getInner933(MatrixStack matrixStack, float f) {
+        public static Inner getInner933(PoseStack matrixStack, float f) {
             inner.matrixStack = matrixStack;
             inner.val = f;
             inner.resetCancelled();
@@ -26,12 +26,11 @@ public class MatrixStackEvent extends Event {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/MatrixStackEvent$Inner_2.class */
+    
     public static class Inner_2 extends MatrixStackEvent {
         public static final Inner_2 inner_2 = new Inner_2();
 
-        public static Inner_2 getInner_23016(MatrixStack matrixStack, float f) {
+        public static Inner_2 getInner_23016(PoseStack matrixStack, float f) {
             inner_2.matrixStack = matrixStack;
             inner_2.val = f;
             inner_2.drawContext = Inner_3.inner_3.getDrawContext();
@@ -40,12 +39,11 @@ public class MatrixStackEvent extends Event {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/MatrixStackEvent$Inner_3.class */
+    
     public static class Inner_3 extends MatrixStackEvent {
         public static final Inner_3 inner_3 = new Inner_3();
 
-        public static Inner_3 getInner_3133(MatrixStack matrixStack, float f) {
+        public static Inner_3 getInner_3133(PoseStack matrixStack, float f) {
             inner_3.matrixStack = matrixStack;
             inner_3.val = f;
             inner_3.drawContext = createDrawContext(matrixStack);
@@ -53,22 +51,15 @@ public class MatrixStackEvent extends Event {
             return inner_3;
         }
 
-        private static java.lang.reflect.Constructor<DrawContext> drawContextCtor;
-
-        private static DrawContext createDrawContext(MatrixStack matrixStack) {
-            try {
-                if (drawContextCtor == null) {
-                    drawContextCtor = DrawContext.class.getDeclaredConstructor(MinecraftClient.class, MatrixStack.class, net.minecraft.client.render.VertexConsumerProvider.Immediate.class);
-                    drawContextCtor.setAccessible(true);
-                }
-                return drawContextCtor.newInstance(MinecraftClient.getInstance(), matrixStack, MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers());
-            } catch (Exception e) {
-                throw new java.lang.RuntimeException(e);
-            }
+        /* 26.2 backend: world drawing goes through GizmoRenderer (vanilla gizmos),
+           so there is no draw context on the world event. HUD/screen events carry
+           their own live contexts. */
+        private static GuiGraphicsExtractor createDrawContext(PoseStack matrixStack) {
+            return null;
         }
     }
 
-    public MatrixStack getMatrixStack() {
+    public PoseStack getMatrixStack() {
         return this.matrixStack;
     }
 
@@ -76,7 +67,7 @@ public class MatrixStackEvent extends Event {
         return this.val;
     }
 
-    public DrawContext getDrawContext() {
+    public GuiGraphicsExtractor getDrawContext() {
         return this.drawContext;
     }
 }

@@ -10,19 +10,16 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import me.mioclient.loader.Globals;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ClientAccessor.class */
 public interface ClientAccessor {
     public static final Gson gson = new GsonBuilder().setLenient().setPrettyPrinting().create();
-    public static final MinecraftClient minecraftClient = MinecraftClient.getInstance();
+    public static final Minecraft minecraftClient = Minecraft.getInstance();
     public static final ReflectiveEventBus eventBus = new Inner();
     public static final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/SearchHelper_4$Inner.class */
+    
     class Inner extends ReflectiveEventBus {
         public Inner() {
             registerLookup("me.mioclient", (method, cls) -> {
@@ -39,7 +36,7 @@ public interface ClientAccessor {
     }
 
     default boolean isNotInGame() {
-        return minecraftClient.player == null || minecraftClient.world == null;
+        return minecraftClient.player == null || minecraftClient.level == null;
     }
 
     static boolean isLocalPlayer(Object obj) {

@@ -7,11 +7,7 @@ import java.lang.reflect.Field;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
 import net.fabricmc.loader.api.FabricLoader;
-import me.mioclient.api.Experimental;
-import me.mioclient.api.Experimental;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EnumSettingRegistry.class */
 public class EnumSettingRegistry {
     public static boolean flag;
 

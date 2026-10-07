@@ -2,10 +2,6 @@ package me.mioclient.mode.misc;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import java.util.function.BiFunction;
 import me.mioclient.api.Keybind;
 import me.mioclient.command.KeybindFeature;
@@ -13,10 +9,7 @@ import me.mioclient.command.KeybindFeature_2;
 import me.mioclient.command.KeybindFeature_3;
 import me.mioclient.command.KeybindFeature_4;
 import me.mioclient.command.StopwatchKeybindFeature;
-import me.mioclient.command.KeybindFeature;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_4.class */
 public enum KeybindMode implements NamedValue {
     SIMPLE("simple", KeybindFeature_2::new),
     QUEUE("queue", KeybindFeature_4::new),

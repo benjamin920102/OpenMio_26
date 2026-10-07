@@ -2,12 +2,6 @@ package me.mioclient.module.player.cheststealer;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChestStealerMode.class */
 public enum ChestStealerMode implements NamedValue {
     STEAL("Steal"),
     FILL("Fill"),

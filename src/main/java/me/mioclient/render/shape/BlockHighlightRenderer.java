@@ -6,7 +6,6 @@ import me.mioclient.util.registry.CollectionRegistry;
 import me.mioclient.util.registry.AbstractCollectionRegistry;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.registry.AbstractCollectionRegistry;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import java.awt.Color;
@@ -23,19 +22,14 @@ import java.util.Set;
 import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import me.mioclient.util.registry.CollectionRegistry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 import me.mioclient.module.Feature;
-import me.mioclient.api.ValueProvider;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BlockHighlightRenderer.class */
 public final class BlockHighlightRenderer extends AbstractCollectionRegistry<BlockHighlightRenderer.Record, List<BlockHighlightRenderer.Record>> implements ClientAccessor {
     public final Map<Record, Set<FadingBoxRenderer>> map;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/AntiPhaseSearchHelper4$Record.class */
+    
     public static final class Record {
         public final me.mioclient.module.Feature feature;
         public final ValueProvider<Color> ValueProvider;
@@ -100,7 +94,6 @@ public final class BlockHighlightRenderer extends AbstractCollectionRegistry<Blo
             return Objects.hash(this.feature);
         }
 
-
         public me.mioclient.module.Feature getFeature() {
             return this.feature;
         }
@@ -144,10 +137,10 @@ public final class BlockHighlightRenderer extends AbstractCollectionRegistry<Blo
         if (blockPos == null) {
             return;
         }
-        addHighlight(feature, new Box(blockPos));
+        addHighlight(feature, new AABB(blockPos));
     }
 
-    public void addHighlight(me.mioclient.module.Feature feature, Box box) {
+    public void addHighlight(me.mioclient.module.Feature feature, AABB box) {
         if (box == null) {
             return;
         }

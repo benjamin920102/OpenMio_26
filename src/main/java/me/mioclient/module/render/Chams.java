@@ -13,35 +13,21 @@ import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.module.render.chams.ChamsMode_2;
 import me.mioclient.render.chams.ChamsRenderDispatcher;
 import me.mioclient.render.mesh.TrajectoriesVertexConsumer;
-import me.mioclient.render.shader.ShaderPassRegistry;
+import me.mioclient.render.shader.ShaderRegistry;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.player.EntityUtil;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.render.chams.ChamsColorApplier;
 import me.mioclient.module.render.esp.EspBoxRenderer;
-import me.mioclient.render.chams.ChamsRenderDispatcher;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.render.shader.ShaderPassRegistry;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.player.EntityUtil;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
-import me.mioclient.mode.render.ChamsMode;
-import me.mioclient.module.render.chams.ChamsMode_2;
-import me.mioclient.event.events.entity.EntityModelRenderEvent;
-import me.mioclient.event.events.entity.EntityRenderEvent;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.setting.HoleSnapMode;
 import me.mioclient.event.events.render.MatrixStackEvent;
-import me.mioclient.util.player.ClonedPlayerEntity;
-import me.mioclient.event.events.entity.TotemPopEvent;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.ducks.DuckEndCrystalEntity;
-import me.mioclient.render.mesh.TrajectoriesVertexConsumer;
 import me.mioclient.ducks.DuckSimpleOption;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
@@ -49,29 +35,27 @@ import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
 import me.mioclient.module.combat.AutoCrystal;
 import me.mioclient.module.player.Freecam;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Chams.class */
 public class Chams extends Module {
     public Setting<Integer> range = add(new NumberSetting<>("Range", 60, 1, 300).setSuffix("m"));
     public Setting<Boolean> fade = add(new BooleanSetting("Fade", false).setVisible());
@@ -108,11 +92,52 @@ public class Chams extends Module {
     public final TrajectoriesVertexConsumer trajectoriesVertexConsumer;
     public final Map<ClonedPlayerEntity, Long> map;
     public boolean flag3;
-    public static final Identifier identifier = Identifier.of("mio-mount", "textures/shine.png");
-    public static AutoCrystal autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
-    public static NoRender norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class);
-    public static Animations animations = (Animations) ClientServices.moduleInjector.getModule(Animations.class);
-    public static final Freecam freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
+    public static final Identifier identifier = Identifier.fromNamespaceAndPath("mio-mount", "textures/shine.png");
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static AutoCrystal autoCrystal;
+    private static NoRender norender;
+    private static Animations animations;
+    private static Freecam freecam;
+
+    public static AutoCrystal getAutoCrystal() {
+        if (autoCrystal == null && ClientServices.moduleInjector != null) {
+            try {
+                autoCrystal = (AutoCrystal) ClientServices.moduleInjector.getModule(AutoCrystal.class);
+            } catch (Exception e) {
+            }
+        }
+        return autoCrystal;
+    }
+
+    public static NoRender getNorender() {
+        if (norender == null && ClientServices.moduleInjector != null) {
+            try {
+                norender = (NoRender) ClientServices.moduleInjector.getModule(NoRender.class);
+            } catch (Exception e) {
+            }
+        }
+        return norender;
+    }
+
+    public static Animations getAnimations() {
+        if (animations == null && ClientServices.moduleInjector != null) {
+            try {
+                animations = (Animations) ClientServices.moduleInjector.getModule(Animations.class);
+            } catch (Exception e) {
+            }
+        }
+        return animations;
+    }
+
+    public static Freecam getFreecam() {
+        if (freecam == null && ClientServices.moduleInjector != null) {
+            try {
+                freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
+            } catch (Exception e) {
+            }
+        }
+        return freecam;
+    }
     public static boolean flag = false;
     public static boolean flag2 = false;
 
@@ -126,47 +151,41 @@ public class Chams extends Module {
     }
 
     @Listen(get219= RenderConstants.num)
-    public void onRenderWorldPre(MatrixStackEvent.Inner inner) {
+    public void onRenderWorldPre(MatrixStackEvent.Inner_3 inner) {
         if (this.shine2.getValue().booleanValue()) {
-            this.trajectoriesVertexConsumer.beginBuffer(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+            this.trajectoriesVertexConsumer.beginBuffer(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         }
-        float intBitsToFloat = ((Integer) minecraftClient.options.getFov().getValue()).intValue() > 115 && is2047() ? Float.intBitsToFloat(1075000115) : Float.intBitsToFloat(1065353216);
+        float intBitsToFloat = is2047() ? Float.intBitsToFloat(1075000115) : Float.intBitsToFloat(1065353216);
         EspBoxRenderer.disableEntityCulling();
-        RenderSystem.enablePolygonOffset();
-        RenderSystem.polygonOffset(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(-900358272) * intBitsToFloat);
-        for (Entity entity : minecraftClient.world.getEntities()) {
+        org.lwjgl.opengl.GL32C.glEnable(32823);
+        org.lwjgl.opengl.GL32C.glPolygonOffset(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(-900358272) * intBitsToFloat);
+        for (Entity entity : minecraftClient.level.entitiesForRendering()) {
             if (shouldRenderEntity(entity)) {
-                if (this.model.getValue().booleanValue() && this.xqz.getValue().booleanValue() && !norender.isEntityHidden(entity) && this.opacity.getValue().intValue() > 0) {
+                NoRender norender_lcl = getNorender();
+                if (this.model.getValue().booleanValue() && this.xqz.getValue().booleanValue() && (norender_lcl == null || !norender_lcl.isEntityHidden(entity)) && this.opacity.getValue().intValue() > 0) {
                     this.flag3 = true;
-                    RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), this.opacity.getValue().intValue() / Float.intBitsToFloat(1120403456));
-                    RenderUtil.INSTANCE.renderEntity(entity, inner.getTickDelta(), inner.getMatrixStack(), minecraftClient.getBufferBuilders().getEntityVertexConsumers());
+                    RenderUtil.INSTANCE.renderEntity(entity, inner.getTickDelta(), inner.getMatrixStack(), null);
                     this.flag3 = false;
                 }
                 if (this.shine2.getValue().booleanValue()) {
                     flag = true;
-                    RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
-                    inner.getMatrixStack().push();
+                    inner.getMatrixStack().pushPose();
                     RenderUtil.applyCameraRotation(inner.getMatrixStack());
-                    RenderUtil.INSTANCE.renderEntity(entity, inner.getTickDelta(), inner.getMatrixStack(), minecraftClient.getBufferBuilders().getEntityVertexConsumers());
-                    inner.getMatrixStack().pop();
+                    RenderUtil.INSTANCE.renderEntity(entity, inner.getTickDelta(), inner.getMatrixStack(), null);
+                    inner.getMatrixStack().popPose();
                     flag = false;
                 }
             }
         }
-        if (this.model.getValue().booleanValue() && this.xqz.getValue().booleanValue()) {
-            RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), this.opacity.getValue().intValue() / Float.intBitsToFloat(1120403456));
-            minecraftClient.getBufferBuilders().getEntityVertexConsumers().draw();
-            RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
-        }
-        RenderSystem.disablePolygonOffset();
-        RenderSystem.polygonOffset(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1247125376) * intBitsToFloat);
+        org.lwjgl.opengl.GL32C.glDisable(32823);
+        org.lwjgl.opengl.GL32C.glPolygonOffset(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1247125376) * intBitsToFloat);
         EspBoxRenderer.restoreEntityCulling();
     }
 
     @Listen(get219= -1000)
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
         ChamsRenderDispatcher.setOutlineWidth(this.lineWidth.getValue().floatValue());
-        for (Entity entity : minecraftClient.world.getEntities()) {
+        for (Entity entity : minecraftClient.level.entitiesForRendering()) {
             if (shouldRenderEntity(entity) && getChamsModeForEntity(entity).getValue().is594()) {
                 getChamsModeForEntity(entity).getValue().applyChamsRender(this, entity, inner_3.getMatrixStack());
             }
@@ -177,43 +196,27 @@ public class Chams extends Module {
                     return ((float) ((Long) entry.getValue()).longValue()) + (this.time.getValue().floatValue() * Float.intBitsToFloat(1148846080)) < ((float) System.currentTimeMillis());
                 });
                 this.map.forEach((otherClientPlayerEntity, l) -> {
-                    float intBitsToFloat = Float.intBitsToFloat(1065353216) - MathHelper.clamp(((float) (System.currentTimeMillis() - l.longValue())) / (this.time.getValue().floatValue() * Float.intBitsToFloat(1148846080)), 0.0f, Float.intBitsToFloat(1065353216));
-                    otherClientPlayerEntity.setPosition(otherClientPlayerEntity.getX(), otherClientPlayerEntity.getLastPosition().y + ((Float.intBitsToFloat(1065353216) - intBitsToFloat) * this.motion.getValue().floatValue()), otherClientPlayerEntity.getZ());
+                    float intBitsToFloat = Float.intBitsToFloat(1065353216) - Mth.clamp(((float) (System.currentTimeMillis() - l.longValue())) / (this.time.getValue().floatValue() * Float.intBitsToFloat(1148846080)), 0.0f, Float.intBitsToFloat(1065353216));
+                    otherClientPlayerEntity.setPos(otherClientPlayerEntity.getX(), otherClientPlayerEntity.getLastPosition().y + ((Float.intBitsToFloat(1065353216) - intBitsToFloat) * this.motion.getValue().floatValue()), otherClientPlayerEntity.getZ());
                     Color[] colorArray593 = this.wireframe.getValue().getChamsColors(this);
                     ChamsRenderDispatcher.setChamsColors(ColorUtils.withAlphaPercent(colorArray593[0], (colorArray593[0].getAlpha() / Float.intBitsToFloat(1132396544)) * intBitsToFloat), ColorUtils.withAlphaPercent(colorArray593[1], (colorArray593[1].getAlpha() / Float.intBitsToFloat(1132396544)) * intBitsToFloat));
                     ChamsRenderDispatcher.renderEntityChams(inner_3.getMatrixStack(), otherClientPlayerEntity);
                 });
             }
         }
-        if (this.xqz.getValue().booleanValue()) {
-            minecraftClient.getBufferBuilders().getEntityVertexConsumers().draw();
-        }
         if (this.shine2.getValue().booleanValue()) {
-            double doubleValue = ((Double) minecraftClient.options.getGlintSpeed().getValue()).doubleValue();
-            double doubleValue2 = ((Double) minecraftClient.options.getGlintStrength().getValue()).doubleValue();
-            ((DuckSimpleOption) (Object) minecraftClient.options.getGlintSpeed()).forceSetValue(Double.valueOf(this.speed.getValue().doubleValue()));
-            minecraftClient.options.getGlintStrength().setValue(Double.valueOf(this.strength.getValue().doubleValue()));
-            Color value = this.shine.getValue();
-            RenderSystem.enableBlend();
+            RenderType glintType = RenderTypes.armorEntityGlint();
             flag2 = true;
-            RenderLayer.getArmorEntityGlint().startDrawing();
-            MinecraftClient.getInstance().getTextureManager().getTexture(identifier).setFilter(true, false);
-            RenderSystem.setShaderTexture(0, identifier);
-            RenderSystem.setShaderColor(value.getRed() / Float.intBitsToFloat(1132396544), value.getGreen() / Float.intBitsToFloat(1132396544), value.getBlue() / Float.intBitsToFloat(1132396544), Float.intBitsToFloat(1065353216));
-            RenderSystem.disableDepthTest();
+            RenderUtil.INSTANCE.setupRenderState();
             this.trajectoriesVertexConsumer.drawBuffer();
-            RenderSystem.enableDepthTest();
-            RenderLayer.getArmorEntityGlint().endDrawing();
-            RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
+            RenderUtil.INSTANCE.restoreRenderState();
             flag2 = false;
-            minecraftClient.options.getGlintSpeed().setValue(Double.valueOf(doubleValue));
-            minecraftClient.options.getGlintStrength().setValue(Double.valueOf(doubleValue2));
         }
     }
 
     @Listen
     public void onEntityRenderPre(EntityRenderEvent.Inner inner) {
-        if (ShaderPassRegistry.flag || this.model.getValue().booleanValue() || !shouldRenderEntity(inner.getEntity()) || this.flag3) {
+        if (ShaderRegistry.flag || this.model.getValue().booleanValue() || !shouldRenderEntity(inner.getEntity()) || this.flag3) {
             return;
         }
         inner.cancel();
@@ -228,21 +231,20 @@ public class Chams extends Module {
 
     @Listen
     public void onTotemPop(TotemPopEvent playerEntityEvent) {
-        PlayerEntity playerEntity1890;
+        Player playerEntity1890;
         if (this.pop.getValue().booleanValue()) {
             if ((playerEntityEvent.getType() != TotemPopEvent.LogoutSpotsHelperMode.DEATH || this.death.getValue().booleanValue()) && (playerEntity1890 = playerEntityEvent.getPlayer()) != minecraftClient.player) {
-                ClonedPlayerEntity otherClientPlayerEntity = new ClonedPlayerEntity(minecraftClient.world);
+                ClonedPlayerEntity otherClientPlayerEntity = new ClonedPlayerEntity(minecraftClient.level);
                 otherClientPlayerEntity.copyFromPlayer(playerEntity1890);
-                otherClientPlayerEntity.limbAnimator.pos *= Float.intBitsToFloat(1073741824);
+                otherClientPlayerEntity.walkAnimation.setSpeed(otherClientPlayerEntity.walkAnimation.speed() * Float.intBitsToFloat(1073741824));
                 if (!this.animate.getValue().booleanValue()) {
-                    otherClientPlayerEntity.limbAnimator.pos = 0.0f;
-                    otherClientPlayerEntity.limbAnimator.speed = 0.0f;
-                    otherClientPlayerEntity.limbAnimator.prevSpeed = 0.0f;
+                    otherClientPlayerEntity.walkAnimation.stop();
                 } else if (this.boost.getValue().booleanValue()) {
                     otherClientPlayerEntity.setChamsVisible(true);
-                    otherClientPlayerEntity.handSwingProgress = 0.0f;
-                    otherClientPlayerEntity.limbAnimator.speed = (float) ((Math.random() * Double.longBitsToDouble(4605380979056443392L)) + Double.longBitsToDouble(4596373779801702400L));
-                    otherClientPlayerEntity.limbAnimator.pos = 0.0f;
+                    otherClientPlayerEntity.attackAnim = 0.0f;
+                    otherClientPlayerEntity.oAttackAnim = 0.0f;
+                    otherClientPlayerEntity.walkAnimation.stop();
+                    otherClientPlayerEntity.walkAnimation.setSpeed((float) ((Math.random() * Double.longBitsToDouble(4605380979056443392L)) + Double.longBitsToDouble(4596373779801702400L)));
                 }
                 synchronized (this.map) {
                     this.map.putIfAbsent(otherClientPlayerEntity, Long.valueOf(System.currentTimeMillis()));
@@ -256,18 +258,20 @@ public class Chams extends Module {
             return false;
         }
         try {
-            boolean z = !RotationManager.isInFrustum(entity.getBoundingBox()) || minecraftClient.gameRenderer.getCamera().getPos().distanceTo(entity.getPos()) > this.range.getValue().intValue();
+            boolean z = !RotationManager.isInFrustum(entity.getBoundingBox()) || minecraftClient.gameRenderer.mainCamera().position().distanceTo(entity.position()) > this.range.getValue().intValue();
             if (z || EntityUtil.isFirstPersonView(entity)) {
                 return false;
             }
-            if (!(entity instanceof EndCrystalEntity)) {
-                if (entity instanceof PlayerEntity) {
-                    return entity == minecraftClient.player ? this.self.getValue().is594() && (freecam.isToggled() || minecraftClient.options.getPerspective() != Perspective.FIRST_PERSON) : this.players.getValue().is594();
+            if (!(entity instanceof EndCrystal)) {
+                if (entity instanceof Player) {
+                    Freecam freecam_lcl = getFreecam();
+                    return entity == minecraftClient.player ? this.self.getValue().is594() && ((freecam_lcl != null && freecam_lcl.isToggled()) || minecraftClient.options.getCameraType() != CameraType.FIRST_PERSON) : this.players.getValue().is594();
                 }
-                return ((entity instanceof PassiveEntity) && this.animals.getValue().is594()) || ((entity instanceof Monster) && this.hostiles.getValue().is594());
+                return ((entity instanceof Animal) && this.animals.getValue().is594()) || ((entity instanceof Monster) && this.hostiles.getValue().is594());
             }
-            DuckEndCrystalEntity spawnTimeHelper_2 = (DuckEndCrystalEntity)((EndCrystalEntity) entity);
-            if (System.currentTimeMillis() - spawnTimeHelper_2.getSpawnTime() > Math.max(ClientServices.holeSnapRenderHelper.getPing(), 50) && ((EndCrystalEntity) spawnTimeHelper_2).age < 10 && autoCrystal.isToggled() && autoCrystal.inhibit.getValue().booleanValue() && spawnTimeHelper_2.isMioAttacked()) {
+            DuckEndCrystalEntity spawnTimeHelper_2 = (DuckEndCrystalEntity)((EndCrystal) entity);
+            AutoCrystal autoCrystal_lcl = getAutoCrystal();
+            if (System.currentTimeMillis() - spawnTimeHelper_2.getSpawnTime() > Math.max(ClientServices.holeSnapRenderHelper.getPing(), 50) && ((EndCrystal) spawnTimeHelper_2).tickCount < 10 && autoCrystal_lcl != null && autoCrystal_lcl.isToggled() && autoCrystal_lcl.inhibit.getValue().booleanValue() && spawnTimeHelper_2.isMioAttacked()) {
                 return false;
             }
             return this.crystals.getValue().is594();
@@ -277,7 +281,7 @@ public class Chams extends Module {
     }
 
     public float get2044(Entity entity) {
-        return (float) (Double.longBitsToDouble(4607182418800017408L) - MathHelper.clamp(((minecraftClient.gameRenderer.getCamera().getPos().distanceTo(entity.getPos()) / this.range.getValue().intValue()) - (this.fadeRadius.getValue().intValue() / Float.intBitsToFloat(1120403456))) / (Float.intBitsToFloat(1065353216) - (this.fadeRadius.getValue().intValue() / Float.intBitsToFloat(1120403456))), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
+        return (float) (Double.longBitsToDouble(4607182418800017408L) - Mth.clamp(((minecraftClient.gameRenderer.mainCamera().position().distanceTo(entity.position()) / this.range.getValue().intValue()) - (this.fadeRadius.getValue().intValue() / Float.intBitsToFloat(1120403456))) / (Float.intBitsToFloat(1065353216) - (this.fadeRadius.getValue().intValue() / Float.intBitsToFloat(1120403456))), 0.0d, Double.longBitsToDouble(4607182418800017408L)));
     }
 
     public boolean shouldRenderChams(Entity entity) {
@@ -293,10 +297,11 @@ public class Chams extends Module {
 
     public boolean is2047() {
         float intBitsToFloat = Float.intBitsToFloat(1050253722);
-        Vec3d eyePos = minecraftClient.player.getEyePos();
-        BlockPos ofFloored = BlockPos.ofFloored((Position) eyePos);
-        if (!minecraftClient.world.isBlockSpaceEmpty(minecraftClient.player, Box.of(eyePos, intBitsToFloat, intBitsToFloat, intBitsToFloat))) {
-            if (minecraftClient.world.getBlockState(ofFloored).getCollisionShape(minecraftClient.world, ofFloored).isEmpty()) {
+        Vec3 eyePos = minecraftClient.player.getEyePosition();
+        BlockPos ofFloored = BlockPos.containing(eyePos.x, eyePos.y, eyePos.z);
+        AABB eyeBox = new AABB(eyePos.x - intBitsToFloat, eyePos.y - intBitsToFloat, eyePos.z - intBitsToFloat, eyePos.x + intBitsToFloat, eyePos.y + intBitsToFloat, eyePos.z + intBitsToFloat);
+        if (!minecraftClient.level.noCollision(minecraftClient.player, eyeBox)) {
+            if (minecraftClient.level.getBlockState(ofFloored).getCollisionShape(minecraftClient.level, ofFloored).isEmpty()) {
                 return true;
             }
         }
@@ -304,7 +309,8 @@ public class Chams extends Module {
     }
 
     public boolean is2048() {
-        return animations.isStaticAnimationEnabled();
+        Animations animations_lcl = getAnimations();
+        return animations_lcl != null && animations_lcl.isStaticAnimationEnabled();
     }
 
     public TrajectoriesVertexConsumer getShineVertexConsumer() {
@@ -312,6 +318,6 @@ public class Chams extends Module {
     }
 
     public Setting<? extends ChamsColorApplier> getChamsModeForEntity(Entity entity) {
-        return entity == minecraftClient.player ? this.self : entity instanceof EndCrystalEntity ? this.crystals : entity instanceof PlayerEntity ? this.players : entity instanceof PassiveEntity ? this.animals : this.hostiles;
+        return entity == minecraftClient.player ? this.self : entity instanceof EndCrystal ? this.crystals : entity instanceof Player ? this.players : entity instanceof Animal ? this.animals : this.hostiles;
     }
 }

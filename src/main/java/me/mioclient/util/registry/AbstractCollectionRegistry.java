@@ -3,8 +3,6 @@ package me.mioclient.util.registry;
 import java.util.Collection;
 import java.util.Optional;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AbstractCollectionRegistry.class */
 public abstract class AbstractCollectionRegistry<E, T extends Collection<E>> implements CollectionRegistry<E, T> {
     public final T registry;
 

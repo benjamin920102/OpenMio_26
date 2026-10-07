@@ -3,20 +3,12 @@ package me.mioclient.setting;
 import me.mioclient.api.NamedValue;
 import me.mioclient.gui.widget.PanelComponent;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.mioclient.api.Setting;
-import me.mioclient.gui.widget.PanelComponent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetSettingButton.class */
 public class PresetSettingButton extends PanelComponent {
     public final PresetSettingPresetSettingButton presetSettingSearchHelper419;
     public final String string;
@@ -30,12 +22,11 @@ public class PresetSettingButton extends PanelComponent {
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         super.render(drawContext, matrixStack, d, d2);
         ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, this.string, (getPanel().getX() + (getPanel().getTotalWidth() / Float.intBitsToFloat(1073741824))) - (ClientTextRenderer.INSTANCE.getStringWidth(this.string) / Float.intBitsToFloat(1073741824)), (((this.presetSettingSearchHelper419.getY() + this.num) + getTextOffsetY()) - Float.intBitsToFloat(1065353216)) - getAnimationOffset(), getUI().textColor.getValue());
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
     public void mouseClicked(double d, double d2, int i) {
         if (!this.presetSettingSearchHelper419.isHidden() && containsPoint(d, d2) && this.presetSettingSearchHelper419.isShown()) {

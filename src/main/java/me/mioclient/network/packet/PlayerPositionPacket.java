@@ -8,16 +8,10 @@ import me.mioclient.network.codec.NetworkMessage;
 import me.mioclient.network.irc.CoordLogEntry;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.irc.CoordLogEntry;
-import me.mioclient.network.codec.NetworkMessage;
 
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
-import me.mioclient.event.events.client.CoordLogReceiveEvent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlayerPositionPacket.class */
 public class PlayerPositionPacket implements NetworkMessage {
     public String username;
     public String string;

@@ -3,16 +3,11 @@ package me.mioclient.command;
 import me.mioclient.api.ClientServices;
 import me.mioclient.module.HudModule;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.HashSet;
 import java.util.Set;
 import me.mioclient.module.Module;
-import net.minecraft.command.CommandSource;
-import me.mioclient.module.HudModule;
+import net.minecraft.commands.CommandSourceStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_5.class */
 public final class AllOffCommand extends CommandFeature {
     public final Set<Module> set;
 
@@ -22,7 +17,7 @@ public final class AllOffCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.executes(commandContext -> {
             this.set.clear();
             for (Module module : ClientServices.moduleRegistry.getRegistry()) {

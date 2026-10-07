@@ -1,14 +1,12 @@
 package me.mioclient.module.player.autobreed;
 
-import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.world.entity.animal.Animal;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BredAnimalEntry.class */
 public final class BredAnimalEntry {
-    public final AnimalEntity animalEntity;
+    public final Animal animalEntity;
     public int num = 0;
 
-    public BredAnimalEntry(AnimalEntity animalEntity) {
+    public BredAnimalEntry(Animal animalEntity) {
         this.animalEntity = animalEntity;
     }
 
@@ -16,7 +14,7 @@ public final class BredAnimalEntry {
         this.num++;
     }
 
-    public AnimalEntity getAnimalEntity() {
+    public Animal getAnimalEntity() {
         return this.animalEntity;
     }
 

@@ -3,15 +3,11 @@ package me.mioclient.command;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.inventory.SlotPair;
 
-import me.mioclient.util.inventory.SlotPair;
-import me.mioclient.util.inventory.InventoryUtils;
-
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.Item;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import me.mioclient.command.ActionCommand;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ArmorSwapAction.class */
 public class ArmorSwapAction implements ItemSwapHandler {
     @Override // me.mioclient.command.ItemSwapHandler
     public void swapForward(SlotPair data_4) {
@@ -29,8 +25,9 @@ public class ArmorSwapAction implements ItemSwapHandler {
             return SlotPair.data_4;
         }
         int i = 6;
-        if (item instanceof ArmorItem) {
-            i = 8 - ((ArmorItem) item).getSlotType().getEntitySlotId();
+        var equippable = new ItemStack(item).get(DataComponents.EQUIPPABLE);
+        if (equippable != null) {
+            i = 8 - equippable.slot().getId();
         }
         return new SlotPair(InventoryUtils.findSlot(item), i);
     }

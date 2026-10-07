@@ -1,21 +1,20 @@
 package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.util.math.MathUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.MathUtils;
 
 import me.mioclient.module.movement.ElytraFly;
 import me.mioclient.module.movement.Fireworks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.projectile.FireworkRocketEntity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,9 +22,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified): entity is FireworkRocketEntity; shooter field is now
+   attachedToEntity; age is tickCount; getRotationVec is getLookAngle;
+   addVelocity is push; boost applies via LivingEntity.setDeltaMovement. */
 @Mixin({FireworkRocketEntity.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinFireworkRocketEntity.class */
 public abstract class MixinFireworkRocketEntity extends Entity {
     private static Fireworks fireworks;
 
@@ -43,9 +43,9 @@ public abstract class MixinFireworkRocketEntity extends Entity {
 
     @Shadow
     @Nullable
-    private LivingEntity field_7616;
+    private LivingEntity attachedToEntity;
 
-    public MixinFireworkRocketEntity(EntityType<?> entityType, World world) {
+    public MixinFireworkRocketEntity(EntityType<?> entityType, Level world) {
         super(entityType, world);
     }
 
@@ -59,26 +59,26 @@ public abstract class MixinFireworkRocketEntity extends Entity {
         ElytraFly.flag = false;
     }
 
-    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;setVelocity(Lnet/minecraft/util/math/Vec3d;)V", shift = At.Shift.AFTER)})
+    @Inject(method = {"tick"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(Lnet/minecraft/world/phys/Vec3;)V", shift = At.Shift.AFTER)})
     private void tick(CallbackInfo callbackInfo) {
         Fireworks fireworks_lcl = getFireworks();
 
         if (fireworks_lcl == null) return;
 
         if (fireworks_lcl.flag3) {
-            this.age = 1;
+            this.tickCount = 1;
             fireworks_lcl.flag3 = false;
         }
         float f = fireworks_lcl.getBoostFactor(true);
-        if (this.field_7616 == MinecraftClient.getInstance().player && f != 0.0f) {
-            float f2 = MathUtils.getRadians(this.field_7616.getYaw());
+        if (this.attachedToEntity == Minecraft.getInstance().player && f != 0.0f) {
+            float f2 = MathUtils.getRadians(this.attachedToEntity.getYRot());
             if (f > 0.5d) {
-                f = MathHelper.clamp(0.2f + (0.3f * this.age), 0.0f, f);
+                f = Mth.clamp(0.2f + (0.3f * this.tickCount), 0.0f, f);
             }
             if (fireworks_lcl.getRemainingTicks() > 0) {
-                this.field_7616.addVelocity(this.field_7616.getRotationVec(1.0f).multiply(f));
+                this.attachedToEntity.push(this.attachedToEntity.getLookAngle().scale(f));
             } else {
-                this.field_7616.addVelocity(MathHelper.sin(f2) * (-f), 0.0d, MathHelper.cos(f2) * f);
+                this.attachedToEntity.push(Mth.sin(f2) * (-f), 0.0d, Mth.cos(f2) * f);
             }
         }
     }

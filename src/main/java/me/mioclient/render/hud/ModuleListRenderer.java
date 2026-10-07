@@ -1,30 +1,34 @@
 package me.mioclient.render.hud;
 
 import me.mioclient.api.ClientServices;
+import me.mioclient.module.HudModule;
 
 import me.mioclient.mode.client.ModuleListMode;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.gui.GuiComponent;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import me.mioclient.module.client.HUD;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.mode.client.ModuleListMode;
-import me.mioclient.mode.client.ModuleListMode;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ModuleListRenderer.class */
 public class ModuleListRenderer implements ClientAccessor, GuiComponent {
-    public static HUD hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+    /* Resolved lazily — eager static init ran before the module registry was ready. */
+    private static HUD hud;
+
+    public static HUD getHud() {
+        if (hud == null && ClientServices.moduleInjector != null) {
+            try {
+                hud = (HUD) ClientServices.moduleInjector.getModule(HUD.class);
+            } catch (Exception e) {
+            }
+        }
+        return hud;
+    }
     public final ArrayList<DraggableHudElement> arrayList = new ArrayList<>();
     public final ModuleListMode moduleListMode;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/SearchHelper4_10$ArrayList.class */
     public static final class ArrayList<T> extends java.util.ArrayList<T> {
         public T getLast() {
             return get(size() - 1);
@@ -35,8 +39,8 @@ public class ModuleListRenderer implements ClientAccessor, GuiComponent {
         this.moduleListMode = moduleListMode;
     }
 
-    @Override // me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    @Override
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         for (int i = 0; i < this.arrayList.size(); i++) {
             DraggableHudElement moduleListSearchHelper4 = this.arrayList.get(i);
             moduleListSearchHelper4.updateVisibilityAnim();
@@ -55,9 +59,7 @@ public class ModuleListRenderer implements ClientAccessor, GuiComponent {
                 }
             }
             if (z) {
-                RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), moduleListSearchHelper4.get2142());
                 moduleListSearchHelper4.render(drawContext, matrixStack, d, d2);
-                RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
             }
             if (i < this.arrayList.size() - 1 && this.moduleListMode != ModuleListMode.NONE && getVerticalDirection(this.moduleListMode) == 1) {
                 this.arrayList.get(i + 1).setRelativeY(moduleListSearchHelper4.getY() + floatArray365[1], true);
@@ -89,15 +91,16 @@ public class ModuleListRenderer implements ClientAccessor, GuiComponent {
     }
 
     public float getAnchorX(float f, ModuleListMode moduleListMode) {
+        HUD hud_lcl = getHud();
         switch (moduleListMode) {
             case TOP_LEFT:
             case BOTTOM_LEFT:
-                return hud.getSafeAreaX();
+                return hud_lcl != null ? hud_lcl.getSafeAreaX() : 0.0f;
             case TOP_RIGHT:
             case BOTTOM_RIGHT:
-                return (minecraftClient.getWindow().getScaledWidth() - f) - hud.getSafeAreaX();
+                return (minecraftClient.getWindow().getGuiScaledWidth() - f) - (hud_lcl != null ? hud_lcl.getSafeAreaX() : 0.0f);
             case TOP_CENTER:
-                return (minecraftClient.getWindow().getScaledWidth() / Float.intBitsToFloat(1073741824)) - (f / Float.intBitsToFloat(1073741824));
+                return (minecraftClient.getWindow().getGuiScaledWidth() / Float.intBitsToFloat(1073741824)) - (f / Float.intBitsToFloat(1073741824));
             case NONE:
                 throw new IllegalArgumentException("dumb");
             default:
@@ -106,23 +109,28 @@ public class ModuleListRenderer implements ClientAccessor, GuiComponent {
     }
 
     public float getAnchorY(float f, ModuleListMode moduleListMode) {
+        HUD hud_lcl = getHud();
         switch (moduleListMode) {
             case TOP_LEFT:
             case TOP_CENTER:
-                return hud.getSafeAreaY();
+                return hud_lcl != null ? hud_lcl.getSafeAreaY() : 0.0f;
             case TOP_RIGHT:
-                return hud.getStatusEffectOffset() + hud.getSafeAreaY();
+                return (hud_lcl != null ? hud_lcl.getStatusEffectOffset() + hud_lcl.getSafeAreaY() : 0.0f);
             case NONE:
                 throw new IllegalArgumentException("dumb");
             case BOTTOM_LEFT:
             case BOTTOM_RIGHT:
-                return (minecraftClient.getWindow().getScaledHeight() - f) - getBottomPadding();
+                return (minecraftClient.getWindow().getGuiScaledHeight() - f) - getBottomPadding();
             default:
                 throw new MatchException((String) null, (Throwable) null);
         }
     }
 
     public float getBottomPadding() {
-        return MathHelper.clamp(hud.getSafeAreaY() + hud.getBottomOffsetTarget(), 0.0f, Float.intBitsToFloat(1096810496));
+        HUD hud_lcl = getHud();
+        if (hud_lcl == null) {
+            return 0.0f;
+        }
+        return Mth.clamp(hud_lcl.getSafeAreaY() + hud_lcl.getBottomOffsetTarget(), 0.0f, Float.intBitsToFloat(1096810496));
     }
 }

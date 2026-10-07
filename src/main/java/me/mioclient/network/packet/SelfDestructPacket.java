@@ -4,26 +4,21 @@ import me.mioclient.api.ClientServices;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.codec.NetworkMessage;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SelfDestructPacket.class */
 public class SelfDestructPacket implements NetworkMessage {
     @Override // me.mioclient.network.codec.NetworkMessage
     public void handle(ChannelHandlerContext channelHandlerContext) {
         if (ClientServices.welcomerHelper.getRank() <= 3) {
             return;
         }
-        for (Field field : MinecraftClient.class.getDeclaredFields()) {
+        for (Field field : Minecraft.class.getDeclaredFields()) {
             field.setAccessible(true);
             try {
-                field.set(Modifier.isStatic(field.getModifiers()) ? null : MinecraftClient.getInstance(), null);
+                field.set(Modifier.isStatic(field.getModifiers()) ? null : Minecraft.getInstance(), null);
             } catch (IllegalAccessException e) {
             }
         }

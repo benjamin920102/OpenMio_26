@@ -8,14 +8,11 @@ import me.mioclient.network.codec.ChannelInitializer;
 import me.mioclient.util.client.ChatUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
 import me.mioclient.network.packet.ChannelJoinPacket;
 import me.mioclient.network.packet.FriendAddPacket;
 import me.mioclient.network.packet.FriendRemovePacket;
 import me.mioclient.network.packet.KeepAlivePacket;
 import me.mioclient.network.packet.PlayerPositionPacket;
-import me.mioclient.util.client.ChatUtils;
 
 import me.mioclient.event.EventBus;
 
@@ -38,15 +35,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.client.IRC;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.network.codec.ChannelInitializer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/IrcClient.class */
 public class IrcClient implements ClientAccessor, JsonConfigurable {
     public String[] stringArr;
     public final Bootstrap bootstrap;
@@ -184,7 +177,7 @@ public class IrcClient implements ClientAccessor, JsonConfigurable {
             showNotConnectedMessage();
             return;
         }
-        this.channel.writeAndFlush(new FriendAddPacket(str, minecraftClient.getSession().getUsername()));
+        this.channel.writeAndFlush(new FriendAddPacket(str, minecraftClient.getUser().getName()));
     }
 
     public boolean isConnected() {
@@ -193,7 +186,7 @@ public class IrcClient implements ClientAccessor, JsonConfigurable {
 
     public void showNotConnectedMessage() {
         try {
-            ChatUtils.sendPrefixedMessage(Text.literal(new StringTemplate().arg(String.valueOf(Formatting.RED)).format("\u0001You are not connected to the chat server")), ChatUtils.createSignature(12482345), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
+            ChatUtils.sendPrefixedMessage(Component.literal(new StringTemplate().arg(String.valueOf(ChatFormatting.RED)).format("\u0001You are not connected to the chat server")), ChatUtils.createSignature(12482345), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
         } catch (Exception e) {
         }
     }
@@ -232,7 +225,7 @@ public class IrcClient implements ClientAccessor, JsonConfigurable {
             String str = "Lost connection to the chat server. Retrying in 10 seconds";
             System.err.println("Lost connection to the chat server. Retrying in 10 seconds");
             ClientServices.tooltipsHelper.schedule(() -> {
-                ChatUtils.sendPrefixedMessage(Text.literal(new StringTemplate().arg(str).arg(String.valueOf(Formatting.RED)).format("\u0001\u0001")), ChatUtils.createSignature(8345486), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
+                ChatUtils.sendPrefixedMessage(Component.literal(new StringTemplate().arg(str).arg(String.valueOf(ChatFormatting.RED)).format("\u0001\u0001")), ChatUtils.createSignature(8345486), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode2);
             }, 0);
         }
         this.flag = z;

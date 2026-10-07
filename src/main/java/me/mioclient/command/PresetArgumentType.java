@@ -8,8 +8,6 @@ import me.mioclient.manager.PresetEntry;
 import me.mioclient.mode.misc.PresetHelperMode;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.manager.PresetEntry;
 import me.mioclient.manager.PresetFileRegistry;
 
 import com.mojang.brigadier.StringReader;
@@ -19,14 +17,10 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import me.mioclient.gui.panel.PresetPanel;
-import me.mioclient.mode.misc.PresetHelperMode;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetArgumentType.class */
 public class PresetArgumentType implements com.mojang.brigadier.arguments.ArgumentType<String> {
     public static PresetEntry getPreset(CommandContext<?> commandContext, String str, String str2) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         PresetHelperMode presetHelperMode = (PresetHelperMode) commandContext.getArgument(str, PresetHelperMode.class);
@@ -36,7 +30,7 @@ public class PresetArgumentType implements com.mojang.brigadier.arguments.Argume
         });
         if (optional2404.isEmpty()) {
             throw new DynamicCommandExceptionType(obj -> {
-                return Text.of(new StringTemplate().arg(String.valueOf(obj)).format("Preset not found \u0001"));
+                return Component.literal(new StringTemplate().arg(String.valueOf(obj)).format("Preset not found \u0001"));
             }).create(str3);
         }
         return (PresetEntry) optional2404.get();
@@ -55,7 +49,7 @@ public class PresetArgumentType implements com.mojang.brigadier.arguments.Argume
             } catch (Throwable th) {
             }
             try {
-                return (Suggestions) CommandSource.suggestMatching(presetHelperSearchHelper4_273.getRegistry().stream().map((v0) -> {
+                return (Suggestions) SharedSuggestionProvider.suggest(presetHelperSearchHelper4_273.getRegistry().stream().map((v0) -> {
                     return v0.getName();
                 }), suggestionsBuilder).get();
             } catch (Exception e) {

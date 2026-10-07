@@ -16,18 +16,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.util.registry.CollectionRegistry;
-import me.mioclient.render.RenderConstants;
 import me.mioclient.render.RenderConstants;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TickScheduler.class */
 public class TickScheduler extends AbstractCollectionRegistry<TickScheduler.Inner, List<TickScheduler.Inner>> implements ClientAccessor {
     public final Queue<Inner> queue;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/TooltipsSearchHelper4_2$Inner.class */
+    
     public static class Inner {
         public final java.lang.Runnable runnable;
         public int num;
@@ -76,11 +70,11 @@ public class TickScheduler extends AbstractCollectionRegistry<TickScheduler.Inne
 
     public void schedule(java.lang.Runnable runnable, int i) {
         Inner inner = new Inner(runnable, i);
-        if (minecraftClient.isOnThread()) {
+        if (minecraftClient.isSameThread()) {
             register(inner);
             return;
         }
-        minecraftClient.executeSync(() -> {
+        minecraftClient.execute(() -> {
             register(inner);
         });
     }

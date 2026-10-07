@@ -7,45 +7,36 @@ import me.mioclient.util.math.ColorUtils;
 
 import me.mioclient.api.ClientAccessor;
 import me.mioclient.module.render.trajectories.TrajectoryCalculator;
-import me.mioclient.render.shape.BoxRenderer;
 import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.math.ColorUtils;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import me.mioclient.event.events.render.MatrixStackEvent;
-import me.mioclient.render.mesh.TrajectoriesVertexConsumer;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.entity.projectile.WitherSkullEntity;
-import net.minecraft.item.BowItem;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import org.lwjgl.opengl.GL32C;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Trajectories.class */
 public class Trajectories extends Module {
     public final TrajectoryCalculator trajectoriesSearchHelper4;
     public Setting<Boolean> onlyOwn = add(new BooleanSetting("OnlyOwn", true));
@@ -61,15 +52,14 @@ public class Trajectories extends Module {
     public Setting<Boolean> exp = add(new BooleanSetting("Exp", true).requiresSettings(this.targets));
     public Setting<Boolean> others = add(new BooleanSetting("Others", true).requiresSettings(this.targets));
     public BufferBuilder bufferBuilder;
-    public Vec3d vec3d;
+    public Vec3 vec3d;
     public float val;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/render/Trajectories$Inner.class */
+    
     private class Inner {
-        public final List<Vec3d> list = new ArrayList();
+        public final List<Vec3> list = new ArrayList();
         public boolean flag;
-        public Box box;
+        public AABB box;
         public Entity entity;
         public Entity entity2;
 
@@ -99,7 +89,7 @@ public class Trajectories extends Module {
         }
 
         public void recordPosition() {
-            this.list.add(new Vec3d(Trajectories.this.trajectoriesSearchHelper4.vector3d.x, Trajectories.this.trajectoriesSearchHelper4.vector3d.y, Trajectories.this.trajectoriesSearchHelper4.vector3d.z));
+            this.list.add(new Vec3(Trajectories.this.trajectoriesSearchHelper4.vector3d.x, Trajectories.this.trajectoriesSearchHelper4.vector3d.y, Trajectories.this.trajectoriesSearchHelper4.vector3d.z));
         }
 
         public void handleHit(HitResult hitResult) {
@@ -112,20 +102,20 @@ public class Trajectories extends Module {
             }
             BlockHitResult blockHitResult = (BlockHitResult) hitResult;
             this.flag = true;
-            this.box = new Box(blockHitResult.getPos(), blockHitResult.getPos());
-            if (blockHitResult.getSide() == Direction.UP || blockHitResult.getSide() == Direction.DOWN) {
-                this.box = this.box.expand(Double.longBitsToDouble(4598175219545276416L), 0.0d, Double.longBitsToDouble(4598175219545276416L));
-            } else if (blockHitResult.getSide() == Direction.NORTH || blockHitResult.getSide() == Direction.SOUTH) {
-                this.box = this.box.expand(Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L), 0.0d);
+            this.box = new AABB(blockHitResult.getLocation(), blockHitResult.getLocation());
+            if (blockHitResult.getDirection() == Direction.UP || blockHitResult.getDirection() == Direction.DOWN) {
+                this.box = this.box.inflate(Double.longBitsToDouble(4598175219545276416L), 0.0d, Double.longBitsToDouble(4598175219545276416L));
+            } else if (blockHitResult.getDirection() == Direction.NORTH || blockHitResult.getDirection() == Direction.SOUTH) {
+                this.box = this.box.inflate(Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L), 0.0d);
             } else {
-                this.box = this.box.expand(0.0d, Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L));
+                this.box = this.box.inflate(0.0d, Double.longBitsToDouble(4598175219545276416L), Double.longBitsToDouble(4598175219545276416L));
             }
-            this.list.add(hitResult.getPos());
+            this.list.add(hitResult.getLocation());
         }
 
         public void renderTrajectory(MatrixStackEvent.Inner_3 inner_3) {
-            Vec3d vec3d = null;
-            for (Vec3d vec3d2 : this.list) {
+            Vec3 vec3d = null;
+            for (Vec3 vec3d2 : this.list) {
                 if (vec3d != null) {
                     RenderUtil.INSTANCE.addLineVertex(inner_3.getMatrixStack(), Trajectories.this.bufferBuilder, vec3d, vec3d2, Trajectories.this.color.getValue().getRGB(), Trajectories.this.color.getValue().getRGB());
                 }
@@ -145,34 +135,32 @@ public class Trajectories extends Module {
     public Trajectories() {
         super("Trajectories", "Draws trajectories for projectiles and bows.", Category.RENDER, new String[0]);
         this.trajectoriesSearchHelper4 = new TrajectoryCalculator();
-        this.vec3d = Vec3d.ZERO;
+        this.vec3d = Vec3.ZERO;
         setDrawn(false);
     }
 
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
-        this.vec3d = minecraftClient.player.getVelocity();
-        this.val = BowItem.getPullProgress(minecraftClient.player.getItemUseTime());
+        this.vec3d = minecraftClient.player.getDeltaMovement();
+        this.val = BowItem.getPowerForTime(minecraftClient.player.getTicksUsingItem());
     }
 
     @Listen
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        BufferBuilder begin = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-        this.bufferBuilder = begin;
-        for (Entity entity : minecraftClient.world.getEntities()) {
+        for (Entity entity : minecraftClient.level.entitiesForRendering()) {
             if (shouldTrackEntity(entity)) {
                 Inner inner = new Inner();
-                if (entity instanceof ProjectileEntity) {
-                    if (this.trajectoriesSearchHelper4.initAirborneProjectile((ProjectileEntity) entity, true, inner_3.getTickDelta())) {
+                if (entity instanceof Projectile) {
+                    if (this.trajectoriesSearchHelper4.initAirborneProjectile((Projectile) entity, true, inner_3.getTickDelta())) {
                         inner.simulatePath();
                         inner.setSourceEntity(entity);
                         inner.renderTrajectory(inner_3);
                         inner.resetTrajectoryData();
                     }
                 } else {
-                    if (entity instanceof PlayerEntity) {
-                        Entity entity2 = (PlayerEntity) entity;
-                        if (!this.trajectoriesSearchHelper4.is1867(entity2, ((PlayerEntity) entity2).getStackInHand(((PlayerEntity) entity2).getActiveHand()), 0.0d, true, inner_3.getTickDelta())) {
+                    if (entity instanceof Player) {
+                        Entity entity2 = (Player) entity;
+                        if (!this.trajectoriesSearchHelper4.is1867(entity2, ((Player) entity2).getItemInHand(((Player) entity2).getUsedItemHand()), 0.0d, true, inner_3.getTickDelta())) {
                         }
                     }
                     inner.simulatePath();
@@ -182,21 +170,16 @@ public class Trajectories extends Module {
                 }
             }
         }
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        RenderUtil.INSTANCE.setupRenderState();
-        GL32C.glLineWidth(this.lineWidth.getValue().floatValue());
-        TrajectoriesVertexConsumer.endAndDraw(begin);
-        RenderUtil.INSTANCE.restoreRenderState();
     }
 
     public boolean shouldTrackEntity(Entity entity) {
-        if (entity instanceof WitherSkullEntity) {
+        if (entity instanceof WitherSkull) {
             return false;
         }
-        return ((entity instanceof PlayerEntity) && this.predict.getValue().booleanValue()) ? entity == minecraftClient.player || !this.onlyOwn.getValue().booleanValue() : (entity instanceof ProjectileEntity) && this.airborne.getValue().booleanValue();
+        return ((entity instanceof Player) && this.predict.getValue().booleanValue()) ? entity == minecraftClient.player || !this.onlyOwn.getValue().booleanValue() : (entity instanceof Projectile) && this.airborne.getValue().booleanValue();
     }
 
-    public Vec3d getLastPlayerVelocity() {
+    public Vec3 getLastPlayerVelocity() {
         return this.vec3d;
     }
 

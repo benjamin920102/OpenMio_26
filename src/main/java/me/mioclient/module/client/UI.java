@@ -1,6 +1,7 @@
 package me.mioclient.module.client;
 
 import me.mioclient.event.events.network.PacketReceiveEvent;
+import net.minecraft.network.chat.Component;
 
 import me.mioclient.event.events.client.ClientTickEvent;
 
@@ -9,7 +10,6 @@ import me.mioclient.api.NamedValue;
 import me.mioclient.setting.SoundIdentifierSetting;
 import me.mioclient.util.client.SoundIdentifier;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
 import me.mioclient.gui.screen.ClickGuiScreen;
 import me.mioclient.mode.client.CursorType;
@@ -17,40 +17,27 @@ import me.mioclient.mode.client.Season;
 import me.mioclient.mode.misc.KeybindMode;
 
 import me.mioclient.command.ClientCommandRegistry;
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.screen.ClickGuiScreen;
-import me.mioclient.api.NamedValue;
 
 import me.mioclient.event.EventBus;
 
 import java.awt.Color;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.event.events.client.ClientTickEvent;
-import me.mioclient.mode.client.Season;
-import me.mioclient.mode.client.CursorType;
-import me.mioclient.util.client.SoundIdentifier;
 import me.mioclient.api.Category;
 import me.mioclient.api.Keybind;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
 import org.lwjgl.glfw.GLFW;
-import me.mioclient.mode.misc.KeybindMode;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.setting.SoundIdentifierSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/client/UI.class */
 public final class UI extends Module {
     public static UI uI;
     public final AtomicBoolean atomicBoolean;
@@ -83,7 +70,7 @@ public final class UI extends Module {
     public Setting<Boolean> rightClick = add(new BooleanSetting("RightClick", true, v -> this.sounds.isShown()).setVisible());
     public Setting<SoundIdentifier> sound = add(new SoundIdentifierSetting("Sound", new SoundIdentifier("system", "rclick")).requiresSettings(this.sounds, this.rightClick));
     public Setting<Float> volume2 = add(new NumberSetting<>("Volume", 0.5f, 0.0f, 1.0f).requiresSettings(this.sounds, this.rightClick));
-    public Setting<Boolean> text = add(new BooleanSetting("Text", false).setDependent());
+    public Setting<Boolean> text = add(new BooleanSetting("Component", false).setDependent());
     public Setting<Boolean> bounce = add(new BooleanSetting("Bounce", true, v -> this.text.isShown()));
     public Setting<Color> textColor = add(new ColorSetting("TextColor", new Color(-396033, true), v -> this.text.isShown()));
     public Setting<Color> enabledColor = add(new ColorSetting("EnabledColor", new Color(-2242049, true), v -> this.text.isShown()));
@@ -95,8 +82,7 @@ public final class UI extends Module {
     public Setting<Color> tint = add(new ColorSetting("Tint", new Color(627064397, true), v -> this.colors.isShown()));
     public Setting<Color> gradientColor = add(new ColorSetting("GradientColor", new Color(583181052, true), v -> this.colors.isShown()).setThemeSync(true));
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/client/UI$Mode.class */
+    
     public enum Mode implements NamedValue {
         NONE("None", 0),
         X2("X2", 2),
@@ -160,28 +146,28 @@ public final class UI extends Module {
 
     @Override // me.mioclient.module.Module
     public void onEnable() {
-        if (isNotInGame() || (minecraftClient.currentScreen instanceof ClickGuiScreen)) {
+        if (isNotInGame() || (minecraftClient.gui.screen() instanceof ClickGuiScreen)) {
             return;
         }
-        if (minecraftClient.currentScreen instanceof ChatScreen) {
+        if (minecraftClient.gui.screen() instanceof ChatScreen) {
             ClientServices.tooltipsHelper.schedule(() -> {
-                minecraftClient.setScreen(ClientServices.getClickGui());
+                minecraftClient.gui.setScreen(ClientServices.getClickGui());
             }, 0);
         } else {
-            minecraftClient.setScreen(ClientServices.getClickGui());
+            minecraftClient.gui.setScreen(ClientServices.getClickGui());
         }
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (minecraftClient.currentScreen instanceof ClickGuiScreen) {
+        if (minecraftClient.gui.screen() instanceof ClickGuiScreen) {
             ClientServices.getClickGui().requestClose();
         }
     }
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        if (minecraftClient.currentScreen instanceof AbstractClickGuiScreen) {
+        if (minecraftClient.gui.screen() instanceof AbstractClickGuiScreen) {
             return;
         }
         toggle();
@@ -189,7 +175,7 @@ public final class UI extends Module {
 
     @Listen
     public void onClientTick(ClientTickEvent fontsEvent) {
-        if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().getHandle(), 0) == 1 || !this.atomicBoolean.get()) {
+        if (GLFW.glfwGetMouseButton(minecraftClient.getWindow().handle(), 0) == 1 || !this.atomicBoolean.get()) {
             return;
         }
         ClientServices.getClickGui().resetPanelLayout();
@@ -199,14 +185,14 @@ public final class UI extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof DisconnectS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundDisconnectPacket) {
             disable();
         }
     }
 
     @Listen
     public static void onClientTickCursor(ClientTickEvent fontsEvent) {
-        if (minecraftClient.currentScreen instanceof AbstractClickGuiScreen) {
+        if (minecraftClient.gui.screen() instanceof AbstractClickGuiScreen) {
             return;
         }
         CursorType.STANDARD.applyCursor();

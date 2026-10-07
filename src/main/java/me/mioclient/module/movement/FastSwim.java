@@ -6,11 +6,6 @@ import me.mioclient.util.world.WorldUtils;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
-
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
@@ -18,15 +13,24 @@ import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/FastSwim.class */
 public class FastSwim extends Module {
-    public static SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving speedmine null (NPE). */
+    private static SpeedMine speedmine;
+
+    public static SpeedMine getSpeedmine() {
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedmine;
+    }
     public Setting<Boolean> water = add(new BooleanSetting("Water", false).setVisible());
     public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 3.0f).requiresSettings(this.water));
     public Setting<Boolean> lava = add(new BooleanSetting("Lava", true).setVisible());
@@ -48,14 +52,15 @@ public class FastSwim extends Module {
 
     @Listen
     public void onTick(TickEvent tickEvent) {
-        if (((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (PlayerUtils.isInWater(minecraftClient.player) && this.water.getValue().booleanValue())) && !minecraftClient.player.isFallFlying() && minecraftClient.player.isOnGround()) {
-            minecraftClient.player.horizontalSpeed = 0.0f;
+        if (((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (PlayerUtils.isInWater(minecraftClient.player) && this.water.getValue().booleanValue())) && !minecraftClient.player.isFallFlying() && minecraftClient.player.onGround()) {
+            minecraftClient.player.setDeltaMovement(0.0d, minecraftClient.player.getDeltaMovement().y, 0.0d);
         }
     }
 
     @Listen
     public void onMove(MoveEvent moveEvent) {
-        boolean z = speedmine.isToggled() && ((double) speedmine.getMiningProgress()) + speedmine.getCurrentMiningSpeed() >= ((double) speedmine.damage.getValue().floatValue()) - Double.longBitsToDouble(4591870180066957722L) && speedmine.getBreakingPos() != null && WorldUtils.isBreakable(speedmine.getBreakingPos());
+        SpeedMine speedmine_lcl = getSpeedmine();
+        boolean z = speedmine_lcl != null && speedmine_lcl.isToggled() && ((double) speedmine_lcl.getMiningProgress()) + speedmine_lcl.getCurrentMiningSpeed() >= ((double) speedmine_lcl.damage.getValue().floatValue()) - Double.longBitsToDouble(4591870180066957722L) && speedmine_lcl.getBreakingPos() != null && WorldUtils.isBreakable(speedmine_lcl.getBreakingPos());
         if (!((minecraftClient.player.isInLava() && this.lava.getValue().booleanValue()) || (PlayerUtils.isInWater(minecraftClient.player) && this.water.getValue().booleanValue())) || minecraftClient.player.isFallFlying() || !ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(500L) || z) {
             this.num = System.currentTimeMillis();
             return;
@@ -70,24 +75,24 @@ public class FastSwim extends Module {
             intBitsToFloat3 = Float.intBitsToFloat(1039516303) * this.speed.getValue().floatValue();
         }
         if (this.accelerate.getValue().booleanValue() && intBitsToFloat2 < intBitsToFloat3) {
-            intBitsToFloat3 = Math.min(intBitsToFloat2 + ((intBitsToFloat3 - intBitsToFloat2) * MathHelper.clamp(((float) (System.currentTimeMillis() - this.num)) / (this.accelTime.getValue().floatValue() * Float.intBitsToFloat(1148846080)), 0.0f, Float.intBitsToFloat(1065353216))), intBitsToFloat3);
+            intBitsToFloat3 = Math.min(intBitsToFloat2 + ((intBitsToFloat3 - intBitsToFloat2) * Mth.clamp(((float) (System.currentTimeMillis() - this.num)) / (this.accelTime.getValue().floatValue() * Float.intBitsToFloat(1148846080)), 0.0f, Float.intBitsToFloat(1065353216))), intBitsToFloat3);
         }
-        if (minecraftClient.player.input.jumping && !this.flag) {
+        if (minecraftClient.player.input.keyPresses.jump() && !this.flag) {
             moveEvent.setY(intBitsToFloat);
-            minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, intBitsToFloat));
-        } else if (minecraftClient.player.input.sneaking) {
+            minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, intBitsToFloat));
+        } else if (minecraftClient.player.input.keyPresses.shift()) {
             moveEvent.setY(-intBitsToFloat);
-            minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, -intBitsToFloat));
+            minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, -intBitsToFloat));
             intBitsToFloat3 /= Double.longBitsToDouble(4611686018427387904L);
         } else {
             moveEvent.setY(0.0d);
-            minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, 0.0d));
+            minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, 0.0d));
             if (!minecraftClient.player.verticalCollision && this.glide.getValue().floatValue() != 0.0f) {
-                minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().add(0.0d, -this.glide.getValue().floatValue(), 0.0d));
-                moveEvent.setY(minecraftClient.player.getVelocity().y);
+                minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().add(0.0d, -this.glide.getValue().floatValue(), 0.0d));
+                moveEvent.setY(minecraftClient.player.getDeltaMovement().y);
             }
         }
         double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, intBitsToFloat3);
-        minecraftClient.player.setVelocity(doubleArray2507[0], minecraftClient.player.getVelocity().y, doubleArray2507[1]);
+        minecraftClient.player.setDeltaMovement(doubleArray2507[0], minecraftClient.player.getDeltaMovement().y, doubleArray2507[1]);
     }
 }

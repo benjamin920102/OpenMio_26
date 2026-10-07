@@ -6,8 +6,6 @@ import me.mioclient.module.Module;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/Animations.class */
 public class Animations extends Module {
     public Setting<Boolean> crystals = add(new BooleanSetting("Crystals", false).setVisible());
     public Setting<Float> floatFactor = add(new NumberSetting<>("FloatFactor", 1.0f, 0.0f, 1.0f).requiresSettings(this.crystals));

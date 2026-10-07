@@ -4,8 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StringSetting.class */
 public final class StringSetting extends Setting<String> {
     public StringSetting(String str, String str2, java.util.function.Predicate<String> predicate) {
         super(str, str2, predicate);

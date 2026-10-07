@@ -2,27 +2,20 @@ package me.mioclient.module.misc;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import java.util.concurrent.ThreadLocalRandom;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/CustomDeathText.class */
 public class CustomDeathText extends Module {
     public Setting<CustomDeathTextMode> mode = add(new EnumSetting<>("Mode", CustomDeathTextMode.CUSTOM));
     public Setting<String> message = add(new StringSetting("Message", "Uh oh.", v -> this.mode.getValue() == CustomDeathText.CustomDeathTextMode.CUSTOM));
     public static final String[] stringArr = {"YOU USELESS SHITSTAIN", "GAME OVER MOTHERFUCKER! YOU SUCK!", "HOW THE HELL ARE YOU SO BAD AT THIS GAME?", "HOW DO YOU FUCK UP SO BADLY JESUS FUCKING CHRIST?", "YOU DIED! CONGRATS FUCKFACE", "OH MY GOD YOU SUCK! AUTO-UNINSTALLING", "HOLY FUCKING SHIT SERIOUSLY", "YOU FUCKING RETARD!", "YOU DENSE FUCK"};
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/misc/CustomDeathText$CustomDeathTextMode.class */
+    
     public enum CustomDeathTextMode implements NamedValue {
         CUSTOM("Custom"),
         RANDOM("Random");
@@ -44,10 +37,10 @@ public class CustomDeathText extends Module {
         setDrawn(false);
     }
 
-    public Text getText327() {
+    public Component getText327() {
         if (this.mode.getValue() == CustomDeathTextMode.CUSTOM) {
-            return Text.of(this.message.getValue().trim());
+            return Component.literal(this.message.getValue().trim());
         }
-        return Text.literal(stringArr[ThreadLocalRandom.current().nextInt(stringArr.length)]);
+        return Component.literal(stringArr[ThreadLocalRandom.current().nextInt(stringArr.length)]);
     }
 }

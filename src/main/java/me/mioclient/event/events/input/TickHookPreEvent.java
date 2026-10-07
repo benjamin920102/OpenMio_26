@@ -1,11 +1,10 @@
 package me.mioclient.event.events.input;
 
-import net.minecraft.client.input.Input;
+import net.minecraft.client.player.ClientInput;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/TickHookPreEvent.class */
+/* 26.2 port: Yarn mutable Input -> MojMap ClientInput. */
 public class TickHookPreEvent extends InputTickEvent {
-    public TickHookPreEvent(Input input, float f) {
-        super(input, f);
+    public TickHookPreEvent(ClientInput input) {
+        super(input);
     }
 }

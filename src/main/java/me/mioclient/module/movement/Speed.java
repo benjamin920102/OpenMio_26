@@ -7,7 +7,6 @@ import me.mioclient.event.events.player.MoveSpeedEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.combat.ExplosionDamageCalculator;
 import me.mioclient.util.player.MovementUtils;
@@ -15,45 +14,44 @@ import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.registry.ModeValueMap;
 import me.mioclient.util.time.Stopwatch;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.registry.ModeValueMap;
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.movement.speed.GrimSpeedHandler;
 import me.mioclient.module.movement.speed.OnGroundSpeedHandler;
 import me.mioclient.module.movement.speed.SpeedModeHandler;
 import me.mioclient.module.movement.speed.StrafeSpeedHandler;
 import me.mioclient.module.movement.speed.StrafeStrictHandler;
 import me.mioclient.module.movement.speed.VanillaSpeedHandler;
-import me.mioclient.util.combat.ExplosionDamageCalculator;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.render.RenderConstants;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.ExplosionVelocityEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MoveEvent;
-import me.mioclient.event.events.player.MoveSpeedEvent;
 import me.mioclient.event.events.player.SprintUpdateEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Speed.class */
 public class Speed extends Module {
-    public static ObstaclePasser obstaclePasser = (ObstaclePasser) ClientServices.moduleInjector.getModule(ObstaclePasser.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving obstaclePasser null (NPE). */
+    private static ObstaclePasser obstaclePasser;
+
+    public static ObstaclePasser getObstaclePasser() {
+        if (obstaclePasser == null && ClientServices.moduleInjector != null) {
+            try {
+                obstaclePasser = (ObstaclePasser) ClientServices.moduleInjector.getModule(ObstaclePasser.class);
+            } catch (Exception e) {
+            }
+        }
+        return obstaclePasser;
+    }
     public Setting<SpeedPredicateMode> mode = add(new EnumSetting<>("Mode", SpeedPredicateMode.speedPredicateMode));
     public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.0f, 10.0f, v -> (this.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode2 || this.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode5) ? false : true));
     public Setting<Boolean> boost = add(new BooleanSetting("Boost", false, v -> this.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode2 || this.mode.getValue() == Speed.SpeedPredicateMode.speedPredicateMode));
@@ -64,8 +62,7 @@ public class Speed extends Module {
     public final Stopwatch stopwatch;
     public final ModeValueMap<SpeedPredicateMode, SpeedModeHandler> elytraFlyHelper_4;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Speed$Inner.class */
+    
     class Inner extends SpeedModeHandler {
         public Inner(Speed speed, Speed speed2) {
             super(speed2);
@@ -76,10 +73,8 @@ public class Speed extends Module {
         }
     }
 
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Speed$SpeedPredicateMode.class */
+    
+
     public static enum SpeedPredicateMode implements NamedValue {
         speedPredicateMode {
             @Override // me.mioclient.api.NamedValue
@@ -178,7 +173,7 @@ public class Speed extends Module {
 
     @Listen
     public void onMoveSpeed(MoveSpeedEvent moveEvent_2) {
-        if (moveEvent_2.getPhase() == KeyPearlMode.Post && minecraftClient.player.isOnGround() && moveEvent_2.getSpeed() > Double.longBitsToDouble(4603579539098121011L)) {
+        if (moveEvent_2.getPhase() == KeyPearlMode.Post && minecraftClient.player.onGround() && moveEvent_2.getSpeed() > Double.longBitsToDouble(4603579539098121011L)) {
             this.flag = true;
         }
     }
@@ -193,16 +188,16 @@ public class Speed extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             reset();
         }
     }
 
     @Listen
     public void onExplosionVelocity(ExplosionVelocityEvent explosionVelocityEvent) {
-        Vec3d vec3d = new Vec3d(explosionVelocityEvent.getX(), explosionVelocityEvent.getY(), explosionVelocityEvent.getZ());
+        Vec3 vec3d = new Vec3(explosionVelocityEvent.getX(), explosionVelocityEvent.getY(), explosionVelocityEvent.getZ());
         double d = ExplosionDamageCalculator.getExplosionDamage(vec3d, minecraftClient.player, minecraftClient.player.getBoundingBox(), Double.longBitsToDouble(4618441417868443648L), true, (BlockPos) null, (BlockPos) null);
-        if (MovementUtils.is2181() && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(500L) && this.boost.getValue().booleanValue() && Math.sqrt(minecraftClient.player.squaredDistanceTo(vec3d)) <= Double.longBitsToDouble(4618441417868443648L) && d >= Double.longBitsToDouble(4616189618054758400L)) {
+        if (MovementUtils.is2181() && ClientServices.holeSnapRenderHelper.getSetbackStopwatch().hasElapsedMs(500L) && this.boost.getValue().booleanValue() && Math.sqrt(minecraftClient.player.distanceToSqr(vec3d)) <= Double.longBitsToDouble(4618441417868443648L) && d >= Double.longBitsToDouble(4616189618054758400L)) {
             this.stopwatch.reset();
         }
     }
@@ -222,15 +217,16 @@ public class Speed extends Module {
     }
 
     public boolean hasHeadCollision() {
-        Box boundingBox = minecraftClient.player.getBoundingBox();
-        return minecraftClient.world.canCollide(minecraftClient.player, new Box((double) minecraftClient.player.getBlockPos().getX(), boundingBox.minY, (double) minecraftClient.player.getBlockPos().getZ(), ((double) minecraftClient.player.getBlockPos().getX()) + Double.longBitsToDouble(4607182418800017408L), boundingBox.maxY, ((double) minecraftClient.player.getBlockPos().getZ()) + Double.longBitsToDouble(4607182418800017408L)).contract(Double.longBitsToDouble(4502148214488346440L))) && this.pauseInBlocks.getValue().booleanValue();
+        AABB boundingBox = minecraftClient.player.getBoundingBox();
+        return !minecraftClient.level.noCollision(minecraftClient.player, new AABB((double) minecraftClient.player.blockPosition().getX(), boundingBox.minY, (double) minecraftClient.player.blockPosition().getZ(), ((double) minecraftClient.player.blockPosition().getX()) + Double.longBitsToDouble(4607182418800017408L), boundingBox.maxY, ((double) minecraftClient.player.blockPosition().getZ()) + Double.longBitsToDouble(4607182418800017408L)).deflate(Double.longBitsToDouble(4502148214488346440L))) && this.pauseInBlocks.getValue().booleanValue();
     }
 
     public boolean is2824() {
-        if (obstaclePasser == null) {
+        ObstaclePasser obstaclePasser_lcl = getObstaclePasser();
+        if (obstaclePasser_lcl == null) {
             return false;
         }
-        return obstaclePasser.is929();
+        return obstaclePasser_lcl.is929();
     }
 
     public boolean shouldPause() {

@@ -1,7 +1,5 @@
 package me.mioclient.loader;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Helper_14.class */
 public class BuildInfo {
     public static final long num2 = 1740944876627L;
     public static final String string6 = "02/03/2025 22:47";

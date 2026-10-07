@@ -1,18 +1,16 @@
 package me.mioclient.module.combat.pusher;
 
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/FacingDirectionResolver.class */
 public final class FacingDirectionResolver {
     public Direction resolveFacingDirection(float[] fArr) {
         float intBitsToFloat = fArr[1] * Float.intBitsToFloat(1016003125);
         float intBitsToFloat2 = (-fArr[0]) * Float.intBitsToFloat(1016003125);
-        float sin = MathHelper.sin(intBitsToFloat);
-        float cos = MathHelper.cos(intBitsToFloat);
-        float sin2 = MathHelper.sin(intBitsToFloat2);
-        float cos2 = MathHelper.cos(intBitsToFloat2);
+        float sin = Mth.sin(intBitsToFloat);
+        float cos = Mth.cos(intBitsToFloat);
+        float sin2 = Mth.sin(intBitsToFloat2);
+        float cos2 = Mth.cos(intBitsToFloat2);
         boolean z = sin2 > 0.0f;
         boolean z2 = sin < 0.0f;
         boolean z3 = cos2 > 0.0f;

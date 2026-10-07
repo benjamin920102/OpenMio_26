@@ -5,9 +5,6 @@ import me.mioclient.util.text.StringTemplate;
 
 import me.mioclient.network.irc.CoordLogEntry;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.irc.CoordLogEntry;
-
 import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.command.IBaritoneChatControl;
@@ -22,12 +19,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.minecraft.command.CommandSource;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_35.class */
 public class BaritoneCommand extends CommandFeature {
     public static final String string = "#";
 
@@ -37,7 +32,7 @@ public class BaritoneCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.argument("command", StringArgumentType.greedyString()).suggests((commandContext, suggestionsBuilder) -> {
             IBaritone primaryBaritone = BaritoneAPI.getProvider().getPrimaryBaritone();
             String str = "#";
@@ -63,7 +58,7 @@ public class BaritoneCommand extends CommandFeature {
             IBaritone primaryBaritone = BaritoneAPI.getProvider().getPrimaryBaritone();
             String str = (String) commandContext2.getArgument("command", String.class);
             if ("goto".equalsIgnoreCase(str)) {
-                ClientServices.obstaclePasserHelper.pathTo(minecraftClient.gameRenderer.getCamera().getBlockPos());
+                ClientServices.obstaclePasserHelper.pathTo(minecraftClient.gameRenderer.mainCamera().blockPosition());
                 return 1;
             }
             if ("goto ping".equalsIgnoreCase(str)) {
@@ -73,7 +68,7 @@ public class BaritoneCommand extends CommandFeature {
                     return 1;
                 }
             } else if ("elytra ping".equalsIgnoreCase(str) && (blockPos2700 = findNearbyTrackedPos()) != null) {
-                ClientServices.obstaclePasserHelper.elytraPathTo(blockPos2700.withY(minecraftClient.player.getBlockY()));
+                ClientServices.obstaclePasserHelper.elytraPathTo(new BlockPos(blockPos2700.getX(), minecraftClient.player.getBlockY(), blockPos2700.getZ()));
                 return 1;
             }
             primaryBaritone.getGameEventHandler().onSendChatMessage(new ChatEvent(new StringTemplate().arg(str).arg(IBaritoneChatControl.FORCE_COMMAND_PREFIX).format("\u0001\u0001")));
@@ -93,7 +88,7 @@ public class BaritoneCommand extends CommandFeature {
             for (CoordLogEntry spawnTimeHelper : ClientServices.nameTagsManager.getCoordLogEntries()) {
                 if (spawnTimeHelper.isOnSameServer()) {
                     if (!spawnTimeHelper.getPlayerName().equalsIgnoreCase(minecraftClient.player.getName().getString())) {
-                        if (((float) minecraftClient.player.getEyePos().distanceTo(spawnTimeHelper.getBlockPos().toCenterPos())) < Float.intBitsToFloat(1176255488)) {
+                        if (((float) minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(spawnTimeHelper.getBlockPos()))) < Float.intBitsToFloat(1176255488)) {
                             return spawnTimeHelper.getBlockPos();
                         }
                     }

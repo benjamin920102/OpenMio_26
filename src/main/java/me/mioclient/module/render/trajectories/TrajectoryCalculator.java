@@ -6,71 +6,66 @@ import me.mioclient.util.math.BoxMath;
 import me.mioclient.util.math.MathConstants;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.math.MathConstants;
 
 import me.mioclient.ducks.DuckEntityCamera;
 
 import me.mioclient.module.render.Trajectories;
-import net.minecraft.block.Blocks;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ChargedProjectilesComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.projectile.ArrowEntity;
-import net.minecraft.entity.projectile.DragonFireballEntity;
-import net.minecraft.entity.projectile.FireballEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.entity.projectile.TridentEntity;
-import net.minecraft.entity.projectile.WitherSkullEntity;
-import net.minecraft.entity.projectile.thrown.EggEntity;
-import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
-import net.minecraft.entity.projectile.thrown.ExperienceBottleEntity;
-import net.minecraft.entity.projectile.thrown.SnowballEntity;
-import net.minecraft.entity.projectile.thrown.ThrownEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.BowItem;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.EggItem;
-import net.minecraft.item.EnderPearlItem;
-import net.minecraft.item.ExperienceBottleItem;
-import net.minecraft.item.FishingRodItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.SnowballItem;
-import net.minecraft.item.ThrowablePotionItem;
-import net.minecraft.item.TridentItem;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.ChargedProjectiles;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
+import net.minecraft.world.entity.projectile.hurtingprojectile.DragonFireball;
+import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
+import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEgg;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownExperienceBottle;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
+import net.minecraft.world.entity.projectile.ThrowableProjectile;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.EggItem;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.ExperienceBottleItem;
+import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SnowballItem;
+import net.minecraft.world.item.ThrowablePotionItem;
+import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
 import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import me.mioclient.manager.RotationManager;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/TrajectoryCalculator.class */
 public class TrajectoryCalculator implements ClientAccessor {
     public static Trajectories trajectories = (Trajectories) ClientServices.moduleInjector.getModule(Trajectories.class);
-    public static final net.minecraft.util.hit.HitResult hitResult = new HitResult(Vec3d.ZERO);
-    public static final BlockPos.Mutable mutable = new BlockPos.Mutable();
-    public static Vec3d vec3d = new Vec3d(0.0d, 0.0d, 0.0d);
-    public static Vec3d vec3d2 = new Vec3d(0.0d, 0.0d, 0.0d);
+    public static final net.minecraft.world.phys.HitResult hitResult = new HitResult(Vec3.ZERO);
+    public static final BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+    public static Vec3 vec3d = new Vec3(0.0d, 0.0d, 0.0d);
+    public static Vec3 vec3d2 = new Vec3(0.0d, 0.0d, 0.0d);
     public final Vector3d vector3d = new Vector3d();
     public final Vector3d vector3d2 = new Vector3d();
     public double val;
     public double val2;
     public double val3;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/TrajectoriesSearchHelper4$HitResult.class */
-    static class HitResult extends net.minecraft.util.hit.HitResult {
-        public HitResult(Vec3d vec3d) {
+    
+    static class HitResult extends net.minecraft.world.phys.HitResult {
+        public HitResult(Vec3 vec3d) {
             super(vec3d);
         }
 
@@ -80,10 +75,10 @@ public class TrajectoryCalculator implements ClientAccessor {
     }
 
     public boolean is1867(Entity entity, ItemStack itemStack, double d, boolean z, double d2) {
-        ChargedProjectilesComponent chargedProjectilesComponent;
+        ChargedProjectiles chargedProjectilesComponent;
         Item item = itemStack.getItem();
         if ((item instanceof BowItem) && trajectories.bow.getValue().booleanValue()) {
-            double lerp = MathHelper.lerp(d2, trajectories.getLastPullProgress(), BowItem.getPullProgress(minecraftClient.player.getItemUseTime()));
+            double lerp = Mth.lerp(d2, trajectories.getLastPullProgress(), BowItem.getPowerForTime(minecraftClient.player.getTicksUsingItem()));
             if (lerp <= 0.0d) {
                 lerp = Double.longBitsToDouble(4607182418800017408L);
             }
@@ -91,7 +86,7 @@ public class TrajectoryCalculator implements ClientAccessor {
             return true;
         }
         if ((item instanceof CrossbowItem) && trajectories.xBow.getValue().booleanValue()) {
-            if (!CrossbowItem.isCharged(itemStack) || (chargedProjectilesComponent = (ChargedProjectilesComponent) itemStack.get(DataComponentTypes.CHARGED_PROJECTILES)) == null) {
+            if (!CrossbowItem.isCharged(itemStack) || (chargedProjectilesComponent = (ChargedProjectiles) itemStack.get(DataComponents.CHARGED_PROJECTILES)) == null) {
                 return false;
             }
             if (chargedProjectilesComponent.contains(Items.FIREWORK_ROCKET)) {
@@ -109,7 +104,7 @@ public class TrajectoryCalculator implements ClientAccessor {
             calculateShotTrajectory(entity, 0.0d, Double.longBitsToDouble(4612811918334230528L), d, Double.longBitsToDouble(4587366580546961408L), Double.longBitsToDouble(4607092346807469998L), z, d2);
             return true;
         }
-        if ((((item instanceof SnowballItem) || (item instanceof EggItem)) && trajectories.others.getValue().booleanValue()) || ((item instanceof EnderPearlItem) && trajectories.pearls.getValue().booleanValue())) {
+        if ((((item instanceof SnowballItem) || (item instanceof EggItem)) && trajectories.others.getValue().booleanValue()) || ((item instanceof EnderpearlItem) && trajectories.pearls.getValue().booleanValue())) {
             calculateShotTrajectory(entity, 0.0d, Double.longBitsToDouble(4609434218613702656L), d, Double.longBitsToDouble(4584304132692975288L), Double.longBitsToDouble(4605380978949069210L), z, d2);
             return true;
         }
@@ -128,21 +123,21 @@ public class TrajectoryCalculator implements ClientAccessor {
         double d7;
         double d8;
         double d9;
-        this.vector3d.set(MathHelper.lerp(d6, entity.prevX, entity.getX()), MathHelper.lerp(d6, entity.prevY, entity.getY()) + entity.getEyeHeight(entity.getPose()), MathHelper.lerp(d6, entity.prevZ, entity.getZ()));
-        double lerp = MathHelper.lerp(d6, entity.prevYaw, entity.getYaw());
-        double lerp2 = MathHelper.lerp(d6, entity.prevPitch, entity.getPitch());
+        this.vector3d.set(Mth.lerp(d6, entity.xo, entity.getX()), Mth.lerp(d6, entity.yo, entity.getY()) + entity.getEyeHeight(entity.getPose()), Mth.lerp(d6, entity.zo, entity.getZ()));
+        double lerp = Mth.lerp(d6, entity.yRotO, entity.getYRot());
+        double lerp2 = Mth.lerp(d6, entity.xRotO, entity.getXRot());
         if (entity == minecraftClient.player) {
-            lerp = MathHelper.lerp(d6, ClientServices.RotationManager.getPrevYaw(), ClientServices.RotationManager.getYaw());
-            lerp2 = MathHelper.lerp(d6, ClientServices.RotationManager.getPrevPitch(), ClientServices.RotationManager.getPitch());
+            lerp = Mth.lerp(d6, ClientServices.RotationManager.getPrevYaw(), ClientServices.RotationManager.getYaw());
+            lerp2 = Mth.lerp(d6, ClientServices.RotationManager.getPrevPitch(), ClientServices.RotationManager.getPitch());
         }
         if (d3 == 0.0d) {
             d7 = (-Math.sin(lerp * MathConstants.val4)) * Math.cos(lerp2 * MathConstants.val4);
             d8 = -Math.sin((lerp2 + d) * MathConstants.val4);
             d9 = Math.cos(lerp * MathConstants.val4) * Math.cos(lerp2 * MathConstants.val4);
         } else {
-            Vec3d oppositeRotationVector = entity.getOppositeRotationVector(Float.intBitsToFloat(1065353216));
+            Vec3 oppositeRotationVector = entity.getLookAngle().scale(-1.0d);
             Quaterniondc angleAxis = new Quaterniond().setAngleAxis(d3, oppositeRotationVector.x, oppositeRotationVector.y, oppositeRotationVector.z);
-            Vec3d rotationVec = entity.getRotationVec(Float.intBitsToFloat(1065353216));
+            Vec3 rotationVec = entity.getLookAngle();
             Vector3d vector3d = new Vector3d(rotationVec.x, rotationVec.y, rotationVec.z);
             vector3d.rotate(angleAxis);
             d7 = vector3d.x;
@@ -151,11 +146,11 @@ public class TrajectoryCalculator implements ClientAccessor {
         }
         this.vector3d2.set(d7, d8, d9).normalize().mul(d2);
         if (z) {
-            Vec3d velocity = entity.getVelocity();
+            Vec3 velocity = entity.getDeltaMovement();
             if (minecraftClient.player == entity) {
-                this.vector3d2.add(-MathHelper.lerp(d6, trajectories.getLastPlayerVelocity().x, velocity.x), entity.isOnGround() ? 0.0d : MathHelper.lerp(d6, trajectories.getLastPlayerVelocity().y, velocity.y), -MathHelper.lerp(d6, trajectories.getLastPlayerVelocity().z, velocity.z));
+                this.vector3d2.add(-Mth.lerp(d6, trajectories.getLastPlayerVelocity().x, velocity.x), entity.onGround() ? 0.0d : Mth.lerp(d6, trajectories.getLastPlayerVelocity().y, velocity.y), -Mth.lerp(d6, trajectories.getLastPlayerVelocity().z, velocity.z));
             } else {
-                this.vector3d2.add(-velocity.x, entity.isOnGround() ? 0.0d : velocity.y, -velocity.z);
+                this.vector3d2.add(-velocity.x, entity.onGround() ? 0.0d : velocity.y, -velocity.z);
             }
         }
         this.val = d4;
@@ -164,35 +159,35 @@ public class TrajectoryCalculator implements ClientAccessor {
     }
 
     public boolean initAirborneProjectile(Entity entity, boolean z, double d) {
-        if (!minecraftClient.world.isSpaceEmpty(entity, entity.getBoundingBox().expand(BoxMath.val))) {
+        if (!minecraftClient.level.noCollision(entity, entity.getBoundingBox().inflate(BoxMath.val))) {
             return false;
         }
-        if (entity instanceof ArrowEntity) {
-            calculateAirborneTrajectory(entity, ((ArrowEntity) entity).getVelocity().length(), Double.longBitsToDouble(4587366580546961408L), Double.longBitsToDouble(4603579539098121011L), z, d);
-        } else if ((entity instanceof EnderPearlEntity) || (entity instanceof SnowballEntity) || (entity instanceof EggEntity)) {
+        if (entity instanceof Arrow) {
+            calculateAirborneTrajectory(entity, ((Arrow) entity).getDeltaMovement().length(), Double.longBitsToDouble(4587366580546961408L), Double.longBitsToDouble(4603579539098121011L), z, d);
+        } else if ((entity instanceof ThrownEnderpearl) || (entity instanceof Snowball) || (entity instanceof ThrownEgg)) {
             calculateAirborneTrajectory(entity, Double.longBitsToDouble(4609434218613702656L), Double.longBitsToDouble(4584304132692975288L), Double.longBitsToDouble(4605380978949069210L), z, d);
-            if (BlockPos.stream(entity.getBoundingBox().expand(0.0d, Double.longBitsToDouble(4611686018427387904L), 0.0d)).map((v0) -> {
-                return v0.toImmutable();
+            if (BlockPos.betweenClosedStream(entity.getBoundingBox().inflate(0.0d, Double.longBitsToDouble(4611686018427387904L), 0.0d)).map((v0) -> {
+                return new BlockPos(v0);
             }).anyMatch(blockPos -> {
-                return minecraftClient.world.getBlockState(blockPos).getBlock() == Blocks.BUBBLE_COLUMN;
+                return minecraftClient.level.getBlockState(blockPos).getBlock() == Blocks.BUBBLE_COLUMN;
             })) {
-                Vec3d velocity = entity.getVelocity();
-                Vec3d vec3d3 = new Vec3d(velocity.x, Double.longBitsToDouble(-4571373524106608640L), velocity.z);
+                Vec3 velocity = entity.getDeltaMovement();
+                Vec3 vec3d3 = new Vec3(velocity.x, Double.longBitsToDouble(-4571373524106608640L), velocity.z);
                 interpolateVelocity(entity, vec3d3, Double.longBitsToDouble(4607182418800017408L), Double.longBitsToDouble(4609434218613702656L));
             }
-        } else if (entity instanceof TridentEntity) {
+        } else if (entity instanceof ThrownTrident) {
             calculateAirborneTrajectory(entity, Double.longBitsToDouble(4612811918334230528L), Double.longBitsToDouble(4587366580546961408L), Double.longBitsToDouble(4607092346807469998L), z, d);
-        } else if (entity instanceof ExperienceBottleEntity) {
+        } else if (entity instanceof ThrownExperienceBottle) {
             calculateAirborneTrajectory(entity, Double.longBitsToDouble(4604480259023595110L), Double.longBitsToDouble(4589708452245819884L), Double.longBitsToDouble(4605380978949069210L), z, d);
-        } else if (entity instanceof ThrownEntity) {
+        } else if (entity instanceof ThrowableProjectile) {
             calculateAirborneTrajectory(entity, MathConstants.val2, Double.longBitsToDouble(4587366580439587226L), Double.longBitsToDouble(4605380978949069210L), z, d);
         } else {
-            if (!(entity instanceof WitherSkullEntity) && !(entity instanceof FireballEntity) && !(entity instanceof DragonFireballEntity)) {
+            if (!(entity instanceof WitherSkull) && !(entity instanceof Fireball) && !(entity instanceof DragonFireball)) {
                 return false;
             }
             calculateAirborneTrajectory(entity, Double.longBitsToDouble(4606732058837280358L), 0.0d, Double.longBitsToDouble(4605380978949069210L), z, d);
         }
-        if (!entity.hasNoGravity()) {
+        if (!entity.isNoGravity()) {
             return true;
         }
         this.val = 0.0d;
@@ -200,13 +195,13 @@ public class TrajectoryCalculator implements ClientAccessor {
     }
 
     public void calculateAirborneTrajectory(Entity entity, double d, double d2, double d3, boolean z, double d4) {
-        this.vector3d.set(MathHelper.lerp(d4, entity.prevX, entity.getX()), MathHelper.lerp(d4, entity.prevY, entity.getY()), MathHelper.lerp(d4, entity.prevZ, entity.getZ()));
-        interpolateVelocity(entity, entity.getVelocity(), d4, d);
+        this.vector3d.set(Mth.lerp(d4, entity.xo, entity.getX()), Mth.lerp(d4, entity.yo, entity.getY()), Mth.lerp(d4, entity.zo, entity.getZ()));
+        interpolateVelocity(entity, entity.getDeltaMovement(), d4, d);
         if (z) {
-            Vec3d velocity = entity.getVelocity();
+            Vec3 velocity = entity.getDeltaMovement();
             Vector3d vector3d = this.vector3d2;
             double d5 = velocity.x;
-            double d6 = entity.isOnGround() ? 0.0d : velocity.y;
+            double d6 = entity.onGround() ? 0.0d : velocity.y;
             vector3d.add(d5, d6, velocity.z);
         }
         this.val = d2;
@@ -214,21 +209,21 @@ public class TrajectoryCalculator implements ClientAccessor {
         this.val3 = d3;
     }
 
-    public void interpolateVelocity(Entity entity, Vec3d vec3d3, double d, double d2) {
+    public void interpolateVelocity(Entity entity, Vec3 vec3d3, double d, double d2) {
         DuckEntityCamera cameraYawHelper = (DuckEntityCamera) entity;
-        this.vector3d2.set(MathHelper.lerp(d, cameraYawHelper.mio$getPrevVelocity().x, vec3d3.x), MathHelper.lerp(d, cameraYawHelper.mio$getPrevVelocity().y, vec3d3.y), MathHelper.lerp(d, cameraYawHelper.mio$getPrevVelocity().z, vec3d3.z)).normalize().mul(d2);
+        this.vector3d2.set(Mth.lerp(d, cameraYawHelper.mio$getPrevVelocity().x, vec3d3.x), Mth.lerp(d, cameraYawHelper.mio$getPrevVelocity().y, vec3d3.y), Mth.lerp(d, cameraYawHelper.mio$getPrevVelocity().z, vec3d3.z)).normalize().mul(d2);
     }
 
     public void calculateFishingRodTrajectory(Entity entity, double d) {
-        double lerp = MathHelper.lerp(d, entity.prevYaw, entity.getYaw());
-        double lerp2 = MathHelper.lerp(d, entity.prevPitch, entity.getPitch());
+        double lerp = Mth.lerp(d, entity.yRotO, entity.getYRot());
+        double lerp2 = Mth.lerp(d, entity.xRotO, entity.getXRot());
         double cos = Math.cos(((-lerp) * MathConstants.val4) - Double.longBitsToDouble(4614256656748904448L));
         double sin = Math.sin(((-lerp) * MathConstants.val4) - Double.longBitsToDouble(4614256656748904448L));
         double d2 = -Math.cos((-lerp2) * MathConstants.val4);
         double sin2 = Math.sin((-lerp2) * MathConstants.val4);
-        this.vector3d.set(MathHelper.lerp(d, entity.prevX, entity.getX()), MathHelper.lerp(d, entity.prevY, entity.getY()) + entity.getEyeHeight(entity.getPose()), MathHelper.lerp(d, entity.prevZ, entity.getZ()));
+        this.vector3d.set(Mth.lerp(d, entity.xo, entity.getX()), Mth.lerp(d, entity.yo, entity.getY()) + entity.getEyeHeight(entity.getPose()), Mth.lerp(d, entity.zo, entity.getZ()));
         this.vector3d.sub(sin * Double.longBitsToDouble(4599075939470750515L), 0.0d, cos * Double.longBitsToDouble(4599075939470750515L));
-        this.vector3d2.set(-sin, MathHelper.clamp(-(sin2 / d2), Double.longBitsToDouble(-4606056518893174784L), Double.longBitsToDouble(4617315517961601024L)), -cos);
+        this.vector3d2.set(-sin, Mth.clamp(-(sin2 / d2), Double.longBitsToDouble(-4606056518893174784L), Double.longBitsToDouble(4617315517961601024L)), -cos);
         double length = this.vector3d2.length();
         this.vector3d2.mul((Double.longBitsToDouble(4603579539098121011L) / length) + MathConstants.val2, (Double.longBitsToDouble(4603579539098121011L) / length) + MathConstants.val2, (Double.longBitsToDouble(4603579539098121011L) / length) + MathConstants.val2);
         this.val = Double.longBitsToDouble(4584304132692975288L);
@@ -236,19 +231,19 @@ public class TrajectoryCalculator implements ClientAccessor {
         this.val3 = 0.0d;
     }
 
-    public net.minecraft.util.hit.HitResult stepSimulation() {
-        vec3d2 = new Vec3d(this.vector3d.x, this.vector3d.y, this.vector3d.z);
+    public net.minecraft.world.phys.HitResult stepSimulation() {
+        vec3d2 = new Vec3(this.vector3d.x, this.vector3d.y, this.vector3d.z);
         this.vector3d.add(this.vector3d2);
         this.vector3d2.mul(isInWater() ? this.val3 : this.val2);
         this.vector3d2.sub(0.0d, this.val, 0.0d);
-        if (this.vector3d.y < minecraftClient.world.getBottomY()) {
+        if (this.vector3d.y < minecraftClient.level.getMinY()) {
             return hitResult;
         }
-        if (!minecraftClient.world.getChunkManager().isChunkLoaded((int) (this.vector3d.x / Double.longBitsToDouble(4625196817309499392L)), (int) (this.vector3d.z / Double.longBitsToDouble(4625196817309499392L)))) {
+        if (!minecraftClient.level.getChunkSource().hasChunk((int) (this.vector3d.x / Double.longBitsToDouble(4625196817309499392L)), (int) (this.vector3d.z / Double.longBitsToDouble(4625196817309499392L)))) {
             return hitResult;
         }
-        vec3d = new Vec3d(this.vector3d.x, this.vector3d.y, this.vector3d.z);
-        net.minecraft.util.hit.HitResult hitResult1875 = raycastCollision();
+        vec3d = new Vec3(this.vector3d.x, this.vector3d.y, this.vector3d.z);
+        net.minecraft.world.phys.HitResult hitResult1875 = raycastCollision();
         if (hitResult1875.getType() == HitResult.Type.MISS) {
             return null;
         }
@@ -257,19 +252,19 @@ public class TrajectoryCalculator implements ClientAccessor {
 
     public boolean isInWater() {
         mutable.set(this.vector3d.x, this.vector3d.y, this.vector3d.z);
-        FluidState fluidState = minecraftClient.world.getFluidState(mutable);
-        return (fluidState.getFluid() == Fluids.WATER || fluidState.getFluid() == Fluids.FLOWING_WATER) && this.vector3d.y - ((double) ((int) this.vector3d.y)) <= ((double) fluidState.getHeight());
+        FluidState fluidState = minecraftClient.level.getFluidState(mutable);
+        return fluidState.is(FluidTags.WATER) && this.vector3d.y - ((double) ((int) this.vector3d.y)) <= ((double) fluidState.getHeight(minecraftClient.level, mutable));
     }
 
-    public net.minecraft.util.hit.HitResult raycastCollision() {
-        Vec3d vec3d3 = vec3d2;
-        net.minecraft.util.hit.HitResult raycast = minecraftClient.world.raycast(new RaycastContext(vec3d3, vec3d, RaycastContext.ShapeType.COLLIDER, this.val3 == 0.0d ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, minecraftClient.player));
+    public net.minecraft.world.phys.HitResult raycastCollision() {
+        Vec3 vec3d3 = vec3d2;
+        net.minecraft.world.phys.HitResult raycast = minecraftClient.level.clip(new ClipContext(vec3d3, vec3d, ClipContext.Block.COLLIDER, this.val3 == 0.0d ? ClipContext.Fluid.ANY : ClipContext.Fluid.NONE, minecraftClient.player));
         if (raycast.getType() != HitResult.Type.MISS) {
-            vec3d3 = raycast.getPos();
+            vec3d3 = raycast.getLocation();
         }
-        net.minecraft.util.hit.HitResult entityCollision = ProjectileUtil.getEntityCollision(minecraftClient.world, minecraftClient.player, vec3d3, vec3d, new Box(this.vector3d.x, this.vector3d.y, this.vector3d.z, this.vector3d.x, this.vector3d.y, this.vector3d.z).stretch(minecraftClient.player.getVelocity()).expand(Double.longBitsToDouble(4607182418800017408L)), entity -> {
-            return !entity.isSpectator() && entity.isAlive() && entity.canHit();
-        });
+        net.minecraft.world.phys.HitResult entityCollision = ProjectileUtil.getEntityHitResult(minecraftClient.level, minecraftClient.player, vec3d3, vec3d, new AABB(this.vector3d.x, this.vector3d.y, this.vector3d.z, this.vector3d.x, this.vector3d.y, this.vector3d.z).expandTowards(minecraftClient.player.getDeltaMovement()).inflate(Double.longBitsToDouble(4607182418800017408L)), entity -> {
+            return !entity.isSpectator() && entity.isAlive() && entity.isPickable();
+        }, 0.0f);
         if (entityCollision != null) {
             raycast = entityCollision;
         }

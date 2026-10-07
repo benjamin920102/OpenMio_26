@@ -6,8 +6,6 @@ import me.mioclient.module.Module;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.StringSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/NameProtect.class */
 public class NameProtect extends Module {
     public Setting<String> name = add(new StringSetting("Name", "Me"));
     public Setting<Boolean> skin = add(new BooleanSetting("Skin", true));

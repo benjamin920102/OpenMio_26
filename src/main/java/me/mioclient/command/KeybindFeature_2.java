@@ -5,7 +5,6 @@ import me.mioclient.mode.misc.KeybindMode;
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.api.Keybind;
-import me.mioclient.mode.misc.KeybindMode;
 
 public class KeybindFeature_2 extends KeybindFeature {
    public KeybindFeature_2(String var1, Keybind var2) {

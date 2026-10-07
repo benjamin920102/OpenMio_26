@@ -3,19 +3,16 @@ package me.mioclient.mixin;
 import me.mioclient.api.ClientServices;
 
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.render.shader.BlurFramebuffer;
+import me.mioclient.render.shape.Shape2DRenderer;
 
 import me.mioclient.command.ClientCommandRegistry;
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
 
-import me.mioclient.render.shader.BlurFramebuffer;
 import me.mioclient.module.render.Blur;
 import me.mioclient.module.render.NoRender;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Style;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Style;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,9 +21,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified via JDK25 javap): Screen.renderBlurredBackground ->
+   extractBlurredBackground; renderBackground -> extractBackground;
+   handleTextClick/renderInGameBackground gone — hooks deleted. */
 @Mixin({Screen.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinScreen.class */
+
 public abstract class MixinScreen {
     private static NoRender norender;
     private static Blur blur;
@@ -47,47 +46,28 @@ public abstract class MixinScreen {
 
     @Shadow
     @Nullable
-    protected MinecraftClient field_22787;
+    protected Minecraft minecraft;
 
     @Shadow
-    public int field_22789;
+    public int width;
 
     @Shadow
-    public int field_22790;
+    public int height;
 
     @Shadow
-    protected abstract void method_57735(DrawContext drawContext);
+    protected abstract void extractBlurredBackground(GuiGraphicsExtractor drawContext);
 
-    @Inject(method = {"handleTextClick"}, at = {@At(value = "INVOKE", target = "Ljava/lang/String;startsWith(Ljava/lang/String;)Z", shift = At.Shift.BEFORE)})
-    private void handleTextClickHook(Style style, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        if (this.field_22787.getNetworkHandler() == null) {
-            return;
-        }
-        String value = style.getClickEvent().getValue();
-        if (value.startsWith(ClientCommandRegistry.getPrefix())) {
-            this.field_22787.getNetworkHandler().sendChatMessage(value);
-        }
-    }
-
-    @Inject(method = {"renderInGameBackground"}, at = {@At("HEAD")}, cancellable = true)
-    private void renderInGameBackgroundHook(DrawContext drawContext, CallbackInfo callbackInfo) {
-        if (getNorender() != null && getNorender().isTintEnabled()) {
-            callbackInfo.cancel();
-        }
-    }
-
-    @Inject(method = {"renderBackground"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/Screen;applyBlur(F)V", shift = At.Shift.BEFORE)}, cancellable = true)
-    private void renderBackground(DrawContext drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
+    @Inject(method = {"extractBackground"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;extractBlurredBackground(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V", shift = At.Shift.BEFORE)}, cancellable = true, require = 0)
+    private void renderBackground(GuiGraphicsExtractor drawContext, int i, int i2, float f, CallbackInfo callbackInfo) {
+        /* Every screen frame gets its live extractor so GUI-phase 2D shapes route through
+           vanilla fills instead of discarded immediate buffers. */
+        Shape2DRenderer.setPendingExtractor(drawContext);
         Blur blurLocal = getBlur();
-        if (blurLocal != null && blurLocal.isToggled() && this.field_22787.world != null && this.field_22787.player != null) {
-            method_57735(drawContext);
+        if (blurLocal != null && blurLocal.isToggled() && this.minecraft.level != null && this.minecraft.player != null) {
+            extractBlurredBackground(drawContext);
             callbackInfo.cancel();
-        } else if (MinecraftClient.getInstance().currentScreen instanceof AbstractClickGuiScreen) {
-            float menuBackgroundBlurrinessValue = this.field_22787.options.getMenuBackgroundBlurrinessValue();
-            method_57735(drawContext);
-            BlurFramebuffer.renderWithBlur(() -> {
-                drawContext.fill(0, 0, this.field_22789, this.field_22790, -1);
-            }, menuBackgroundBlurrinessValue);
+        } else if (Minecraft.getInstance().gui.screen() instanceof AbstractClickGuiScreen) {
+            extractBlurredBackground(drawContext);
             callbackInfo.cancel();
         }
     }

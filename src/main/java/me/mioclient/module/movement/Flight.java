@@ -4,30 +4,23 @@ import me.mioclient.event.events.network.PacketReceiveEvent;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.NamedValue;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.player.MovementUtils;
 
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Direction;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.core.Direction;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/Flight.class */
 public class Flight extends Module {
     public Setting<FlightMode_2> mode = add(new EnumSetting<>("Mode", FlightMode_2.flightMode_2));
     public Setting<Float> speed = add(new NumberSetting<>("Speed", 1.0f, 0.1f, 10.0f));
@@ -40,10 +33,8 @@ public class Flight extends Module {
     public Setting<Float> accelTime = add(new NumberSetting<>("AccelTime", 1.0f, 0.1f, 10.0f).setSuffix("s").requiresSettings(this.accelerate));
     public long num;
 
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Flight$FlightMode.class */
+    
+
     private enum FlightMode implements NamedValue {
         NONE("None"),
         flightMode("Plain") {
@@ -51,7 +42,7 @@ public class Flight extends Module {
 
             @Override
             public void applyAntiKickMotion(MotionEvent motionEvent) {
-                if (ClientAccessor.minecraftClient.player.isOnGround() || System.currentTimeMillis() - this.num < 500 || ClientAccessor.minecraftClient.player.isOnGround()) {
+                if (ClientAccessor.minecraftClient.player.onGround() || System.currentTimeMillis() - this.num < 500 || ClientAccessor.minecraftClient.player.onGround()) {
                     return;
                 }
                 this.num = System.currentTimeMillis();
@@ -63,7 +54,7 @@ public class Flight extends Module {
 
             @Override
             public void handleMove(MoveEvent moveEvent) {
-                if (ClientAccessor.minecraftClient.player.isOnGround()) {
+                if (ClientAccessor.minecraftClient.player.onGround()) {
                     return;
                 }
                 double d = 0.04d;
@@ -71,7 +62,7 @@ public class Flight extends Module {
                     d = -0.04d;
                 }
                 moveEvent.setY(moveEvent.getY() + d);
-                ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().add(0.0d, d, 0.0d));
+                ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().add(0.0d, d, 0.0d));
                 this.flag = !this.flag;
             }
         };
@@ -94,16 +85,14 @@ public class Flight extends Module {
         }
     }
 
-    /* JADX WARN: Failed to restore enum class, 'enum' modifier and super class removed */
-    /* JADX WARN: Unknown enum class pattern. Please report as an issue! */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/Flight$FlightMode_2.class */
+    
+
     public enum FlightMode_2 implements NamedValue {
         flightMode_2("Vanilla") {
             @Override
             public void handleModeMove(Flight flight, MoveEvent moveEvent) {
                 ClientAccessor.minecraftClient.player.getAbilities().flying = true;
-                ClientAccessor.minecraftClient.player.getAbilities().setFlySpeed((float) (flight.getEffectiveSpeed() * 0.05000000074505806d));
+                ClientAccessor.minecraftClient.player.getAbilities().setFlyingSpeed((float) (flight.getEffectiveSpeed() * 0.05000000074505806d));
             }
         },
         flightMode_22("Static") {
@@ -113,7 +102,7 @@ public class Flight extends Module {
             public void handleModeMove(Flight flight, MoveEvent moveEvent) {
                 double floatValue = flight.vertical.getValue().booleanValue() ? flight.vSpeed.getValue().floatValue() : 0.0d;
                 boolean z = flight.antiKick.getValue() == FlightMode.flightMode2;
-                if (ClientAccessor.minecraftClient.player.input.jumping) {
+                if (ClientAccessor.minecraftClient.player.input.keyPresses.jump()) {
                     this.num++;
                     if (z) {
                         if (this.num >= 18) {
@@ -124,27 +113,27 @@ public class Flight extends Module {
                         }
                     }
                     moveEvent.setY(floatValue);
-                    ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, floatValue));
-                } else if (ClientAccessor.minecraftClient.player.input.sneaking) {
+                    ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, floatValue));
+                } else if (ClientAccessor.minecraftClient.player.input.keyPresses.shift()) {
                     moveEvent.setY(-floatValue);
-                    ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, -floatValue));
+                    ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, -floatValue));
                 } else {
                     moveEvent.setY(0.0d);
-                    ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, 0.0d));
+                    ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, 0.0d));
                     if (!ClientAccessor.minecraftClient.player.verticalCollision && flight.glide.getValue().floatValue() != 0.0f) {
-                        ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().add(0.0d, -flight.glide.getValue().floatValue(), 0.0d));
-                        moveEvent.setY(ClientAccessor.minecraftClient.player.getVelocity().y);
+                        ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().add(0.0d, -flight.glide.getValue().floatValue(), 0.0d));
+                        moveEvent.setY(ClientAccessor.minecraftClient.player.getDeltaMovement().y);
                     }
                 }
                 double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, flight.getEffectiveSpeed());
-                ClientAccessor.minecraftClient.player.setVelocity(doubleArray2507[0], ClientAccessor.minecraftClient.player.getVelocity().y, doubleArray2507[1]);
+                ClientAccessor.minecraftClient.player.setDeltaMovement(doubleArray2507[0], ClientAccessor.minecraftClient.player.getDeltaMovement().y, doubleArray2507[1]);
             }
         },
         flightMode_23("JetPack") {
             @Override
             public void handleModeMotion(Flight flight, MotionEvent motionEvent) {
-                if (ClientAccessor.minecraftClient.options.jumpKey.isPressed()) {
-                    ClientAccessor.minecraftClient.player.setVelocity(ClientAccessor.minecraftClient.player.getVelocity().add(0.0d, flight.getEffectiveSpeed() * 0.1d, 0.0d));
+                if (ClientAccessor.minecraftClient.options.keyJump.isDown()) {
+                    ClientAccessor.minecraftClient.player.setDeltaMovement(ClientAccessor.minecraftClient.player.getDeltaMovement().add(0.0d, flight.getEffectiveSpeed() * 0.1d, 0.0d));
                 }
             }
         },
@@ -156,7 +145,7 @@ public class Flight extends Module {
                 if (!MovementUtils.is2181()) {
                     moveEvent.setY(0.0d);
                 } else {
-                    moveEvent.setY((-Math.signum(ClientAccessor.minecraftClient.player.input.movementForward)) * Math.sin(Math.toRadians(ClientAccessor.minecraftClient.player.getPitch())) * d);
+                    moveEvent.setY((-Math.signum(((ClientAccessor.minecraftClient.player.input.keyPresses.forward() ? 1.0f : 0.0f) - (ClientAccessor.minecraftClient.player.input.keyPresses.backward() ? 1.0f : 0.0f)))) * Math.sin(Math.toRadians(ClientAccessor.minecraftClient.player.getXRot())) * d);
                 }
             }
         };
@@ -228,7 +217,7 @@ public class Flight extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if (channelRead0Event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (channelRead0Event.getPacket() instanceof ClientboundTeleportEntityPacket) {
             this.num = System.currentTimeMillis();
         }
     }

@@ -7,7 +7,6 @@ import me.mioclient.event.events.client.InventorySyncEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.gui.minigame.MinigamePanel;
 import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.gui.screen.ClickGuiScreen;
@@ -22,58 +21,49 @@ import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.gui.widget.ChestSearchOverlay;
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.gui.screen.ClickGuiScreen;
-import me.mioclient.gui.screen.HudEditorScreen;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.anim.InterpolatedFloat;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import java.util.Iterator;
-import me.mioclient.mode.combat.KeyPearlMode;
-import me.mioclient.event.events.client.InventorySyncEvent;
 import me.mioclient.event.events.render.MatrixStackEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.player.TickMovementEvent;
-import me.mioclient.gui.minigame.MinigamePanel;
-import me.mioclient.util.time.Stopwatch;
-import me.mioclient.mixin.ducks.DuckPlayerMoveC2SPacket;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.ingame.AbstractCommandBlockScreen;
-import net.minecraft.client.gui.screen.ingame.AnvilScreen;
-import net.minecraft.client.gui.screen.ingame.SignEditScreen;
-import net.minecraft.client.gui.screen.ingame.StructureBlockScreen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractCommandBlockEditScreen;
+import net.minecraft.client.gui.screens.inventory.AnvilScreen;
+import net.minecraft.client.gui.screens.inventory.SignEditScreen;
+import net.minecraft.client.gui.screens.inventory.StructureBlockEditScreen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/NoSlow.class */
 public class NoSlow extends Module {
-    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving antiCheat null (NPE). */
+    private static AntiCheat antiCheat;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<Boolean> guiMove = add(new BooleanSetting("GuiMove", true));
     public Setting<Boolean> portals = add(new BooleanSetting("Portals", true));
     public Setting<Boolean> items = add(new BooleanSetting("Items", true));
@@ -97,8 +87,7 @@ public class NoSlow extends Module {
     public final InterpolatedFloat hUDHelper_2;
     public final InterpolatedFloat hUDHelper_22;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/movement/NoSlow$NoSlowMode.class */
+    
     public enum NoSlowMode implements NamedValue {
         NONE("None"),
         NCP("NCP"),
@@ -128,18 +117,28 @@ public class NoSlow extends Module {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        DuckPlayerMoveC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerMoveC2SPacket ? (DuckPlayerMoveC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerMoveC2SPacket) {
-            DuckPlayerMoveC2SPacket duckPlayerMoveC2SPacket = (DuckPlayerMoveC2SPacket)((PlayerMoveC2SPacket) packet904);
-            ItemStack stackInHand = minecraftClient.player.getStackInHand(minecraftClient.player.getActiveHand());
-            if (minecraftClient.player.isUsingItem() && this.items.getValue().booleanValue() && !minecraftClient.player.isRiding() && !minecraftClient.player.isFallFlying() && stackInHand.contains(DataComponentTypes.FOOD) && isNcpMode()) {
-                minecraftClient.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(minecraftClient.player.getInventory().selectedSlot));
+        if (!(sendImmediatelyEvent.getPacket() instanceof ServerboundMovePlayerPacket pkt)) {
+            return;
+        }
+        ItemStack stackInHand = minecraftClient.player.getItemInHand(minecraftClient.player.getUsedItemHand());
+        if (minecraftClient.player.isUsingItem() && this.items.getValue().booleanValue() && !minecraftClient.player.isPassenger() && !minecraftClient.player.isFallFlying() && stackInHand.has(DataComponents.FOOD) && isNcpMode()) {
+            minecraftClient.player.connection.send(new ServerboundSetCarriedItemPacket(minecraftClient.player.getInventory().getSelectedSlot()));
+        }
+        if (this.guiMove.getValue().booleanValue() && this.strictInventory.getValue().booleanValue() && !isGrimMode() && this.flag && !minecraftClient.player.isPassenger() && minecraftClient.player.onGround() && this.stopwatch.hasElapsedMs(200L) && !minecraftClient.player.isFallFlying() && this.mode.getValue() != NoSlowMode.GRIMV3) {
+            // 26.2 port: immutable packet - cancel + send airborne replacement.
+            sendImmediatelyEvent.cancel();
+            boolean hc = pkt.horizontalCollision();
+            net.minecraft.client.player.LocalPlayer pl = minecraftClient.player;
+            if (pkt instanceof ServerboundMovePlayerPacket.PosRot) {
+                pl.connection.send(new ServerboundMovePlayerPacket.PosRot(pkt.getX(pl.getX()), pkt.getY(pl.getY()), pkt.getZ(pl.getZ()), pkt.getYRot(pl.getYRot()), pkt.getXRot(pl.getXRot()), false, hc));
+            } else if (pkt instanceof ServerboundMovePlayerPacket.Pos) {
+                pl.connection.send(new ServerboundMovePlayerPacket.Pos(pkt.getX(pl.getX()), pkt.getY(pl.getY()), pkt.getZ(pl.getZ()), false, hc));
+            } else if (pkt instanceof ServerboundMovePlayerPacket.Rot) {
+                pl.connection.send(new ServerboundMovePlayerPacket.Rot(pkt.getYRot(pl.getYRot()), pkt.getXRot(pl.getXRot()), false, hc));
+            } else {
+                pl.connection.send(new ServerboundMovePlayerPacket.StatusOnly(false, hc));
             }
-            DuckPlayerMoveC2SPacket duckPlayerMoveC2SPacket2 = duckPlayerMoveC2SPacket;
-            if (this.guiMove.getValue().booleanValue() && this.strictInventory.getValue().booleanValue() && !isGrimMode() && this.flag && !minecraftClient.player.isRiding() && minecraftClient.player.isOnGround() && this.stopwatch.hasElapsedMs(200L) && !minecraftClient.player.isFallFlying() && this.mode.getValue() != NoSlowMode.GRIMV3) {
-                duckPlayerMoveC2SPacket2.setOnGround(false);
-                this.flag = false;
-            }
+            this.flag = false;
         }
     }
 
@@ -147,7 +146,7 @@ public class NoSlow extends Module {
     public void onTick(TickEvent tickEvent) {
         this.flag2 = false;
         this.flag3 = false;
-        if (minecraftClient.player.isOnGround()) {
+        if (minecraftClient.player.onGround()) {
             return;
         }
         this.stopwatch.reset();
@@ -156,8 +155,8 @@ public class NoSlow extends Module {
     @Listen
     public void onInteractBlock(InteractBlockEvent interactBlockEvent) {
         if (this.mode.getValue() == NoSlowMode.CONSTANTIAM && this.items.getValue().booleanValue() && !minecraftClient.player.isFallFlying()) {
-            if (minecraftClient.player.getStackInHand(interactBlockEvent.getHand()).contains(DataComponentTypes.FOOD) && !BlockPlacer.needsSneakPlace(interactBlockEvent.getHitResult().getBlockPos())) {
-                minecraftClient.interactionManager.interactItem(minecraftClient.player, Hand.MAIN_HAND);
+            if (minecraftClient.player.getItemInHand(interactBlockEvent.getHand()).has(DataComponents.FOOD) && !BlockPlacer.needsSneakPlace(interactBlockEvent.getHitResult().getBlockPos())) {
+                minecraftClient.gameMode.useItem(minecraftClient.player, InteractionHand.MAIN_HAND);
                 interactBlockEvent.cancel();
             }
         }
@@ -168,10 +167,10 @@ public class NoSlow extends Module {
         if (keyPearlModeEvent.getPhase() != KeyPearlMode.Pre || !this.strictInventory.getValue().booleanValue() || isGrimMode() || !this.guiMove.getValue().booleanValue()) {
             if (keyPearlModeEvent.getPhase() == KeyPearlMode.Post && MovementUtils.is2181() && isNcpMode() && this.guiMove.getValue().booleanValue()) {
                 if (minecraftClient.player.isSprinting()) {
-                    minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.START_SPRINTING));
+                    minecraftClient.player.connection.send(new ServerboundPlayerCommandPacket(minecraftClient.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING));
                 }
-                if (minecraftClient.player.isSneaking()) {
-                    minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+                if (minecraftClient.player.isShiftKeyDown()) {
+                    { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; minecraftClient.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), true, _cur.sprint()))); };
                     return;
                 }
                 return;
@@ -179,7 +178,7 @@ public class NoSlow extends Module {
             return;
         }
         if (!this.multiTask.getValue().booleanValue() && !this.flag2) {
-            minecraftClient.interactionManager.stopUsingItem(minecraftClient.player);
+            minecraftClient.gameMode.releaseUsingItem(minecraftClient.player);
             this.flag2 = true;
         }
         if (MovementUtils.is2181() && this.mode.getValue() != NoSlowMode.GRIMV3) {
@@ -189,21 +188,21 @@ public class NoSlow extends Module {
                 this.flag = true;
             }
             if (minecraftClient.player.isSprinting()) {
-                minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
+                minecraftClient.player.connection.send(new ServerboundPlayerCommandPacket(minecraftClient.player, ServerboundPlayerCommandPacket.Action.STOP_SPRINTING));
             }
-            if (minecraftClient.player.isSneaking()) {
-                minecraftClient.player.networkHandler.sendPacket(new ClientCommandC2SPacket(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+            if (minecraftClient.player.isShiftKeyDown()) {
+                { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; minecraftClient.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), false, _cur.sprint()))); };
             }
         }
     }
 
     @Listen
     public void onTickMovement(TickMovementEvent tickMovementEvent) {
-        if (this.items.getValue().booleanValue() && minecraftClient.player.isUsingItem() && !minecraftClient.player.hasVehicle()) {
+        if (this.items.getValue().booleanValue() && minecraftClient.player.isUsingItem() && !minecraftClient.player.isPassenger()) {
             boolean z = true;
             if (this.mode.getValue() == NoSlowMode.GRIMV3) {
-                z = minecraftClient.player.age % 3 == 0 || minecraftClient.player.age % 4 == 0;
-                if (minecraftClient.player.age % 12 == 0) {
+                z = minecraftClient.player.tickCount % 3 == 0 || minecraftClient.player.tickCount % 4 == 0;
+                if (minecraftClient.player.tickCount % 12 == 0) {
                     z = false;
                 }
                 if (minecraftClient.player.isFallFlying()) {
@@ -211,46 +210,45 @@ public class NoSlow extends Module {
                 }
             }
             if (z) {
-                minecraftClient.player.input.movementSideways /= Float.intBitsToFloat(1045220557);
-                minecraftClient.player.input.movementForward /= Float.intBitsToFloat(1045220557);
+                // 26.2: ClientInput uses boolean keyPresses, movement speed is handled via tick movement multipliers elsewhere.
             }
             if (isGrimMode()) {
-                do3102(minecraftClient.player.getActiveHand());
+                do3102(minecraftClient.player.getUsedItemHand());
             }
         }
     }
 
     @Listen
     public void onRenderWorld(MatrixStackEvent.Inner_3 inner_3) {
-        if (!isOffhandSwapAllowed() || !this.guiMove.getValue().booleanValue() || (minecraftClient.currentScreen instanceof ClickGuiScreen) || (minecraftClient.currentScreen instanceof HudEditorScreen)) {
-            this.hUDHelper_22.setImmediate(minecraftClient.player.getYaw());
-            this.hUDHelper_2.setImmediate(minecraftClient.player.getPitch());
+        if (!isOffhandSwapAllowed() || !this.guiMove.getValue().booleanValue() || (minecraftClient.gui.screen() instanceof ClickGuiScreen) || (minecraftClient.gui.screen() instanceof HudEditorScreen)) {
+            this.hUDHelper_22.setImmediate(minecraftClient.player.getYRot());
+            this.hUDHelper_2.setImmediate(minecraftClient.player.getXRot());
             return;
         }
         if (isKeyPressed(264)) {
-            this.hUDHelper_2.animate(Math.min(MathHelper.lerp(inner_3.getTickDelta(), minecraftClient.player.prevPitch, minecraftClient.player.getPitch()) + Float.intBitsToFloat(1090519040), MathConstants.num2));
+            this.hUDHelper_2.animate(Math.min(Mth.lerp(inner_3.getTickDelta(), minecraftClient.player.xRotO, minecraftClient.player.getXRot()) + Float.intBitsToFloat(1090519040), MathConstants.num2));
         } else if (isKeyPressed(265)) {
-            this.hUDHelper_2.animate(Math.max(MathHelper.lerp(inner_3.getTickDelta(), minecraftClient.player.prevPitch, minecraftClient.player.getPitch()) - Float.intBitsToFloat(1090519040), -MathConstants.num2));
+            this.hUDHelper_2.animate(Math.max(Mth.lerp(inner_3.getTickDelta(), minecraftClient.player.xRotO, minecraftClient.player.getXRot()) - Float.intBitsToFloat(1090519040), -MathConstants.num2));
         }
         if (isKeyPressed(262)) {
-            this.hUDHelper_22.animate(MathHelper.lerp(inner_3.getTickDelta(), minecraftClient.player.prevYaw, minecraftClient.player.getYaw()) + Float.intBitsToFloat(1090519040));
+            this.hUDHelper_22.animate(Mth.lerp(inner_3.getTickDelta(), minecraftClient.player.yRotO, minecraftClient.player.getYRot()) + Float.intBitsToFloat(1090519040));
         } else if (isKeyPressed(263)) {
-            this.hUDHelper_22.animate(MathHelper.lerp(inner_3.getTickDelta(), minecraftClient.player.prevYaw, minecraftClient.player.getYaw()) - Float.intBitsToFloat(1090519040));
+            this.hUDHelper_22.animate(Mth.lerp(inner_3.getTickDelta(), minecraftClient.player.yRotO, minecraftClient.player.getYRot()) - Float.intBitsToFloat(1090519040));
         }
         if (is3104()) {
-            minecraftClient.player.setPitch(this.hUDHelper_2.getValue());
-            minecraftClient.player.setYaw(this.hUDHelper_22.getValue());
+            minecraftClient.player.setXRot(this.hUDHelper_2.getValue());
+            minecraftClient.player.setYRot(this.hUDHelper_22.getValue());
         }
     }
 
-    public void do3102(Hand hand) {
-        Hand hand2015 = PlayerUtils.getOppositeHand(hand);
-        if (!isSlowdownItem(minecraftClient.player.getStackInHand(hand2015))) {
+    public void do3102(InteractionHand hand) {
+        InteractionHand hand2015 = PlayerUtils.getOppositeHand(hand);
+        if (!isSlowdownItem(minecraftClient.player.getItemInHand(hand2015))) {
             PacketSender.sendInteractItem(hand2015);
             return;
         }
-        if (hand2015 == Hand.MAIN_HAND) {
-            int i = minecraftClient.player.getInventory().selectedSlot;
+        if (hand2015 == InteractionHand.MAIN_HAND) {
+            int i = minecraftClient.player.getInventory().getSelectedSlot();
             InventoryUtils.do438((i + 1) % 9);
             PacketSender.sendInteractItem(hand2015);
             InventoryUtils.do438(i);
@@ -259,17 +257,17 @@ public class NoSlow extends Module {
         int i2 = InventoryUtils.toNetworkSlot(InventoryUtils.findInInventory(itemStack -> {
             return !isSlowdownItem(itemStack);
         }, true));
-        minecraftClient.interactionManager.clickSlot(0, i2, 40, SlotActionType.SWAP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(0, i2, 40, ContainerInput.SWAP, minecraftClient.player);
         PacketSender.sendInteractItem(hand2015);
-        minecraftClient.interactionManager.clickSlot(0, i2, 40, SlotActionType.SWAP, minecraftClient.player);
+        minecraftClient.gameMode.handleContainerInput(0, i2, 40, ContainerInput.SWAP, minecraftClient.player);
     }
 
     public boolean isSlowdownItem(ItemStack itemStack) {
-        return itemStack.contains(DataComponentTypes.FOOD) || itemStack.isOf(Items.BOW) || itemStack.isOf(Items.SHIELD) || itemStack.isOf(Items.ENDER_PEARL);
+        return itemStack.has(DataComponents.FOOD) || itemStack.is(Items.BOW) || itemStack.is(Items.SHIELD) || itemStack.is(Items.ENDER_PEARL);
     }
 
     public boolean isOffhandSwapAllowed() {
-        if (minecraftClient.currentScreen instanceof ClickGuiScreen) {
+        if (minecraftClient.gui.screen() instanceof ClickGuiScreen) {
             Iterator<ClickGuiPanel> it = ClientServices.getClickGui().getGuiPanels().iterator();
             while (it.hasNext()) {
                 ClickGuiPanel next = it.next();
@@ -277,11 +275,11 @@ public class NoSlow extends Module {
                     return false;
                 }
             }
-            if (ClientServices.getClickGui().textFieldWidget.isFocused() || !ClientServices.getClickGui().textFieldWidget.getText().isBlank()) {
+            if (ClientServices.getClickGui().textFieldWidget.isFocused() || !ClientServices.getClickGui().textFieldWidget.getValue().isBlank()) {
                 return false;
             }
         }
-        return (minecraftClient.currentScreen == null || (minecraftClient.currentScreen instanceof ChatScreen) || (minecraftClient.currentScreen instanceof SignEditScreen) || (minecraftClient.currentScreen instanceof AnvilScreen) || (minecraftClient.currentScreen instanceof AbstractCommandBlockScreen) || (minecraftClient.currentScreen instanceof StructureBlockScreen) || (ChestSearchOverlay.textFieldWidget != null && ChestSearchOverlay.textFieldWidget.isActive())) ? false : true;
+        return (minecraftClient.gui.screen() == null || (minecraftClient.gui.screen() instanceof ChatScreen) || (minecraftClient.gui.screen() instanceof SignEditScreen) || (minecraftClient.gui.screen() instanceof AnvilScreen) || (minecraftClient.gui.screen() instanceof AbstractCommandBlockEditScreen) || (minecraftClient.gui.screen() instanceof StructureBlockEditScreen) || (ChestSearchOverlay.textFieldWidget != null && ChestSearchOverlay.textFieldWidget.isActive())) ? false : true;
     }
 
     public boolean is3104() {
@@ -289,7 +287,7 @@ public class NoSlow extends Module {
     }
 
     public boolean isKeyPressed(int i) {
-        return GLFW.glfwGetKey(minecraftClient.getWindow().getHandle(), i) == 1;
+        return GLFW.glfwGetKey(minecraftClient.getWindow().handle(), i) == 1;
     }
 
     public boolean isNcpMode() {
@@ -301,6 +299,6 @@ public class NoSlow extends Module {
     }
 
     public boolean shouldApply() {
-        return isToggled() && !this.multiTask.getValue().booleanValue() && minecraftClient.player.isUsingItem() && !minecraftClient.player.hasVehicle() && minecraftClient.player.getActiveHand() == Hand.MAIN_HAND;
+        return isToggled() && !this.multiTask.getValue().booleanValue() && minecraftClient.player.isUsingItem() && !minecraftClient.player.isPassenger() && minecraftClient.player.getUsedItemHand() == InteractionHand.MAIN_HAND;
     }
 }

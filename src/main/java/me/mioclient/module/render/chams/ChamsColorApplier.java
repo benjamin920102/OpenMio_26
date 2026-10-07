@@ -6,49 +6,59 @@ import me.mioclient.render.chams.ChamsRenderDispatcher;
 import me.mioclient.util.math.ColorUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.chams.ChamsRenderDispatcher;
-import me.mioclient.util.math.ColorUtils;
 
 import java.awt.Color;
 import me.mioclient.module.client.Colors;
 import me.mioclient.module.render.Chams;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ChamsColorApplier.class */
 public interface ChamsColorApplier extends ClientAccessor {
-    public static final Colors colors = (Colors) ClientServices.moduleInjector.getModule(Colors.class);
+    /* Interfaces cannot hold mutable static state, so the cached ref lives in
+       a nested holder. Resolved lazily -- Colors can register after the first
+       chams lookup, and an eager lookup left the ref null (NPE). */
+    final class ColorsHolder {
+        static Colors colors;
+    }
+
+    static Colors getColors() {
+        if (ColorsHolder.colors == null && ClientServices.moduleInjector != null) {
+            try {
+                ColorsHolder.colors = (Colors) ClientServices.moduleInjector.getModule(Colors.class);
+            } catch (Exception e) {
+            }
+        }
+        return ColorsHolder.colors;
+    }
     public static final Color color = new Color(0, 0, 0, 0);
 
-    default void applyChamsRender(Chams chams, Entity entity, MatrixStack matrixStack) {
+    default void applyChamsRender(Chams chams, Entity entity, PoseStack matrixStack) {
         Color[] colorArray593 = getChamsColors(chams);
         if (chams.fade.getValue().booleanValue()) {
             float f = chams.get2044(entity);
             colorArray593 = new Color[]{ColorUtils.withAlpha(colorArray593[0], (int) (f * colorArray593[0].getAlpha())), ColorUtils.withAlpha(colorArray593[1], (int) (f * colorArray593[1].getAlpha()))};
         }
         ChamsRenderDispatcher.setChamsColors(colorArray593[0], colorArray593[1]);
-        if (chams.friends.getValue().booleanValue() && (entity instanceof PlayerEntity)) {
-            PlayerEntity playerEntity = (PlayerEntity) entity;
+        if (chams.friends.getValue().booleanValue() && (entity instanceof Player)) {
+            Player playerEntity = (Player) entity;
             if (ClientServices.socialManager.isFriendEntity(playerEntity)) {
-                overrideChamsColor(chams, colorArray593, colors.friendColor.getValue());
+                overrideChamsColor(chams, colorArray593, getColors().friendColor.getValue());
             }
             if (ClientServices.socialManager.isEnemyEntity(playerEntity)) {
-                overrideChamsColor(chams, colorArray593, colors.enemyColor.getValue());
+                overrideChamsColor(chams, colorArray593, getColors().enemyColor.getValue());
             }
         }
         ChamsRenderDispatcher.setExtraLayer(chams.extraLayer.getValue().booleanValue());
-        if (entity instanceof PlayerEntity) {
-            PlayerEntity playerEntity2 = (PlayerEntity) entity;
+        if (entity instanceof Player) {
+            Player playerEntity2 = (Player) entity;
             if (chams.is2048()) {
-                playerEntity2.limbAnimator.pos = 0.0f;
-                playerEntity2.limbAnimator.speed = 0.0f;
-                playerEntity2.limbAnimator.prevSpeed = 0.0f;
+                playerEntity2.walkAnimation.stop();
             }
         }
-        ChamsRenderDispatcher.renderEntityChams(matrixStack, entity);
+        /* 26.2 textured chams: the model itself is tinted during raster (see
+           MixinModelFeatureRenderer), so no manual box walk happens here. Ghost
+           entities outside vanilla's submit flow keep their own box rendering. */
     }
 
     default void overrideChamsColor(Chams chams, Color[] colorArr, Color color2) {

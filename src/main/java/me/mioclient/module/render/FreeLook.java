@@ -2,7 +2,6 @@ package me.mioclient.module.render;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.render.RenderUtil;
 
 import me.mioclient.render.RenderConstants;
@@ -11,13 +10,11 @@ import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.player.Freecam;
-import net.minecraft.client.option.Perspective;
+import net.minecraft.client.CameraType;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/FreeLook.class */
 public class FreeLook extends Module {
     public static Freecam freecam = (Freecam) ClientServices.moduleInjector.getModule(Freecam.class);
-    public Perspective perspective;
+    public CameraType perspective;
 
     public FreeLook() {
         super("FreeLook", "Allows you to rotate your 3rd person camera without rotating your player.", Category.RENDER, new String[0]);
@@ -28,14 +25,14 @@ public class FreeLook extends Module {
         if (freecam.isToggled()) {
             return;
         }
-        this.perspective = minecraftClient.options.getPerspective();
-        minecraftClient.options.setPerspective(getFreeLookPerspective());
+        this.perspective = minecraftClient.options.getCameraType();
+        minecraftClient.options.setCameraType(getFreeLookPerspective());
     }
 
     @Override // me.mioclient.module.Module
     public void onDisable() {
-        if (this.perspective == Perspective.FIRST_PERSON) {
-            minecraftClient.options.setPerspective(Perspective.FIRST_PERSON);
+        if (this.perspective == CameraType.FIRST_PERSON) {
+            minecraftClient.options.setCameraType(CameraType.FIRST_PERSON);
         }
     }
 
@@ -44,16 +41,18 @@ public class FreeLook extends Module {
         if (freecam.isToggled()) {
             return;
         }
-        minecraftClient.options.setPerspective(getFreeLookPerspective());
-        minecraftClient.crosshairTarget = minecraftClient.player.raycast(minecraftClient.player.getBlockInteractionRange(), RenderUtil.getPartialTick(), false);
+        minecraftClient.options.setCameraType(getFreeLookPerspective());
+        if (minecraftClient.player != null && minecraftClient.getCameraEntity() != null) {
+            minecraftClient.hitResult = minecraftClient.player.raycastHitResult(RenderUtil.getPartialTick(), minecraftClient.getCameraEntity());
+        }
     }
 
-    public Perspective getFreeLookPerspective() {
-        if (this.perspective == Perspective.FIRST_PERSON) {
-            return Perspective.THIRD_PERSON_BACK;
+    public CameraType getFreeLookPerspective() {
+        if (this.perspective == CameraType.FIRST_PERSON) {
+            return CameraType.THIRD_PERSON_BACK;
         }
         if (this.perspective == null) {
-            this.perspective = Perspective.FIRST_PERSON;
+            this.perspective = CameraType.FIRST_PERSON;
         }
         return this.perspective;
     }

@@ -2,7 +2,6 @@ package me.mioclient.loader;
 
 import nick.MioModInitializer;
 
-/* loaded from: mio-yarn.jar:me/mioclient/ModInitializerBridge.class */
 public class ModInitializerBridge {
     public static void do1352(Object obj) {
         MioModInitializer.modules(obj);

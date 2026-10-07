@@ -1,14 +1,12 @@
 package me.mioclient.event.events.screen;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Event_2.class */
 public class ScreenDrawEvent extends me.mioclient.event.Event {
     public final Screen screen;
-    public DrawContext drawContext;
+    public GuiGraphicsExtractor drawContext;
     public float x;
     public float y;
     public Runnable runnable = null;
@@ -21,8 +19,8 @@ public class ScreenDrawEvent extends me.mioclient.event.Event {
         return this.screen;
     }
 
-    public MatrixStack getMatrixStack() {
-        return this.drawContext.getMatrices();
+    public org.joml.Matrix3x2fStack getMatrixStack() {
+        return this.drawContext.pose();
     }
 
     public float getX() {
@@ -33,11 +31,11 @@ public class ScreenDrawEvent extends me.mioclient.event.Event {
         return this.y;
     }
 
-    public DrawContext getDrawContext() {
+    public GuiGraphicsExtractor getDrawContext() {
         return this.drawContext;
     }
 
-    public void setDrawContext(DrawContext drawContext) {
+    public void setDrawContext(GuiGraphicsExtractor drawContext) {
         this.drawContext = drawContext;
     }
 

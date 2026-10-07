@@ -4,10 +4,6 @@ import me.mioclient.mode.combat.KeyPearlMode;
 
 import me.mioclient.event.Event;
 
-import me.mioclient.mode.combat.KeyPearlMode;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/EndDrawingEvent.class */
 public class EndDrawingEvent extends Event {
     public final KeyPearlMode keyPearlMode;
 

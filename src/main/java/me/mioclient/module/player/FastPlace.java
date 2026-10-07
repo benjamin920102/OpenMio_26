@@ -7,17 +7,15 @@ import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.mixin.ducks.DuckMinecraftClient;
 import me.mioclient.module.Module;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ExperienceBottleItem;
-import net.minecraft.item.FireworkRocketItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ExperienceBottleItem;
+import net.minecraft.world.item.FireworkRocketItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/FastPlace.class */
 public class FastPlace extends Module {
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 2, 0, 4));
     public Setting<Boolean> exp = add(new BooleanSetting("Exp", true));
@@ -35,7 +33,7 @@ public class FastPlace extends Module {
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
         DuckMinecraftClient duckMinecraftClient = (DuckMinecraftClient)(minecraftClient);
-        if (!minecraftClient.player.getMainHandStack().contains(DataComponentTypes.FOOD) && this.autoPlace.getValue().booleanValue() && duckMinecraftClient.getItemUseCooldown() == 0) {
+        if (!minecraftClient.player.getMainHandItem().has(DataComponents.FOOD) && this.autoPlace.getValue().booleanValue() && minecraftClient.missTime == 0) {
             duckMinecraftClient.interact();
         }
     }
@@ -45,9 +43,9 @@ public class FastPlace extends Module {
         if (isNotInGame()) {
             return;
         }
-        Item item = minecraftClient.player.getMainHandStack().getItem();
+        Item item = minecraftClient.player.getMainHandItem().getItem();
         if (((item instanceof ExperienceBottleItem) && this.exp.getValue().booleanValue()) || (((item instanceof FireworkRocketItem) && this.rockets.getValue().booleanValue()) || (((item instanceof BlockItem) && this.blocks.getValue().booleanValue()) || ((item == Items.ENDER_CHEST && this.enderChests.getValue().booleanValue()) || this.all.getValue().booleanValue())))) {
-            ((DuckMinecraftClient) minecraftClient).setItemUseCooldown(Math.min(((DuckMinecraftClient) minecraftClient).getItemUseCooldown(), this.delay.getValue().intValue()));
+            minecraftClient.missTime = Math.min(minecraftClient.missTime, this.delay.getValue().intValue());
         }
     }
 }

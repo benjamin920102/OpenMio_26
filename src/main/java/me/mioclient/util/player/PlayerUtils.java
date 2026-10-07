@@ -13,33 +13,30 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import me.mioclient.module.movement.ElytraFly;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3i;
-import me.mioclient.mode.combat.BlockerOffsetMode;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PlayerUtils.class */
 public class PlayerUtils implements ClientAccessor {
-    public static boolean isInCobweb(PlayerEntity playerEntity) {
-        return minecraftClient.world.getStatesInBox(playerEntity.getBoundingBox()).anyMatch(blockState -> {
-            return blockState.isOf(Blocks.COBWEB);
+    public static boolean isInCobweb(Player playerEntity) {
+        return minecraftClient.level.getBlockStates(playerEntity.getBoundingBox()).anyMatch(blockState -> {
+            return blockState.getBlock() == Blocks.COBWEB;
         });
     }
 
-    public static boolean isInWater(PlayerEntity playerEntity) {
-        return BlockPlacer.getBlockAt(BlockPos.ofFloored(playerEntity.getX(), playerEntity.getBoundingBox().minY, playerEntity.getZ())) == Blocks.WATER || playerEntity.isTouchingWater();
+    public static boolean isInWater(Player playerEntity) {
+        return BlockPlacer.getBlockAt(BlockPos.containing(playerEntity.getX(), playerEntity.getBoundingBox().minY, playerEntity.getZ())) == Blocks.WATER || playerEntity.isInWater();
     }
 
-    public static boolean isInLiquid(PlayerEntity playerEntity) {
+    public static boolean isInLiquid(Player playerEntity) {
         return isInWater(playerEntity) || playerEntity.isInLava();
     }
 
@@ -48,12 +45,12 @@ public class PlayerUtils implements ClientAccessor {
     }
 
     public static BlockPos getRoundedBlockPos(LivingEntity livingEntity) {
-        return BlockPos.ofFloored(livingEntity.getX(), Math.round(livingEntity.getY()), livingEntity.getZ());
+        return BlockPos.containing(livingEntity.getX(), Math.round(livingEntity.getY()), livingEntity.getZ());
     }
 
     public static Direction getMovementDirection() {
-        double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
-        return Direction.fromRotation(Math.toDegrees(Math.atan2(doubleArray2508[1], doubleArray2508[0])) - MathConstants.num2);
+        double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
+        return Direction.fromYRot(Math.toDegrees(Math.atan2(doubleArray2508[1], doubleArray2508[0])) - MathConstants.num2);
     }
 
     public static List<BlockPos> getSurroundPositions(LivingEntity livingEntity) {
@@ -61,7 +58,7 @@ public class PlayerUtils implements ClientAccessor {
         Set<BlockPos> set2011 = getFeetPositions(livingEntity);
         for (BlockPos blockPos : set2011) {
             for (Vec3i vec3i : BlockerOffsetMode.SURROUND.getOffsets()) {
-                BlockPos add = blockPos.add(vec3i);
+                BlockPos add = blockPos.offset(vec3i);
                 if (!set2011.contains(add)) {
                     arrayList.add(add);
                 }
@@ -73,30 +70,30 @@ public class PlayerUtils implements ClientAccessor {
     public static Set<BlockPos> getFeetPositions(LivingEntity livingEntity) {
         BlockPos blockPos2008 = getRoundedBlockPos(livingEntity);
         HashSet hashSet = new HashSet();
-        Box expand = livingEntity.getBoundingBox().expand(-BoxMath.val);
-        hashSet.add(BlockPos.ofFloored(expand.minX, blockPos2008.getY(), expand.minZ));
-        hashSet.add(BlockPos.ofFloored(expand.minX, blockPos2008.getY(), expand.maxZ));
-        hashSet.add(BlockPos.ofFloored(expand.maxX, blockPos2008.getY(), expand.minZ));
-        hashSet.add(BlockPos.ofFloored(expand.maxX, blockPos2008.getY(), expand.maxZ));
+        AABB expand = livingEntity.getBoundingBox().inflate(-BoxMath.val);
+        hashSet.add(BlockPos.containing(expand.minX, blockPos2008.getY(), expand.minZ));
+        hashSet.add(BlockPos.containing(expand.minX, blockPos2008.getY(), expand.maxZ));
+        hashSet.add(BlockPos.containing(expand.maxX, blockPos2008.getY(), expand.minZ));
+        hashSet.add(BlockPos.containing(expand.maxX, blockPos2008.getY(), expand.maxZ));
         return hashSet;
     }
 
     public static boolean isHungry() {
-        return minecraftClient.player.getHungerManager().getFoodLevel() < 6;
+        return minecraftClient.player.getFoodData().getFoodLevel() < 6;
     }
 
     public static boolean hasArmor(LivingEntity livingEntity) {
-        Iterator it = livingEntity.getArmorItems().iterator();
-        while (it.hasNext()) {
-            if (!((ItemStack) it.next()).isEmpty()) {
+        // 26.2 port: LivingEntity.getArmorItems removed; iterate armor EquipmentSlots.
+        for (net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+            if (!livingEntity.getItemBySlot(slot).isEmpty()) {
                 return true;
             }
         }
         return false;
     }
 
-    public static boolean hasElytraEquipped(PlayerEntity playerEntity) {
-        return playerEntity.getInventory().getArmorStack(EquipmentSlot.CHEST.getEntitySlotId()).isOf(Items.ELYTRA);
+    public static boolean hasElytraEquipped(Player playerEntity) {
+        return playerEntity.getItemBySlot(EquipmentSlot.CHEST).getItem() == Items.ELYTRA;
     }
 
     public static boolean isReallyFallFlying() {
@@ -109,7 +106,7 @@ public class PlayerUtils implements ClientAccessor {
         return isFallFlying;
     }
 
-    public static Hand getOppositeHand(Hand hand) {
-        return hand == Hand.MAIN_HAND ? Hand.OFF_HAND : Hand.MAIN_HAND;
+    public static InteractionHand getOppositeHand(InteractionHand hand) {
+        return hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
     }
 }

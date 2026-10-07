@@ -2,13 +2,9 @@ package me.mioclient.util.anim;
 
 import me.mioclient.api.ClientServices;
 
-import me.mioclient.api.ClientServices;
-
 import java.util.function.Supplier;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Progress.class */
 public class AnimationProgress extends InterpolatedFloat {
     public AnimationProgress(float f, boolean z) {
         super(f, z);
@@ -37,7 +33,7 @@ public class AnimationProgress extends InterpolatedFloat {
         if (ClientServices.hitmarkerHelper.getFrameRate() <= 15) {
             this.val = this.val2;
         }
-        return MathHelper.clamp(this.val - Float.intBitsToFloat(1065353216), 0.0f, Float.intBitsToFloat(1065353216));
+        return Mth.clamp(this.val - Float.intBitsToFloat(1065353216), 0.0f, Float.intBitsToFloat(1065353216));
     }
 
     @Override // me.mioclient.util.anim.InterpolatedFloat

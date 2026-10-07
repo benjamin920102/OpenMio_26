@@ -8,7 +8,6 @@ import me.mioclient.mode.player.SpeedMineMode_2;
 import me.mioclient.util.inventory.EnchantmentHelper;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.render.breakhighlight.BreakProgressTracker;
 
 import me.mioclient.event.EventBus;
@@ -17,24 +16,31 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.inventory.EnchantmentHelper;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.mode.player.SpeedMineMode_2;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BlockBreakProgressTracker.class */
 public final class BlockBreakProgressTracker implements ClientAccessor {
-    public static final SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    /* 26.2 port: resolved lazily — the static initializer used to run before the
+       module registry was ready, leaving speedmine null forever (NPE spam). */
+    private static SpeedMine speedmine;
+
+    public static SpeedMine getSpeedmine() {
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedmine;
+    }
     public static ItemStack itemStack;
     public final List<BreakProgressTracker> list = Collections.synchronizedList(new ArrayList());
 
@@ -49,9 +55,10 @@ public final class BlockBreakProgressTracker implements ClientAccessor {
             return v0.is2817();
         });
         for (BreakProgressTracker entityIdHelper : this.list) {
-            float f2 = ((float) WorldUtils.getBlockBreakingDelta(getEfficiencyPickaxe(), minecraftClient.world.getBlockState(entityIdHelper.getBlockPos()), true)) * ClientServices.holeSnapRenderHelper.getTickRateFactor();
-            if (speedmine.isToggled()) {
-                f2 /= speedmine.damage.getValue().floatValue();
+            float f2 = ((float) WorldUtils.getBlockBreakingDelta(getEfficiencyPickaxe(), minecraftClient.level.getBlockState(entityIdHelper.getBlockPos()), true)) * ClientServices.holeSnapRenderHelper.getTickRateFactor();
+            SpeedMine speedmine_lcl = getSpeedmine();
+            if (speedmine_lcl != null && speedmine_lcl.isToggled()) {
+                f2 /= speedmine_lcl.damage.getValue().floatValue();
             }
             if (WorldUtils.isBreakable(entityIdHelper.getBlockPos())) {
                 f = f2 * Math.max(entityIdHelper.get2093(), 1);
@@ -67,26 +74,26 @@ public final class BlockBreakProgressTracker implements ClientAccessor {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        BlockBreakingProgressS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof BlockBreakingProgressS2CPacket ? (BlockBreakingProgressS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet904 instanceof BlockBreakingProgressS2CPacket) {
-            BlockBreakingProgressS2CPacket blockBreakingProgressS2CPacket = packet904;
+        ClientboundBlockDestructionPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundBlockDestructionPacket ? (ClientboundBlockDestructionPacket) (channelRead0Event.getPacket()) : null;
+        if (packet904 instanceof ClientboundBlockDestructionPacket) {
+            ClientboundBlockDestructionPacket blockBreakingProgressS2CPacket = packet904;
             minecraftClient.execute(() -> {
                 if (blockBreakingProgressS2CPacket.getProgress() < 0 || blockBreakingProgressS2CPacket.getProgress() > 10) {
                     return;
                 }
-                trackBlockBreak(blockBreakingProgressS2CPacket.getPos(), blockBreakingProgressS2CPacket.getEntityId());
+                trackBlockBreak(blockBreakingProgressS2CPacket.getPos(), blockBreakingProgressS2CPacket.getId());
             });
         }
-        BlockUpdateS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof BlockUpdateS2CPacket ? (BlockUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof BlockUpdateS2CPacket) {
-            BlockUpdateS2CPacket blockUpdateS2CPacket = packet9042;
-            if (blockUpdateS2CPacket.getState().isAir()) {
+        ClientboundBlockUpdatePacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundBlockUpdatePacket ? (ClientboundBlockUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundBlockUpdatePacket) {
+            ClientboundBlockUpdatePacket blockUpdateS2CPacket = packet9042;
+            if (blockUpdateS2CPacket.getBlockState().isAir()) {
                 resetBlockBreakProgress(blockUpdateS2CPacket.getPos());
             }
         }
-        ChunkDeltaUpdateS2CPacket packet9043 = (channelRead0Event.getPacket()) instanceof ChunkDeltaUpdateS2CPacket ? (ChunkDeltaUpdateS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9043 instanceof ChunkDeltaUpdateS2CPacket) {
-            packet9043.visitUpdates((blockPos, blockState) -> {
+        ClientboundSectionBlocksUpdatePacket packet9043 = (channelRead0Event.getPacket()) instanceof ClientboundSectionBlocksUpdatePacket ? (ClientboundSectionBlocksUpdatePacket) (channelRead0Event.getPacket()) : null;
+        if (packet9043 instanceof ClientboundSectionBlocksUpdatePacket) {
+            packet9043.runUpdates((blockPos, blockState) -> {
                 if (blockState.isAir()) {
                     resetBlockBreakProgress(blockPos);
                 }
@@ -95,7 +102,8 @@ public final class BlockBreakProgressTracker implements ClientAccessor {
     }
 
     public void resetBlockBreakProgress(BlockPos blockPos) {
-        if (speedmine.rebreak2.getValue() == SpeedMineMode_2.INSTANT) {
+        SpeedMine speedmine_lcl = getSpeedmine();
+        if (speedmine_lcl == null || speedmine_lcl.rebreak2.getValue() == SpeedMineMode_2.INSTANT) {
             return;
         }
         minecraftClient.execute(() -> {
@@ -150,7 +158,11 @@ public final class BlockBreakProgressTracker implements ClientAccessor {
     public static ItemStack getEfficiencyPickaxe() {
         if (itemStack == null) {
             itemStack = new ItemStack(Items.NETHERITE_PICKAXE);
-            itemStack.addEnchantment(EnchantmentHelper.getEnchantmentEntry(Enchantments.EFFICIENCY), 5);
+            // 26.2 port: ItemStack.addEnchantment(Holder,int) -> enchant(Holder,int).
+            net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment> eff = EnchantmentHelper.getEnchantmentEntry(Enchantments.EFFICIENCY);
+            if (eff != null) {
+                itemStack.enchant(eff, 5);
+            }
         }
         return itemStack;
     }

@@ -1,33 +1,21 @@
 package me.mioclient.module.render.viewmodel;
 
 import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.gui.widget.ScrollState;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.client.GuiScaleOverride;
 import me.mioclient.util.client.InputState;
 import me.mioclient.util.math.ColorUtils;
 import me.mioclient.util.math.MathUtils;
 import me.mioclient.util.time.Stopwatch;
-
-import me.mioclient.gui.screen.AbstractClickGuiScreen;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.render.RenderUtil;
-import me.mioclient.util.math.ColorUtils;
-import me.mioclient.util.client.GuiScaleOverride;
-import me.mioclient.util.client.InputState;
-import me.mioclient.util.math.MathUtils;
 
 import java.awt.Color;
 import java.util.LinkedList;
 import java.util.List;
 import me.mioclient.api.Setting;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.render.ViewModel;
-import net.minecraft.client.gui.DrawContext;
-import me.mioclient.gui.widget.ScrollState;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ViewModelEditorScreen.class */
 public class ViewModelEditorScreen extends AbstractClickGuiScreen {
     public static final Color color = new Color(255, 255, 255, 100);
     public final ViewModel viewmodel;
@@ -46,7 +34,7 @@ public class ViewModelEditorScreen extends AbstractClickGuiScreen {
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public void renderCustomContent(DrawContext drawContext, int i, int i2, float f) {
+    public void renderCustomContent(GuiGraphicsExtractor drawContext, int i, int i2, float f) {
         ViewModelTransform data_2 = this.data_2;
         if (getActiveTransformMode() == ViewModelTransformMode.NONE) {
             return;
@@ -127,7 +115,7 @@ public class ViewModelEditorScreen extends AbstractClickGuiScreen {
         if (getActiveTransformMode() != ViewModelTransformMode.NONE) {
             this.data_2 = ViewModelTransform.fromViewModel(this.viewmodel);
             this.linkedList.add(this.data_2);
-            this.flag = d * GuiScaleOverride.getScaleMultiplier((float) this.val) < ((double) (((float) minecraftClient.getWindow().getScaledWidth()) / Float.intBitsToFloat(1073741824)));
+            this.flag = d * GuiScaleOverride.getScaleMultiplier((float) this.val) < ((double) (((float) minecraftClient.getWindow().getGuiScaledWidth()) / Float.intBitsToFloat(1073741824)));
             this.val = d;
             this.val2 = d2;
         }
@@ -143,7 +131,7 @@ public class ViewModelEditorScreen extends AbstractClickGuiScreen {
         if (d4 > Double.longBitsToDouble(-4616189618054758400L) && d4 < Double.longBitsToDouble(4607182418800017408L)) {
             return super.mouseScrolled(d, d2, d3, d4);
         }
-        boolean z = d * GuiScaleOverride.getScaleMultiplier((float) this.val) < ((double) (((float) minecraftClient.getWindow().getScaledWidth()) / Float.intBitsToFloat(1073741824)));
+        boolean z = d * GuiScaleOverride.getScaleMultiplier((float) this.val) < ((double) (((float) minecraftClient.getWindow().getGuiScaledWidth()) / Float.intBitsToFloat(1073741824)));
         float longBitsToDouble = (float) (d4 * Double.longBitsToDouble(-4631501856680443904L));
         if (this.stopwatch.hasElapsedMs(100L)) {
             this.linkedList.add(ViewModelTransform.fromViewModel(this.viewmodel));
@@ -171,7 +159,8 @@ public class ViewModelEditorScreen extends AbstractClickGuiScreen {
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public boolean keyPressed(int i, int i2, int i3) {
+    public boolean keyPressed(KeyEvent event) {
+        int i = event.key();
         if (InputState.isLeftCtrlDown() && i == 90 && !this.linkedList.isEmpty()) {
             this.linkedList.getLast().applyTo(this.viewmodel);
             if (this.linkedList.size() != 1) {
@@ -183,20 +172,20 @@ public class ViewModelEditorScreen extends AbstractClickGuiScreen {
             this.data_2.applyTo(this.viewmodel);
             this.linkedList.add(this.data_2);
         }
-        return super.keyPressed(i, i2, i3);
+        return super.keyPressed(event);
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public void renderOverlay(DrawContext drawContext) {
-        float scaledWindowWidth = drawContext.getScaledWindowWidth();
-        float scaledWindowHeight = drawContext.getScaledWindowHeight();
-        RenderUtil.INSTANCE.drawFilledRectColor(drawContext.getMatrices(), (scaledWindowWidth / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1065353216), 0.0f, (scaledWindowWidth / Float.intBitsToFloat(1073741824)) + Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1111490560), color);
+    public void renderOverlay(GuiGraphicsExtractor drawContext) {
+        float scaledWindowWidth = drawContext.guiWidth();
+        float scaledWindowHeight = drawContext.guiHeight();
+        drawContext.fill((int) ((scaledWindowWidth / 2.0f) - 1.0f), 0, (int) ((scaledWindowWidth / 2.0f) + 1.0f), 50, color.getRGB());
         int i = 2;
-        for (String str : List.of("Left Click - Rotate", "Right Click - Move", "Middle Click - Scale", "Mouse Scroll - Move by Z", "Mouse Scroll + Shift - Rotate by Z", "Mouse Scroll + Alt - Scale by Z", "Hold Ctrl - Modify one", "Hold Shift - Lock axis", "Ctrl + Z - Undo", "Delete - Reset to defaults")) {
+        for (String str : List.of("Left Click - Rotate", "Right Click - Move", "Middle Click - Scale", "MouseHandler Scroll - Move by Z", "MouseHandler Scroll + Shift - Rotate by Z", "MouseHandler Scroll + Alt - Scale by Z", "Hold Ctrl - Modify one", "Hold Shift - Lock axis", "Ctrl + Z - Undo", "Delete - Reset to defaults")) {
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, str, (scaledWindowWidth - ClientTextRenderer.INSTANCE.getStringWidth(str)) / Float.intBitsToFloat(1073741824), 50 + i, ColorUtils.withAlpha(Color.white, 180));
             i += ClientTextRenderer.INSTANCE.getFontHeight() + 1;
         }
-        RenderUtil.INSTANCE.drawFilledRectColor(drawContext.getMatrices(), (scaledWindowWidth / Float.intBitsToFloat(1073741824)) - Float.intBitsToFloat(1065353216), i + 52, (scaledWindowWidth / Float.intBitsToFloat(1073741824)) + Float.intBitsToFloat(1065353216), scaledWindowHeight, color);
+        drawContext.fill((int) ((scaledWindowWidth / 2.0f) - 1.0f), i + 52, (int) ((scaledWindowWidth / 2.0f) + 1.0f), (int) scaledWindowHeight, color.getRGB());
     }
 
     public ViewModelTransformMode getActiveTransformMode() {

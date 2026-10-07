@@ -4,16 +4,10 @@ import me.mioclient.util.client.SoundIdentifier;
 
 import me.mioclient.util.io.JsonValidator;
 
-import me.mioclient.util.io.JsonValidator;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import me.mioclient.api.Setting;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.client.SoundIdentifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SearchIdentifierSetting.class */
 public final class SoundIdentifierSetting extends Setting<SoundIdentifier> {
     public SoundIdentifierSetting(String str, SoundIdentifier searchIdentifier) {
         super(str, searchIdentifier);

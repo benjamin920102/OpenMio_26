@@ -1,13 +1,14 @@
 package me.mioclient.mixin.ducks;
 
-import net.minecraft.block.AbstractBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Accessor;
 
-/* compiled from: 0.java */
-@Mixin({AbstractBlock.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/ducks/DuckAbstractBlock.class */
-public interface DuckAbstractBlock {
-    @Accessor("collidable")
-    boolean isCollidable();
+/* Class mixin on BlockBehaviour (a class) providing the isCollidable duck.
+   Callers cast via (DuckAbstractBlock)(Object). */
+@Mixin({BlockBehaviour.class})
+public class DuckAbstractBlock {
+    public boolean isCollidable() {
+        return ((Block)(Object) this).defaultBlockState().isSolid();
+    }
 }

@@ -7,8 +7,6 @@ import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/render/NoBob.class */
 public class NoBob extends Module {
     public Setting<Float> multiplier = add(new NumberSetting<>("Multiplier", 0.0f, 0.0f, 1.0f));
 
@@ -19,7 +17,10 @@ public class NoBob extends Module {
     @Listen
     public void onTick(TickEvent tickEvent) {
         if (!isNotInGame() && this.multiplier.getValue().floatValue() <= 0.0f) {
-            minecraftClient.player.horizontalSpeed = 0.0f;
+            minecraftClient.player.xBob = 0.0f;
+            minecraftClient.player.yBob = 0.0f;
+            minecraftClient.player.xBobO = 0.0f;
+            minecraftClient.player.yBobO = 0.0f;
         }
     }
 }

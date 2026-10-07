@@ -3,15 +3,8 @@ package me.mioclient.module.misc.stashfinder;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.text.StringTemplate;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import com.google.gson.annotations.SerializedName;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/StashEntry.class */
 public class StashEntry implements NamedValue {
 
     @SerializedName("id")

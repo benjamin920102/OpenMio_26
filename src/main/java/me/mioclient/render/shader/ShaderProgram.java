@@ -10,14 +10,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.awt.Color;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import org.apache.commons.io.IOUtils;
 import org.joml.Matrix4f;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ShaderProgram.class */
 public class ShaderProgram implements ClientAccessor {
     public static ShaderProgram framebufferHelper_3;
     public final int num;
@@ -28,21 +22,18 @@ public class ShaderProgram implements ClientAccessor {
         GlStateWrapper.setShaderSource(i, loadSource(str));
         String string291 = GlStateWrapper.compileShader(i);
         if (string291 != null) {
-            System.err.println(new StringTemplate().arg(string291).arg(str).format("Failed to compile vertex shader (\u0001): \u0001"));
-            throw new java.lang.RuntimeException(new StringTemplate().arg(string291).arg(str).format("Failed to compile vertex shader (\u0001): \u0001"));
+            throw new java.lang.RuntimeException(new StringTemplate().arg(string291).arg(str).format("Failed to compile vertex shader (1): 1"));
         }
         int i2 = GlStateWrapper.createShader(35632);
         GlStateWrapper.setShaderSource(i2, loadSource(str2));
         String string2912 = GlStateWrapper.compileShader(i2);
         if (string2912 != null) {
-            System.err.println(new StringTemplate().arg(string2912).arg(str2).format("Failed to compile fragment shader (\u0001): \u0001"));
-            throw new java.lang.RuntimeException(new StringTemplate().arg(string2912).arg(str2).format("Failed to compile fragment shader (\u0001): \u0001"));
+            throw new java.lang.RuntimeException(new StringTemplate().arg(string2912).arg(str2).format("Failed to compile fragment shader (1): 1"));
         }
         this.num = GlStateWrapper.createProgram();
         String string293 = GlStateWrapper.linkProgram(this.num, i, i2);
         if (string293 != null) {
-            System.err.println(new StringTemplate().arg(string293).format("Failed to link program: \u0001"));
-            throw new java.lang.RuntimeException(new StringTemplate().arg(string293).format("Failed to link program: \u0001"));
+            throw new java.lang.RuntimeException(new StringTemplate().arg(string293).format("Failed to link program: 1"));
         }
         GlStateWrapper.deleteShader(i);
         GlStateWrapper.deleteShader(i2);
@@ -50,9 +41,12 @@ public class ShaderProgram implements ClientAccessor {
 
     public String loadSource(String str) {
         try {
-            return IOUtils.toString(getClass().getResourceAsStream(new StringTemplate().arg(str).format("/assets/mio/shaders\u0001")), StandardCharsets.UTF_8);
+            java.io.InputStream in = getClass().getResourceAsStream(new StringTemplate().arg(str).format("/assets/mio/shaders1"));
+            if (in == null) {
+                return "";
+            }
+            return org.apache.commons.io.IOUtils.toString(in, java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
-            e.printStackTrace();
             return "";
         }
     }
@@ -96,7 +90,11 @@ public class ShaderProgram implements ClientAccessor {
     }
 
     public void setProjectionUniforms() {
-        setUniformMatrix("u_Proj", RenderSystem.getProjectionMatrix());
-        setUniformMatrix("u_ModelView", RenderSystem.getModelViewStack());
+        setUniformMatrix("u_Proj", new Matrix4f());
+        try {
+            setUniformMatrix("u_ModelView", new Matrix4f(RenderSystem.getModelViewStack()));
+        } catch (Exception ignored) {
+            setUniformMatrix("u_ModelView", new Matrix4f());
+        }
     }
 }

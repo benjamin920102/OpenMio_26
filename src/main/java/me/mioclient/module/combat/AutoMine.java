@@ -15,27 +15,15 @@ import me.mioclient.module.combat.automine.AutoMineLogic;
 import me.mioclient.util.time.TickScheduler;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.combat.automine.FloorTargetStrategy;
 import me.mioclient.module.combat.automine.HeadTargetStrategy;
 import me.mioclient.module.combat.automine.MineTargetSelector;
 import me.mioclient.module.combat.automine.MineTargetState;
 import me.mioclient.module.combat.automine.MineTargetStrategy;
 import me.mioclient.module.combat.automine.MineTargetTracker;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.time.TickScheduler;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.mode.player.AutoCraftMode;
-import me.mioclient.module.combat.automine.FeetTargetStrategy;
-import me.mioclient.module.combat.automine.EnderChestTargetStrategy;
-import me.mioclient.module.combat.automine.SelfTargetStrategy;
-import me.mioclient.module.combat.automine.BurrowTargetStrategy;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.module.combat.automine.AutoMineLogic;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
@@ -43,20 +31,40 @@ import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/AutoMine.class */
 public final class AutoMine extends Module {
     public static final int num = 1500;
-    public static final SpeedMine speedMine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static SpeedMine speedMine;
+
+    public static SpeedMine getSpeedMine() {
+        if (speedMine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedMine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedMine;
+    }
+
+    private static AntiCheat antiCheat;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<AutoMineLogic> logic = add(new EnumSetting<>("Logic", AutoMineLogic.PLAIN));
     public Setting<Boolean> strictDirection = add(new BooleanSetting("StrictDirection", false));
     public Setting<Boolean> raytrace = add(new BooleanSetting("Raytrace", false));
@@ -82,7 +90,7 @@ public final class AutoMine extends Module {
     public boolean flag;
 
     public AutoMine() {
-        super("AutoMine", new StringTemplate().arg(String.valueOf(Formatting.RED)).format("Mines out traps for your enemies and farms obsidian. \n\u0001Requires SpeedMine module enabled."), Category.COMBAT, "combatmine", "autocity");
+        super("AutoMine", new StringTemplate().arg(String.valueOf(ChatFormatting.RED)).format("Mines out traps for your enemies and farms obsidian. \n\u0001Requires SpeedMine module enabled."), Category.COMBAT, "combatmine", "autocity");
         this.list = List.of(new EnderChestTargetStrategy(this), new BurrowTargetStrategy(this), new FloorTargetStrategy(this), new FeetTargetStrategy(this), new SelfTargetStrategy(this), new HeadTargetStrategy(this));
         this.autoMineSearchHelper4 = new MineTargetSelector(this);
         this.speedMineHelper = new MineTargetTracker(this);
@@ -91,7 +99,9 @@ public final class AutoMine extends Module {
 
     @Listen(get219= 300)
     public void onRotationTick(RotationTickEvent holeSnapEvent) {
-        if (speedMine.isToggled()) {
+        SpeedMine speedMine_lcl = getSpeedMine();
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        if (speedMine_lcl != null && speedMine_lcl.isToggled()) {
             MineTargetState autoMineHelper = new MineTargetState();
             for (MineTargetStrategy autoMineHelper_2 : this.list) {
                 if (autoMineHelper_2.isEnabled()) {
@@ -100,7 +110,7 @@ public final class AutoMine extends Module {
             }
             if ((!hasActiveMineTarget() || autoMineHelper.getPriority() >= 1500) && !this.atomicBoolean.get()) {
                 if (autoMineHelper.isCompleted()) {
-                    speedMine.cancelAndReset();
+                    speedMine_lcl.cancelAndReset();
                     return;
                 }
                 if (autoMineHelper.getBlockPos() == null) {
@@ -116,13 +126,13 @@ public final class AutoMine extends Module {
                 BlockPos blockPos386 = autoMineHelper.getBlockPos();
                 BlockPos blockPos2898 = autoMineHelper.getSecondaryBlockPos();
                 Direction direction2750 = getMiningDirection(blockPos386);
-                if (direction2750 == null || blockPos386.equals(speedMine.getMineTargetPos())) {
+                if (direction2750 == null || blockPos386.equals(speedMine_lcl.getMineTargetPos())) {
                     return;
                 }
                 if (isExtraBreakEnabled() && blockPos2898 != null && !blockPos2898.equals(blockPos386) && !this.speedMineHelper.hasActiveMiningTarget()) {
                     executeMineAction(blockPos2898, direction2750, false);
                 }
-                if (!antiCheat.isF2b2t()) {
+                if (antiCheat_lcl == null || !antiCheat_lcl.isF2b2t()) {
                     executeMineAction(blockPos386, direction2750, true);
                     return;
                 }
@@ -138,16 +148,16 @@ public final class AutoMine extends Module {
     }
 
     public void executeMineAction(BlockPos blockPos, Direction direction, boolean z) {
-        Vec3d vec3d2430;
+        Vec3 vec3d2430;
         if (this.rotate.getValue().booleanValue()) {
-            float[] floatArray2484 = RotationManager.getRotationsTo(blockPos.toCenterPos());
+            float[] floatArray2484 = RotationManager.getRotationsTo(Vec3.atCenterOf(blockPos));
             if (this.raytrace.getValue().booleanValue() && (vec3d2430 = WorldUtils.findVisiblePoint(blockPos, AutoCraftMode.X8)) != null) {
                 floatArray2484 = RotationManager.getRotationsTo(vec3d2430);
             }
             ClientServices.RotationManager.requestRotations(floatArray2484, 100);
         }
         SpeedMine.flag = z;
-        minecraftClient.interactionManager.attackBlock(blockPos, direction);
+        minecraftClient.gameMode.startDestroyBlock(blockPos, direction);
         SpeedMine.flag = false;
     }
 
@@ -164,10 +174,11 @@ public final class AutoMine extends Module {
 
     public boolean hasActiveMineTarget() {
         if (isMiningInProgress()) {
-            if (speedMine.getMineTargetPos() == null) {
+            SpeedMine speedMine_lcl = getSpeedMine();
+            if (speedMine_lcl == null || speedMine_lcl.getMineTargetPos() == null) {
                 setTargetFlagged(false);
             } else {
-                setTargetFlagged(!WorldUtils.isAir(speedMine.getMineTargetPos()));
+                setTargetFlagged(!WorldUtils.isAir(speedMine_lcl.getMineTargetPos()));
             }
         }
         return isMiningInProgress();
@@ -182,10 +193,18 @@ public final class AutoMine extends Module {
     }
 
     public float getRange() {
-        return speedMine.range.getValue().floatValue();
+        SpeedMine speedMine_lcl = getSpeedMine();
+        if (speedMine_lcl == null) {
+            return 4.5f;
+        }
+        return speedMine_lcl.range.getValue().floatValue();
     }
 
     public boolean isExtraBreakEnabled() {
-        return speedMine.extraBreak.getValue().booleanValue();
+        SpeedMine speedMine_lcl = getSpeedMine();
+        if (speedMine_lcl == null) {
+            return false;
+        }
+        return speedMine_lcl.extraBreak.getValue().booleanValue();
     }
 }

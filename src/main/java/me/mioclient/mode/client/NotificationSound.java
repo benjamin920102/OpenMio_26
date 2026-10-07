@@ -1,11 +1,7 @@
 package me.mioclient.mode.client;
 
 import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.client.SoundIdentifier;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Mode_9.class */
 public enum NotificationSound {
     KABAN("kaban"),
     NEVERLOSE("neverlose"),

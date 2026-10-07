@@ -1,6 +1,4 @@
-/*
- * Decompiled with CFR 0.2.2 (FabricMC 7c48b8c4).
- */
+
 package nick;
 
 import java.lang.reflect.AccessibleObject;
@@ -8,28 +6,32 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import sun.misc.Unsafe;
 
+// 26.2 / Java 25: sun.misc.Unsafe accessors (getBoolean/putBoolean @ offset 12,
+// getDeclaredMethods0) are deprecated for removal. Replaced with plain
+// reflection + setAccessible, mirroring ModuleFieldInjector's approach
+// (no Unsafe, no --add-opens needed for our own classpath).
 public class ReflectionUtils {
-    private static Unsafe unsafe;
-    private static Method[] table;
-
     public static <T extends AccessibleObject> boolean patched(T obj) {
-        return unsafe.getBoolean(obj, 12L);
+        try {
+            return obj.canAccess(null);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     public static <T extends AccessibleObject> void patch(T obj) {
-        if (!ReflectionUtils.patched(obj)) {
-            unsafe.putBoolean(obj, 12L, true);
+        try {
+            obj.setAccessible(true);
+        } catch (Exception ignored) {
         }
     }
 
-    public static Method getMethod(Class<?> klass, String name, Class<?> ... parameters) {
-        Method[] methods;
+    public static Method getMethod(Class<?> klass, String name, Class<?>... parameters) {
         if (klass == null) {
             throw new RuntimeException("no method found");
         }
-        for (Method method : methods = (Method[])ReflectionUtils.getMembers(klass, (Mask)Mask.METHODS)) {
+        for (Method method : klass.getDeclaredMethods()) {
             if (!method.getName().equals(name) || !Arrays.equals(method.getParameterTypes(), parameters)) continue;
             ReflectionUtils.patch(method);
             return method;
@@ -38,11 +40,10 @@ public class ReflectionUtils {
     }
 
     public static Field getField(Class<?> klass, String name) {
-        Field[] fields;
         if (klass == null) {
             throw new RuntimeException("no field found");
         }
-        for (Field field : fields = (Field[])ReflectionUtils.getMembers(klass, (Mask)Mask.FIELDS)) {
+        for (Field field : klass.getDeclaredFields()) {
             if (!field.getName().equals(name)) continue;
             ReflectionUtils.patch(field);
             return field;
@@ -50,42 +51,34 @@ public class ReflectionUtils {
         return ReflectionUtils.getField(klass.getSuperclass(), name);
     }
 
-    public static <T> Constructor<T> getConstructors(Class<?> klass, Class<?> ... parameters) {
-        Constructor[] constructors;
-        for (Constructor constructor : constructors = (Constructor[])ReflectionUtils.getMembers(klass, (Mask)Mask.CONSTRUCTORS)) {
+    public static <T> Constructor<T> getConstructors(Class<?> klass, Class<?>... parameters) {
+        for (Constructor<?> constructor : klass.getDeclaredConstructors()) {
             if (!Arrays.equals(constructor.getParameterTypes(), parameters)) continue;
             ReflectionUtils.patch(constructor);
-            return constructor;
+            @SuppressWarnings("unchecked")
+            Constructor<T> typed = (Constructor<T>) constructor;
+            return typed;
         }
         throw new RuntimeException("no constructor found");
     }
 
+    @SuppressWarnings("unchecked")
     public static <T extends AccessibleObject> T[] getMembers(Class<?> klass, Mask mask) {
-        try {
-            return (T[])(Object) table[mask.ordinal()].invoke(klass, false);
-        } catch (Throwable _t) {
-            _t.printStackTrace(System.err);
-            throw new RuntimeException();
+        switch (mask) {
+            case METHODS:
+                return (T[]) klass.getDeclaredMethods();
+            case FIELDS:
+                return (T[]) klass.getDeclaredFields();
+            case CONSTRUCTORS:
+                return (T[]) klass.getDeclaredConstructors();
+            default:
+                throw new RuntimeException();
         }
     }
 
-    static {
-        try {
-            Field f = Unsafe.class.getDeclaredField("theUnsafe");
-            f.setAccessible(true);
-            unsafe = (Unsafe)f.get(null);
-            for (Method method : table = new Method[]{Class.class.getDeclaredMethod("getDeclaredMethods0", Boolean.TYPE), Class.class.getDeclaredMethod("getDeclaredFields0", Boolean.TYPE), Class.class.getDeclaredMethod("getDeclaredConstructors0", Boolean.TYPE)}) {
-                ReflectionUtils.patch(method);
-            }
-        } catch (Throwable throwable) {
-            // empty catch block
-        }
-    }
-
-    public static enum Mask {
+    public enum Mask {
         METHODS,
         FIELDS,
-        CONSTRUCTORS;
-
+        CONSTRUCTORS
     }
 }

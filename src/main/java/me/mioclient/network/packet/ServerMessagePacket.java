@@ -3,21 +3,16 @@ package me.mioclient.network.packet;
 import me.mioclient.network.codec.NetworkMessage;
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.network.codec.NetworkMessage;
-import me.mioclient.util.client.ChatUtils;
-
 import io.netty.channel.ChannelHandlerContext;
 import java.io.DataInputStream;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ServerMessagePacket.class */
 public class ServerMessagePacket implements NetworkMessage {
     public String string;
 
     @Override // me.mioclient.network.codec.NetworkMessage
     public void handle(ChannelHandlerContext channelHandlerContext) {
-        ChatUtils.sendMessage(Text.literal(this.string), ChatUtils.createSignature(this.string.hashCode()));
+        ChatUtils.sendMessage(Component.literal(this.string), ChatUtils.createSignature(this.string.hashCode()));
     }
 
     @Override // me.mioclient.network.codec.NetworkMessage

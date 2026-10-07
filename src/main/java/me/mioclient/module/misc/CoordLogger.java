@@ -4,19 +4,15 @@ import me.mioclient.event.events.network.PacketReceiveEvent;
 
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.network.DisconnectEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.module.Module;
-import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/CoordLogger.class */
 public class CoordLogger extends Module {
     public Setting<Boolean> log = add(new BooleanSetting("Log", true));
     public Setting<Boolean> death = add(new BooleanSetting("Death", true));
@@ -33,7 +29,7 @@ public class CoordLogger extends Module {
 
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
-        if ((channelRead0Event.getPacket() instanceof DeathMessageS2CPacket) && this.death.getValue().booleanValue()) {
+        if ((channelRead0Event.getPacket() instanceof ClientboundPlayerCombatKillPacket) && this.death.getValue().booleanValue()) {
             do906();
         }
     }
@@ -47,6 +43,6 @@ public class CoordLogger extends Module {
     }
 
     public void do906() {
-        minecraftClient.keyboard.setClipboard(this.text);
+        minecraftClient.keyboardHandler.setClipboard(this.text);
     }
 }

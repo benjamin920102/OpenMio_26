@@ -2,10 +2,6 @@ package me.mioclient.command;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -16,11 +12,10 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/feature/Enum.class */
 public class EnumArgumentType<T extends java.lang.Enum<T>> implements ArgumentType<T> {
     public final Class<T> class_;
     public final String string;
@@ -43,12 +38,12 @@ public class EnumArgumentType<T extends java.lang.Enum<T>> implements ArgumentTy
             }
         }
         throw new DynamicCommandExceptionType(obj -> {
-            return Text.literal(String.format("%s %s doesn't exist", this.string, obj));
+            return Component.literal(String.format("%s %s doesn't exist", this.string, obj));
         }).create(readString);
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> commandContext, SuggestionsBuilder suggestionsBuilder) {
-        return CommandSource.suggestMatching(Arrays.stream(this.class_.getEnumConstants()).map(this::name), suggestionsBuilder);
+        return SharedSuggestionProvider.suggest(Arrays.stream(this.class_.getEnumConstants()).map(this::name), suggestionsBuilder);
     }
 
     public String name(T t) {

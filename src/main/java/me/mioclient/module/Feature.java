@@ -2,15 +2,10 @@ package me.mioclient.module;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.NamedValue;
 
 import java.util.Objects;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Feature.class */
 public class Feature implements ClientAccessor, NamedValue {
     public final String name;
     public String description = "";

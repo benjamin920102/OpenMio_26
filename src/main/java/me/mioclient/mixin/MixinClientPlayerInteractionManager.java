@@ -7,9 +7,6 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.network.PacketSender;
-import me.mioclient.util.inventory.InventoryUtils;
 
 import me.mioclient.event.EventBus;
 
@@ -20,32 +17,30 @@ import me.mioclient.event.events.interaction.AttackBlockEvent;
 import me.mioclient.event.events.interaction.BreakBlockEvent;
 import me.mioclient.event.events.interaction.InteractBlockEvent;
 import me.mioclient.event.events.interaction.InteractItemEvent;
-import me.mioclient.event.events.interaction.InteractItemPacketEvent;
 import me.mioclient.event.events.player.StopUsingItemEvent;
 import me.mioclient.module.combat.AutoClicker;
 import me.mioclient.module.player.InventoryTweaks;
 import me.mioclient.module.player.NoInteract;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -53,9 +48,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
-@Mixin({ClientPlayerInteractionManager.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientPlayerInteractionManager.class */
+/* 26.2 port (verified against 26.2 merged jar): breakBlock->destroyBlock,
+   attackBlock->startDestroyBlock, clickSlot->handleContainerInput (ClickType is now
+   ContainerInput enum), interactBlock->useItemOn, stopUsingItem->releaseUsingItem,
+   interactItem->useItem, attackEntity->attack, cancelBlockBreaking->stopDestroyBlock,
+   updateBlockBreakingProgress->continueDestroyBlock, useItem builds
+   ServerboundUseItemPacket(hand, sequence, yRot, xRot). Sneak spoof now sends
+   ServerboundPlayerInputPacket (PRESS_SHIFT_KEY action is gone). Slot.getStack is
+   getItem; currentScreenHandler is containerMenu; playerScreenHandler is inventoryMenu. */
+@Mixin({MultiPlayerGameMode.class})
 public abstract class MixinClientPlayerInteractionManager implements ClientAccessor, DuckClientPlayerInteractionManager {
     private static AutoClicker autoclicker;
 
@@ -111,21 +112,21 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
     }
 
     @Shadow
-    private boolean field_3717;
+    private boolean isDestroying;
 
     @Shadow
-    private float field_3715;
+    private float destroyProgress;
 
     @Shadow
-    private BlockPos field_3714;
+    private BlockPos destroyBlockPos;
 
     @Shadow
-    private int field_3716;
+    private int destroyDelay;
 
     @Shadow
-    public abstract void method_2906(int i, int i2, int i3, SlotActionType slotActionType, PlayerEntity playerEntity);
+    public abstract void handleContainerInput(int i, int i2, int i3, ContainerInput containerInput, Player playerEntity);
 
-    @Inject(method = {"breakBlock"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"destroyBlock"}, at = {@At("HEAD")}, cancellable = true)
     private void breakBlock(BlockPos blockPos, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         BreakBlockEvent breakBlockEvent = new BreakBlockEvent(blockPos);
         eventBus.fireEvent(breakBlockEvent);
@@ -135,7 +136,7 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         }
     }
 
-    @Inject(method = {"attackBlock"}, at = {@At("HEAD")}, cancellable = true)
+    @Inject(method = {"startDestroyBlock"}, at = {@At("HEAD")}, cancellable = true)
     private void attackBlockHook(BlockPos blockPos, Direction direction, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         AttackBlockEvent attackBlockEvent = new AttackBlockEvent(blockPos, direction);
         eventBus.fireEvent(attackBlockEvent);
@@ -145,27 +146,27 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         }
     }
 
-    @Inject(method = {"clickSlot"}, at = {@At("HEAD")}, cancellable = true)
-    public void onClickArmorSlot(int i, int i2, int i3, SlotActionType slotActionType, PlayerEntity playerEntity, CallbackInfo callbackInfo) {
+    @Inject(method = {"handleContainerInput"}, at = {@At("HEAD")}, cancellable = true)
+    public void onClickArmorSlot(int i, int i2, int i3, ContainerInput containerInput, Player playerEntity, CallbackInfo callbackInfo) {
         InventoryTweaks inventorytweaks_lcl = getInventorytweaks();
 
         if (inventorytweaks_lcl == null) return;
 
         if (inventorytweaks_lcl.isToggled()) {
-            ScreenHandler screenHandler = playerEntity.currentScreenHandler;
-            if (inventorytweaks_lcl.fastArmor.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE) {
+            AbstractContainerMenu screenHandler = playerEntity.containerMenu;
+            if (inventorytweaks_lcl.fastArmor.getValue().booleanValue() && i3 == 1 && containerInput == ContainerInput.QUICK_MOVE) {
                 Slot slot = screenHandler.getSlot(i2);
-                if ((slot.getStack().getItem() instanceof ArmorItem) || slot.getStack().isOf(Items.ELYTRA)) {
-                    InventoryUtils.swapStacks(i2, 8 - minecraftClient.player.getPreferredEquipmentSlot(slot.getStack()).getEntitySlotId());
+                if (minecraftClient.player.getEquipmentSlotForItem(slot.getItem()).isArmor() || slot.getItem().getItem() == Items.ELYTRA) {
+                    InventoryUtils.swapStacks(i2, 8 - minecraftClient.player.getEquipmentSlotForItem(slot.getItem()).getIndex());
                     callbackInfo.cancel();
                     return;
                 }
             }
-            if (inventorytweaks_lcl.xCarryTweaks.getValue().booleanValue() && i3 == 1 && slotActionType == SlotActionType.QUICK_MOVE && i2 > 4 && (screenHandler instanceof PlayerScreenHandler)) {
+            if (inventorytweaks_lcl.xCarryTweaks.getValue().booleanValue() && i3 == 1 && containerInput == ContainerInput.QUICK_MOVE && i2 > 4 && (screenHandler instanceof InventoryMenu)) {
                 for (int i4 = 0; i4 < 4; i4++) {
-                    if (((ItemStack) minecraftClient.player.playerScreenHandler.getCraftingInput().getHeldStacks().get(i4)).isEmpty()) {
-                        method_2906(i, i2, 0, SlotActionType.PICKUP, minecraftClient.player);
-                        method_2906(i, i4 + 1, 0, SlotActionType.PICKUP, minecraftClient.player);
+                    if (minecraftClient.player.inventoryMenu.getCraftSlots().getItems().get(i4).isEmpty()) {
+                        handleContainerInput(i, i2, 0, ContainerInput.PICKUP, minecraftClient.player);
+                        handleContainerInput(i, i4 + 1, 0, ContainerInput.PICKUP, minecraftClient.player);
                         callbackInfo.cancel();
                         return;
                     }
@@ -174,8 +175,8 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         }
     }
 
-    @Inject(method = {"interactBlock"}, at = {@At("HEAD")}, cancellable = true)
-    private void interactBlockHook(ClientPlayerEntity clientPlayerEntity, Hand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
+    @Inject(method = {"useItemOn"}, at = {@At("HEAD")}, cancellable = true)
+    private void interactBlockHook(LocalPlayer clientPlayerEntity, InteractionHand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<InteractionResult> callbackInfoReturnable) {
         NoInteract nointeract_lcl = getNointeract();
 
         if (nointeract_lcl == null) return;
@@ -183,36 +184,42 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         InteractBlockEvent interactBlockEvent = new InteractBlockEvent(blockHitResult, hand);
         eventBus.fireEvent(interactBlockEvent);
         if (interactBlockEvent.isCancelled()) {
-            callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
+            callbackInfoReturnable.setReturnValue(InteractionResult.FAIL);
             callbackInfoReturnable.cancel();
         }
-        Hand hand1841 = NoInteract.getUsableHand();
-        if (nointeract_lcl.shouldBlockInteraction(minecraftClient.player.getStackInHand(NoInteract.getUsableHand()), blockHitResult.getBlockPos())) {
+        InteractionHand hand1841 = NoInteract.getUsableHand();
+        if (nointeract_lcl.shouldBlockInteraction(minecraftClient.player.getItemInHand(NoInteract.getUsableHand()), blockHitResult.getBlockPos())) {
             if (nointeract_lcl.mode.getValue() == NoInteract.Mode.SHIFT) {
                 nointeract_lcl.flag = !ClientServices.holeSnapRenderHelper.isSneaking();
-                PacketSender.sendClientCommand(clientPlayerEntity, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
+                sendShiftSpoof(true);
             } else {
-                callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
+                callbackInfoReturnable.setReturnValue(InteractionResult.FAIL);
                 callbackInfoReturnable.cancel();
             }
-            minecraftClient.interactionManager.interactItem(minecraftClient.player, hand1841);
+            minecraftClient.gameMode.useItem(minecraftClient.player, hand1841);
         }
     }
 
-    @Inject(method = {"interactBlock"}, at = {@At("RETURN")})
-    private void releaseShiftKey(ClientPlayerEntity clientPlayerEntity, Hand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
+    @Inject(method = {"useItemOn"}, at = {@At("RETURN")})
+    private void releaseShiftKey(LocalPlayer clientPlayerEntity, InteractionHand hand, BlockHitResult blockHitResult, CallbackInfoReturnable<InteractionResult> callbackInfoReturnable) {
         NoInteract nointeract_lcl = getNointeract();
 
         if (nointeract_lcl == null) return;
 
         if (nointeract_lcl.flag) {
-            PacketSender.sendClientCommand(clientPlayerEntity, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
+            sendShiftSpoof(false);
             nointeract_lcl.flag = false;
         }
     }
 
-    @Inject(method = {"stopUsingItem"}, at = {@At("HEAD")}, cancellable = true)
-    private void stopUsingItemHook(PlayerEntity playerEntity, CallbackInfo callbackInfo) {
+    /** 26.2 has no PRESS_SHIFT_KEY packet action; sneak is spoofed via the input packet. */
+    private static void sendShiftSpoof(boolean shift) {
+        Input presses = minecraftClient.player.input.keyPresses;
+        minecraftClient.player.connection.send(new ServerboundPlayerInputPacket(new Input(presses.forward(), presses.backward(), presses.left(), presses.right(), presses.jump(), shift, presses.sprint())));
+    }
+
+    @Inject(method = {"releaseUsingItem"}, at = {@At("HEAD")}, cancellable = true)
+    private void stopUsingItemHook(Player playerEntity, CallbackInfo callbackInfo) {
         StopUsingItemEvent stopUsingItemEvent = new StopUsingItemEvent();
         eventBus.fireEvent(stopUsingItemEvent);
         if (stopUsingItemEvent.isCancelled()) {
@@ -220,18 +227,18 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         }
     }
 
-    @Inject(method = {"interactItem"}, at = {@At("HEAD")}, cancellable = true)
-    private void interactItemHook(PlayerEntity playerEntity, Hand hand, CallbackInfoReturnable<ActionResult> callbackInfoReturnable) {
+    @Inject(method = {"useItem"}, at = {@At("HEAD")}, cancellable = true)
+    private void interactItemHook(Player playerEntity, InteractionHand hand, CallbackInfoReturnable<InteractionResult> callbackInfoReturnable) {
         InteractItemEvent interactItemEvent = new InteractItemEvent(hand);
         eventBus.fireEvent(interactItemEvent);
         if (interactItemEvent.isCancelled()) {
             callbackInfoReturnable.cancel();
-            callbackInfoReturnable.setReturnValue(ActionResult.FAIL);
+            callbackInfoReturnable.setReturnValue(InteractionResult.FAIL);
         }
     }
 
-    @Inject(method = {"attackEntity"}, at = {@At("HEAD")}, cancellable = true)
-    private void attackEntityHook(PlayerEntity playerEntity, Entity entity, CallbackInfo callbackInfo) {
+    @Inject(method = {"attack"}, at = {@At("HEAD")}, cancellable = true)
+    private void attackEntityHook(Player playerEntity, Entity entity, CallbackInfo callbackInfo) {
         AutoClicker autoclicker_lcl = getAutoclicker();
 
         if (autoclicker_lcl == null) return;
@@ -241,8 +248,8 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         }
     }
 
-    @WrapWithCondition(method = {"cancelBlockBreaking"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayNetworkHandler;sendPacket(Lnet/minecraft/network/packet/Packet;)V")})
-    private boolean cancelBlockBreaking(ClientPlayNetworkHandler clientPlayNetworkHandler, Packet packet) {
+    @WrapWithCondition(method = {"stopDestroyBlock"}, at = {@At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V")})
+    private boolean cancelBlockBreaking(ClientPacketListener clientPlayNetworkHandler, Packet packet) {
         SpeedMine speedmine_lcl = getSpeedmine();
 
         if (speedmine_lcl == null) return true;
@@ -250,51 +257,54 @@ public abstract class MixinClientPlayerInteractionManager implements ClientAcces
         return !speedmine_lcl.isToggled();
     }
 
-    @Inject(method = {"updateBlockBreakingProgress"}, at = {@At("HEAD")})
+    @Inject(method = {"continueDestroyBlock"}, at = {@At("HEAD")})
     private void attackBlock(BlockPos blockPos, Direction direction, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
         SpeedMine speedmine_lcl = getSpeedmine();
 
         if (speedmine_lcl == null) return;
 
         if (speedmine_lcl.isToggled()) {
-            this.field_3716 = 0;
+            this.destroyDelay = 0;
         }
     }
 
-    @ModifyExpressionValue(method = {"method_41929"}, at = {@At(value = "NEW", target = "(Lnet/minecraft/util/Hand;IFF)Lnet/minecraft/network/packet/c2s/play/PlayerInteractItemC2SPacket;")})
-    private PlayerInteractItemC2SPacket interactItemHook(PlayerInteractItemC2SPacket playerInteractItemC2SPacket) {
+    /* 26.2 port: useItem delegates to a prediction lambda; the
+       ServerboundUseItemPacket NEW now lives in lambda$useItem$0
+       (bytecode-verified, same ctor). */
+    @ModifyExpressionValue(method = {"lambda$useItem$0"}, at = {@At(value = "NEW", target = "(Lnet/minecraft/world/InteractionHand;IFF)Lnet/minecraft/network/protocol/game/ServerboundUseItemPacket;")})
+    private ServerboundUseItemPacket interactItemHook(ServerboundUseItemPacket playerInteractItemC2SPacket) {
         InteractItemPacketEvent interactItemEvent_2 = new InteractItemPacketEvent(playerInteractItemC2SPacket);
         eventBus.fireEvent(interactItemEvent_2);
         return interactItemEvent_2.isCancelled() ? interactItemEvent_2.getInteractPacket() : playerInteractItemC2SPacket;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public boolean isBreakingBlock() {
-        return this.field_3717;
+        return this.isDestroying;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public void setBreakingBlock(boolean z) {
-        this.field_3717 = z;
+        this.isDestroying = z;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public float getBreakingProgress() {
-        return this.field_3715;
+        return this.destroyProgress;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public void setBreakingProgress(float f) {
-        this.field_3715 = f;
+        this.destroyProgress = f;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public BlockPos getCurrentBreakingBlock() {
-        return this.field_3714;
+        return this.destroyBlockPos;
     }
 
-    @Override // me.mioclient.ducks.DuckClientPlayerInteractionManager
+    @Override
     public void setCurrentBreakingBlock(BlockPos blockPos) {
-        this.field_3714 = blockPos;
+        this.destroyBlockPos = blockPos;
     }
 }

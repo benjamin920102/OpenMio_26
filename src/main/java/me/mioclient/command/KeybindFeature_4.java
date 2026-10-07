@@ -4,7 +4,6 @@ import me.mioclient.mode.misc.KeybindMode;
 
 import java.util.List;
 import me.mioclient.api.Keybind;
-import me.mioclient.mode.misc.KeybindMode;
 
 public class KeybindFeature_4 extends KeybindFeature {
    public int num = 0;

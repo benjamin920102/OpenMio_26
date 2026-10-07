@@ -1,9 +1,4 @@
-/*
- * Decompiled with CFR 0.2.2 (FabricMC 7c48b8c4).
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.ModInitializer
- */
+
 package nick;
 
 import me.mioclient.loader.ClientBootstrap;
@@ -13,7 +8,6 @@ import nick.CommandRegistry;
 import nick.IntegerLookupTable;
 import nick.ModuleRegistry;
 import nick.StringLookupTable;
-import me.mioclient.loader.ClientBootstrap;
 
 public final class MioModInitializer
 implements net.fabricmc.api.ModInitializer {

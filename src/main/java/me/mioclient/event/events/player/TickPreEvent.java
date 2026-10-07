@@ -2,13 +2,12 @@ package me.mioclient.event.events.player;
 
 import me.mioclient.api.ClientAccessor;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/event/TickPreEvent.class */
+/* 26.2 port: Yarn Entity/Vec3 -> MojMap world.entity.Entity / world.phys.Vec3. */
 public final class TickPreEvent extends MoveEvent {
-    public TickPreEvent(Vec3d vec3d) {
+    public TickPreEvent(Vec3 vec3d) {
         super(vec3d, null);
     }
 

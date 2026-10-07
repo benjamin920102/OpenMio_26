@@ -6,8 +6,6 @@ import me.mioclient.util.time.Stopwatch;
 import java.util.Iterator;
 import java.util.List;
 import me.mioclient.api.Keybind;
-import me.mioclient.util.time.Stopwatch;
-import me.mioclient.mode.misc.KeybindMode;
 
 public class StopwatchKeybindFeature extends KeybindFeature {
    public final Stopwatch stopwatch = new Stopwatch();

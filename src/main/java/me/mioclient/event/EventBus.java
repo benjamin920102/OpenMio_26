@@ -1,8 +1,5 @@
 package me.mioclient.event;
 
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Helper_19.class */
 public interface EventBus {
     void registerLookup(String str, LambdaEventListener.Inner inner);
 

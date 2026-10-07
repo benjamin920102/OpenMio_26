@@ -2,13 +2,9 @@ package me.mioclient.module.movement.speed;
 
 import me.mioclient.util.player.MovementUtils;
 
-import me.mioclient.util.player.MovementUtils;
-
 import me.mioclient.event.events.player.MoveEvent;
 import me.mioclient.module.movement.Speed;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/VanillaSpeedHandler.class */
 public final class VanillaSpeedHandler extends SpeedModeHandler {
     public VanillaSpeedHandler(Speed speed) {
         super(speed);

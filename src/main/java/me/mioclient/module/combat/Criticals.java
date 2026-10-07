@@ -5,44 +5,44 @@ import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
 import me.mioclient.util.client.InteractPacketReader;
 import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.module.movement.velocity.AntiCheatVelocityHandler;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.client.InteractPacketReader;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
 
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Criticals.class */
 public class Criticals extends Module {
-    public static final Aura aura = (Aura) ClientServices.moduleInjector.getModule(Aura.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static Aura aura;
+
+    public static Aura getAura() {
+        if (aura == null && ClientServices.moduleInjector != null) {
+            try {
+                aura = (Aura) ClientServices.moduleInjector.getModule(Aura.class);
+            } catch (Exception e) {
+            }
+        }
+        return aura;
+    }
     public Setting<CriticalsMode> mode = add(new EnumSetting<>("Mode", CriticalsMode.PACKET));
     public Setting<Boolean> pauseOnMove = add(new BooleanSetting("PauseOnMove", false));
 
-    /* JADX INFO: Access modifiers changed from: protected */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Criticals$CriticalsMode.class */
+    
+    
     public enum CriticalsMode implements NamedValue {
         PACKET("Packet"),
         NCP("NCP"),
@@ -76,9 +76,9 @@ public class Criticals extends Module {
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
         Entity entity2610;
-        PlayerInteractEntityC2SPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof PlayerInteractEntityC2SPacket ? (PlayerInteractEntityC2SPacket) (sendImmediatelyEvent.getPacket()) : null;
-        if (packet904 instanceof PlayerInteractEntityC2SPacket) {
-            PlayerInteractEntityC2SPacket playerInteractEntityC2SPacket = packet904;
+        ServerboundInteractPacket packet904 = (sendImmediatelyEvent.getPacket()) instanceof ServerboundInteractPacket ? (ServerboundInteractPacket) (sendImmediatelyEvent.getPacket()) : null;
+        if (packet904 instanceof ServerboundInteractPacket) {
+            ServerboundInteractPacket playerInteractEntityC2SPacket = packet904;
             if (!shouldProcessCriticalPacket(playerInteractEntityC2SPacket) || (entity2610 = InteractPacketReader.resolvePacketEntity(playerInteractEntityC2SPacket)) == null) {
                 return;
             }
@@ -86,15 +86,16 @@ public class Criticals extends Module {
                 do906();
             }
             minecraftClient.execute(() -> {
-                minecraftClient.player.addCritParticles(entity2610);
+                minecraftClient.player.crit(entity2610);
             });
         }
     }
 
     public void do906() {
-        float[] fArr = {minecraftClient.player.getYaw(), minecraftClient.player.getPitch()};
-        if (aura.entity != null && aura.isToggled()) {
-            fArr = RotationManager.limitYawSpeed(RotationManager.getRotationsTo(aura.entity), ClientServices.RotationManager.getYawStep());
+        float[] fArr = {minecraftClient.player.getYRot(), minecraftClient.player.getXRot()};
+        Aura aura_lcl = getAura();
+        if (aura_lcl != null && aura_lcl.entity != null && aura_lcl.isToggled()) {
+            fArr = RotationManager.limitYawSpeed(RotationManager.getRotationsTo(aura_lcl.entity), ClientServices.RotationManager.getYawStep());
         }
         switch (this.mode.getValue().ordinal()) {
             case 1:
@@ -124,25 +125,26 @@ public class Criticals extends Module {
             return false;
         }
         if (this.mode.getValue() == CriticalsMode.GRIMV3) {
-            return minecraftClient.player.isOnGround() && AntiCheatVelocityHandler.isNearGroundCollision();
+            return minecraftClient.player.onGround() && AntiCheatVelocityHandler.isNearGroundCollision();
         }
-        if (this.mode.getValue() != CriticalsMode.GRIM || minecraftClient.player.isOnGround()) {
-            return minecraftClient.player.isOnGround() && minecraftClient.player.verticalCollision && !minecraftClient.player.isInLava() && !minecraftClient.player.isTouchingWater();
+        if (this.mode.getValue() != CriticalsMode.GRIM || minecraftClient.player.onGround()) {
+            return minecraftClient.player.onGround() && minecraftClient.player.verticalCollision && !minecraftClient.player.isInLava() && !minecraftClient.player.isInWater();
         }
         return true;
     }
 
     public void sendCriticalOffsets(double... dArr) {
         for (double d : dArr) {
-            PacketSender.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(minecraftClient.player.getX(), minecraftClient.player.getY() + d, minecraftClient.player.getZ(), false));
+            PacketSender.sendPacket(new ServerboundMovePlayerPacket.Pos(minecraftClient.player.getX(), minecraftClient.player.getY() + d, minecraftClient.player.getZ(), false, minecraftClient.player.horizontalCollision));
         }
     }
 
-    public boolean shouldProcessCriticalPacket(PlayerInteractEntityC2SPacket playerInteractEntityC2SPacket) {
+    public boolean shouldProcessCriticalPacket(ServerboundInteractPacket playerInteractEntityC2SPacket) {
         if (InteractPacketReader.getCrystalInteractionType(playerInteractEntityC2SPacket) != InteractPacketReader.LegacyCrystalMode.ATTACK || !is907()) {
             return false;
         }
         Entity entity2610 = InteractPacketReader.resolvePacketEntity(playerInteractEntityC2SPacket);
-        return ((aura.isToggled() && aura.flag2 && this.mode.getValue() != CriticalsMode.GRIM) || entity2610 == null || !entity2610.isAlive() || (entity2610 instanceof EndCrystalEntity)) ? false : true;
+        Aura aura_lcl = getAura();
+        return ((aura_lcl != null && aura_lcl.isToggled() && aura_lcl.flag2 && this.mode.getValue() != CriticalsMode.GRIM) || entity2610 == null || !entity2610.isAlive() || (entity2610 instanceof EndCrystal)) ? false : true;
     }
 }

@@ -2,35 +2,28 @@ package me.mioclient.module.player;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
-import me.mioclient.api.NamedValue;
-
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.module.Module;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.EnderPearlItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ProjectileItem;
-import net.minecraft.item.RangedWeaponItem;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileItem;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EnumSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/NoInteract.class */
 public class NoInteract extends Module {
     public Setting<Mode> mode = add(new EnumSetting<>("Mode", Mode.CANCEL));
     public Setting<Boolean> onlyFood = add(new BooleanSetting("OnlyFood", false));
     public boolean flag;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/NoInteract$Mode.class */
+    
     public enum Mode implements NamedValue {
         CANCEL("Cancel"),
         SHIFT("Shift");
@@ -52,22 +45,22 @@ public class NoInteract extends Module {
     }
 
     public static boolean isUsableItem(ItemStack itemStack) {
-        return itemStack.contains(DataComponentTypes.FOOD) || (itemStack.getItem() instanceof EnderPearlItem) || (itemStack.getItem() instanceof ProjectileItem) || (itemStack.getItem() instanceof RangedWeaponItem);
+        return itemStack.has(DataComponents.FOOD) || (itemStack.getItem() instanceof EnderpearlItem) || (itemStack.getItem() instanceof ProjectileItem) || (itemStack.getItem() instanceof ProjectileWeaponItem);
     }
 
-    public static Hand getUsableHand() {
-        return (isUsableItem(minecraftClient.player.getMainHandStack()) || !isUsableItem(minecraftClient.player.getOffHandStack())) ? Hand.MAIN_HAND : Hand.OFF_HAND;
+    public static InteractionHand getUsableHand() {
+        return (isUsableItem(minecraftClient.player.getMainHandItem()) || !isUsableItem(minecraftClient.player.getOffhandItem())) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
     }
 
     public boolean shouldBlockInteraction(ItemStack itemStack, BlockPos blockPos) {
         if (!isToggled()) {
             return false;
         }
-        if (this.onlyFood.getValue().booleanValue() && !itemStack.contains(DataComponentTypes.FOOD)) {
+        if (this.onlyFood.getValue().booleanValue() && !itemStack.has(DataComponents.FOOD)) {
             return false;
         }
-        BlockState blockState = minecraftClient.world.getBlockState(blockPos);
-        if (blockState.isOf(Blocks.ANVIL)) {
+        BlockState blockState = minecraftClient.level.getBlockState(blockPos);
+        if (blockState.is(Blocks.ANVIL)) {
             return true;
         }
         return blockState.hasBlockEntity() && !(blockState.getBlock() instanceof BedBlock);

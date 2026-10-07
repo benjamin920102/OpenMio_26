@@ -7,16 +7,13 @@ import me.mioclient.api.Setting;
 import me.mioclient.event.events.player.ClipAtLedgeEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.BlockPos;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/movement/SafeWalk.class */
 public class SafeWalk extends Module {
     public Setting<Boolean> sneak = add(new BooleanSetting("Sneak", false).setVisible());
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 0, 0, 1000).setSuffix("ms").requiresSettings(this.sneak));
@@ -30,27 +27,27 @@ public class SafeWalk extends Module {
     @Override // me.mioclient.module.Module
     public void onDisable() {
         if (this.sneak.getValue().booleanValue()) {
-            minecraftClient.options.sneakKey.setPressed(false);
+            minecraftClient.options.keyShift.setDown(false);
         }
     }
 
     @Listen
     public void onTick(TickEvent tickEvent) {
         if (this.sneak.getValue().booleanValue()) {
-            BlockPos down = BlockPos.ofFloored(minecraftClient.player.getPos()).down();
-            BlockState blockState = minecraftClient.world.getBlockState(down);
-            if (blockState.isOf(Blocks.AIR) || blockState.getCollisionShape(minecraftClient.world, down).isEmpty()) {
+            BlockPos down = BlockPos.containing(minecraftClient.player.position()).below();
+            BlockState blockState = minecraftClient.level.getBlockState(down);
+            if (blockState.is(Blocks.AIR) || blockState.getCollisionShape(minecraftClient.level, down).isEmpty()) {
                 this.stopwatch.reset();
-                minecraftClient.options.sneakKey.setPressed(true);
+                minecraftClient.options.keyShift.setDown(true);
             } else {
-                minecraftClient.options.sneakKey.setPressed(!this.stopwatch.hasElapsedMs((long) this.delay.getValue().intValue()));
+                minecraftClient.options.keyShift.setDown(!this.stopwatch.hasElapsedMs((long) this.delay.getValue().intValue()));
             }
         }
     }
 
     @Listen
     public void onClipAtLedge(ClipAtLedgeEvent clipAtLedgeEvent) {
-        if (minecraftClient.player.isSwimming() || minecraftClient.player.isInLava() || minecraftClient.player.isTouchingWater() || this.sneak.getValue().booleanValue()) {
+        if (minecraftClient.player.isSwimming() || minecraftClient.player.isInLava() || minecraftClient.player.isInWater() || this.sneak.getValue().booleanValue()) {
             return;
         }
         clipAtLedgeEvent.cancel();

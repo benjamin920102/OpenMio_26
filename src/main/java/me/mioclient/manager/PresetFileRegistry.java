@@ -7,8 +7,6 @@ import me.mioclient.mode.misc.PresetHelperMode;
 import me.mioclient.util.io.FileIO;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.registry.NamedRegistryList;
-import me.mioclient.util.io.FileIO;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -18,11 +16,7 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import me.mioclient.mode.misc.PresetHelperMode;
-import me.mioclient.util.text.StringTemplate;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetFileRegistry.class */
 public final class PresetFileRegistry extends NamedRegistryList<PresetEntry> implements ClientAccessor {
     public static final String string = ".json";
     public final PresetHelperMode presetHelperMode;

@@ -5,16 +5,10 @@ import me.mioclient.api.JsonConfigurable;
 import me.mioclient.api.NamedValue;
 import me.mioclient.module.HudModule;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.util.io.JsonValidator;
 import me.mioclient.util.io.PresetJsonSanitizer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.JsonConfigurable;
-import me.mioclient.api.NamedValue;
 import me.mioclient.manager.ConfigManager;
-import me.mioclient.util.io.JsonValidator;
-import me.mioclient.util.io.PresetJsonSanitizer;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -32,10 +26,7 @@ import me.mioclient.module.client.HUD;
 import me.mioclient.module.client.Notifications;
 import me.mioclient.module.client.UI;
 import me.mioclient.setting.ColorSetting;
-import me.mioclient.module.HudModule;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetHelperMode.class */
 public enum PresetHelperMode implements NamedValue, JsonConfigurable {
     MODULES("Modules") { // from class: me.mioclient.mode.misc.PresetHelperMode.Inner_3
         @Override // me.mioclient.api.JsonConfigurable

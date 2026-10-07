@@ -6,11 +6,6 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.PlayerUtils;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
-
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
@@ -31,25 +26,23 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.network.ChunkDeltaUpdateEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.mixin.ducks.DuckLivingEntity;
+import me.mioclient.ducks.DuckLivingEntity;
 import me.mioclient.module.Delay;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.core.Position;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Vec3i;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/Range.class */
 public class Range extends Delay {
     public Setting<Float> setting;
     public Setting<Boolean> setting2;
@@ -60,10 +53,9 @@ public class Range extends Delay {
     public Setting<Boolean> setting7;
     public Setting<Boolean> setting8;
     public Setting<Boolean> setting9;
-    public PlayerEntity playerEntity;
+    public Player playerEntity;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/combat/Range$Record.class */
+    
     private static final class Record {
         public final BlockPos blockPos;
         public final BlockState blockState;
@@ -72,9 +64,6 @@ public class Range extends Delay {
             this.blockPos = blockPos;
             this.blockState = blockState;
         }
-
-
-
 
         public BlockPos getBlockPos() {
             return this.blockPos;
@@ -117,7 +106,7 @@ public class Range extends Delay {
     @Override // me.mioclient.module.Module
     public String getInfo() {
         if (this.playerEntity != null) {
-            return this.playerEntity.getGameProfile().getName();
+            return this.playerEntity.getGameProfile().name();
         }
         return null;
     }
@@ -125,21 +114,21 @@ public class Range extends Delay {
     @Override // me.mioclient.module.Delay
     public List<BlockPos> getPlacePositions() {
         this.playerEntity = getTargetPlayer();
-        if (this.playerEntity == null || Math.hypot(this.playerEntity.getX() - this.playerEntity.prevX, this.playerEntity.getZ() - this.playerEntity.prevZ) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L) > Double.longBitsToDouble(4626322717216342016L)) {
+        if (this.playerEntity == null || Math.hypot(this.playerEntity.getX() - this.playerEntity.xo, this.playerEntity.getZ() - this.playerEntity.zo) * Double.longBitsToDouble(4626322717216342016L) * Double.longBitsToDouble(4615288898129284301L) > Double.longBitsToDouble(4626322717216342016L)) {
             return Collections.emptyList();
         }
-        if (Math.abs(this.playerEntity.prevY - this.playerEntity.getY()) > Double.longBitsToDouble(4603579539098121011L)) {
+        if (Math.abs(this.playerEntity.yo - this.playerEntity.getY()) > Double.longBitsToDouble(4603579539098121011L)) {
             return Collections.emptyList();
         }
         Position vec3d885 = getTargetPos(this.playerEntity);
-        List<BlockPos> list877 = collectSurroundPositions(new ArrayList(), BlockPos.ofFloored(vec3d885), 0);
+        List<BlockPos> list877 = collectSurroundPositions(new ArrayList(), BlockPos.containing(vec3d885), 0);
         list877.removeIf(this::isPositionInvalid);
         list877.sort(Comparator.comparing(blockPos -> {
             return Integer.valueOf(-blockPos.getY());
         }));
         if (this.setting5.getValue().booleanValue()) {
             list877.sort(Comparator.comparing(blockPos2 -> {
-                return Double.valueOf(-minecraftClient.player.getPos().distanceTo(blockPos2.toCenterPos()));
+                return Double.valueOf(-minecraftClient.player.position().distanceTo(Vec3.atCenterOf(blockPos2)));
             }));
         }
         return list877;
@@ -161,10 +150,10 @@ public class Range extends Delay {
         BlockPos blockPos878;
         ArrayList arrayList = new ArrayList();
         list.add(Integer.valueOf(blockPos.hashCode()));
-        for (Vec3d vec3d : getList882(blockPos, i, this.playerEntity.getHeight())) {
-            BlockPos add = blockPos.add((int) vec3d.x, (int) vec3d.y, (int) vec3d.z);
-            if (minecraftClient.world.getBlockState(add).isReplaceable()) {
-                if (!minecraftClient.world.getEntitiesByClass(PlayerEntity.class, new Box(add), playerEntity -> {
+        for (Vec3 vec3d : getList882(blockPos, i, this.playerEntity.getBbHeight())) {
+            BlockPos add = blockPos.offset((int) vec3d.x, (int) vec3d.y, (int) vec3d.z);
+            if (minecraftClient.level.getBlockState(add).canBeReplaced()) {
+                if (!minecraftClient.level.getEntitiesOfClass(Player.class, new AABB(add), playerEntity -> {
                     return true;
                 }).isEmpty()) {
                     if (!list.contains(Integer.valueOf(add.hashCode())) && vec3d.y == i) {
@@ -183,7 +172,7 @@ public class Range extends Delay {
     public BlockPos getBlockPos878(BlockPos blockPos, List<BlockPos> list) {
         Stream<Direction> stream = Arrays.stream(Direction.values());
         Objects.requireNonNull(blockPos);
-        return (BlockPos) stream.map(blockPos::offset).sorted(Comparator.comparingDouble(this::getPlacementSortKey)).filter(blockPos2 -> {
+        return (BlockPos) stream.map(d -> blockPos.relative(d)).sorted(Comparator.comparingDouble(this::getPlacementSortKey)).filter(blockPos2 -> {
             if (findSupportDirection(blockPos2, this.setting4.getValue().booleanValue(), list) != null) {
                 if (BlockPlacer.isSpaceFree(blockPos2, true, this.setting7.getValue().booleanValue())) {
                     return true;
@@ -197,24 +186,24 @@ public class Range extends Delay {
         if (!this.setting5.getValue().booleanValue()) {
             return blockPos.getY();
         }
-        return -minecraftClient.player.getPos().squaredDistanceTo(blockPos.toCenterPos());
+        return -minecraftClient.player.position().distanceToSqr(Vec3.atCenterOf(blockPos));
     }
 
     public boolean isPositionInvalid(BlockPos blockPos) {
         if (this.playerEntity == null) {
             return true;
         }
-        Box box = new Box(blockPos.up());
-        for (Entity entity : minecraftClient.world.getEntities()) {
-            if ((entity instanceof DuckEndCrystalEntity) && !((DuckEndCrystalEntity) entity).isMioAttacked() && entity.getBoundingBox().intersects(box) && BlockPos.ofFloored(entity.getPos()).equals(blockPos.up())) {
+        AABB box = new AABB(blockPos.above());
+        for (Entity entity : minecraftClient.level.getEntitiesOfClass(Entity.class, box, e -> true)) {
+            if ((entity instanceof DuckEndCrystalEntity) && !((DuckEndCrystalEntity) entity).isMioAttacked() && entity.getBoundingBox().intersects(box) && BlockPos.containing(entity.position()).equals(blockPos.above())) {
                 return true;
             }
         }
-        if (minecraftClient.player.getEyePos().distanceTo(blockPos.toCenterPos()) > this.setting.getValue().floatValue()) {
+        if (minecraftClient.player.getEyePosition().distanceTo(Vec3.atCenterOf(blockPos)) > this.setting.getValue().floatValue()) {
             return true;
         }
-        if (!this.setting6.getValue().booleanValue() && blockPos.getY() == this.playerEntity.getBlockPos().getY()) {
-            if (!minecraftClient.world.getBlockState(blockPos.up()).isReplaceable()) {
+        if (!this.setting6.getValue().booleanValue() && blockPos.getY() == this.playerEntity.blockPosition().getY()) {
+            if (!minecraftClient.level.getBlockState(blockPos.above()).canBeReplaced()) {
                 return true;
             }
         }
@@ -223,8 +212,8 @@ public class Range extends Delay {
 
     public Direction findSupportDirection(BlockPos blockPos, boolean z, List<BlockPos> list) {
         for (Direction direction : Direction.values()) {
-            BlockPos offset = blockPos.offset(direction);
-            if (!minecraftClient.world.getBlockState(offset).isReplaceable() || list.contains(offset)) {
+            BlockPos offset = blockPos.relative(direction);
+            if (!minecraftClient.level.getBlockState(offset).canBeReplaced() || list.contains(offset)) {
                 if (z) {
                     if (!BlockPlacer.getInteractableSides(offset).contains(direction.getOpposite())) {
                     }
@@ -235,65 +224,65 @@ public class Range extends Delay {
         return null;
     }
 
-    public List<Vec3d> getList882(BlockPos blockPos, int i, float f) {
+    public List<Vec3> getList882(BlockPos blockPos, int i, float f) {
         ArrayList arrayList = new ArrayList();
         if (is887()) {
-            arrayList.add(new Vec3d(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d));
-            Iterator<Vec3d> it = getSurroundOffsetVectors(i, f).iterator();
+            arrayList.add(new Vec3(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d));
+            Iterator<Vec3> it = getSurroundOffsetVectors(i, f).iterator();
             if (it.hasNext()) {
-                Vec3d next = it.next();
-                BlockPos add = BlockPos.ofFloored((Position) next).add((Vec3i) blockPos);
-                if (minecraftClient.world.getBlockState(add).isReplaceable()) {
+                Vec3 next = it.next();
+                BlockPos add = BlockPos.containing((Position) next).offset((Vec3i) blockPos);
+                if (minecraftClient.level.getBlockState(add).canBeReplaced()) {
                     if (BlockPlacer.findSupportSide(add, this.setting4.getValue().booleanValue(), this.setting5.getValue().booleanValue()) == null) {
-                        if (next.getY() > i) {
-                            arrayList.add(new Vec3d(Double.longBitsToDouble(-4616189618054758400L), i + 1, 0.0d));
+                        if (next.y > i) {
+                            arrayList.add(new Vec3(Double.longBitsToDouble(-4616189618054758400L), i + 1, 0.0d));
                         } else {
-                            arrayList.add(new Vec3d(Double.longBitsToDouble(-4616189618054758400L), i, 0.0d));
+                            arrayList.add(new Vec3(Double.longBitsToDouble(-4616189618054758400L), i, 0.0d));
                         }
                     }
                 }
             }
         } else if (this.setting4.getValue().booleanValue()) {
-            arrayList.add(new Vec3d(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d));
+            arrayList.add(new Vec3(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d));
         }
-        for (Vec3d vec3d : getSurroundOffsetVectors(i, f)) {
-            if (vec3d.getY() <= f && (this.setting5.getValue().booleanValue() || vec3d.getY() <= i)) {
-                if (this.setting6.getValue().booleanValue() || vec3d.getY() != i) {
+        for (Vec3 vec3d : getSurroundOffsetVectors(i, f)) {
+            if (vec3d.y <= f && (this.setting5.getValue().booleanValue() || vec3d.y <= i)) {
+                if (this.setting6.getValue().booleanValue() || vec3d.y != i) {
                     arrayList.add(vec3d);
                 }
             }
         }
         if (this.setting7.getValue().booleanValue()) {
-            arrayList.add(new Vec3d(0.0d, i + f + Float.intBitsToFloat(1073741824), 0.0d));
+            arrayList.add(new Vec3(0.0d, i + f + Float.intBitsToFloat(1073741824), 0.0d));
         }
         return arrayList;
     }
 
-    public List<Vec3d> getSurroundOffsetVectors(int i, float f) {
-        return Arrays.asList(new Vec3d(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d), new Vec3d(Double.longBitsToDouble(4607182418800017408L), i, 0.0d), new Vec3d(0.0d, i, Double.longBitsToDouble(4607182418800017408L)), new Vec3d(0.0d, i, Double.longBitsToDouble(-4616189618054758400L)), new Vec3d(Double.longBitsToDouble(-4616189618054758400L), i, 0.0d), new Vec3d(Double.longBitsToDouble(4607182418800017408L), i + 1, 0.0d), new Vec3d(0.0d, i + 1, Double.longBitsToDouble(4607182418800017408L)), new Vec3d(0.0d, i + 1, Double.longBitsToDouble(-4616189618054758400L)), new Vec3d(Double.longBitsToDouble(-4616189618054758400L), i + 1, 0.0d));
+    public List<Vec3> getSurroundOffsetVectors(int i, float f) {
+        return Arrays.asList(new Vec3(0.0d, i + f + Float.intBitsToFloat(1065353216), 0.0d), new Vec3(Double.longBitsToDouble(4607182418800017408L), i, 0.0d), new Vec3(0.0d, i, Double.longBitsToDouble(4607182418800017408L)), new Vec3(0.0d, i, Double.longBitsToDouble(-4616189618054758400L)), new Vec3(Double.longBitsToDouble(-4616189618054758400L), i, 0.0d), new Vec3(Double.longBitsToDouble(4607182418800017408L), i + 1, 0.0d), new Vec3(0.0d, i + 1, Double.longBitsToDouble(4607182418800017408L)), new Vec3(0.0d, i + 1, Double.longBitsToDouble(-4616189618054758400L)), new Vec3(Double.longBitsToDouble(-4616189618054758400L), i + 1, 0.0d));
     }
 
-    public boolean isValidRangeTarget(PlayerEntity playerEntity) {
-        if (playerEntity.isDead() || !playerEntity.isAlive() || playerEntity == minecraftClient.player || ClientServices.socialManager.isFriendEntity(playerEntity)) {
+    public boolean isValidRangeTarget(Player playerEntity) {
+        if (playerEntity.isDeadOrDying() || !playerEntity.isAlive() || playerEntity == minecraftClient.player || ClientServices.socialManager.isFriendEntity(playerEntity)) {
             return false;
         }
-        return (!this.setting8.getValue().booleanValue() || PlayerUtils.hasArmor((LivingEntity) playerEntity)) && playerEntity.distanceTo(minecraftClient.player) <= this.setting.getValue().floatValue() && playerEntity.isOnGround();
+        return (!this.setting8.getValue().booleanValue() || PlayerUtils.hasArmor((LivingEntity) playerEntity)) && playerEntity.distanceTo(minecraftClient.player) <= this.setting.getValue().floatValue() && playerEntity.onGround();
     }
 
-    public Vec3d getTargetPos(PlayerEntity playerEntity) {
-        Vec3d pos = playerEntity.getPos();
-        if (!(this.playerEntity instanceof FakePlayerCommand.OtherClientPlayerEntity) && !(this.playerEntity instanceof ClientPlayerEntity)) {
+    public Vec3 getTargetPos(Player playerEntity) {
+        Vec3 pos = playerEntity.position();
+        if (!(this.playerEntity instanceof FakePlayerCommand.RemotePlayer) && !(this.playerEntity instanceof LocalPlayer)) {
             DuckLivingEntity duckLivingEntity = (DuckLivingEntity)(this.playerEntity);
-            pos = new Vec3d(duckLivingEntity.mio$getServerX(), duckLivingEntity.mio$getServerY(), duckLivingEntity.mio$getServerZ());
+            pos = new Vec3(duckLivingEntity.mio$getServerX(), duckLivingEntity.mio$getServerY(), duckLivingEntity.mio$getServerZ());
         }
         return pos;
     }
 
-    public PlayerEntity getTargetPlayer() {
-        return (PlayerEntity) minecraftClient.world.getPlayers().stream().filter((v1) -> {
+    public Player getTargetPlayer() {
+        return (Player) minecraftClient.level.players().stream().filter((v1) -> {
             return isValidRangeTarget(v1);
         }).min(Comparator.comparing(abstractClientPlayerEntity -> {
-            return Float.valueOf(MathHelper.angleBetween(minecraftClient.player.getYaw(), RotationManager.getRotationsTo((Entity) abstractClientPlayerEntity)[0]));
+            return Float.valueOf(Mth.degreesDifferenceAbs(minecraftClient.player.getYRot(), RotationManager.getRotationsTo((Entity) abstractClientPlayerEntity)[0]));
         })).orElse(null);
     }
 

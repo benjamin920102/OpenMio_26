@@ -1,6 +1,7 @@
 package me.mioclient.module;
 
 import me.mioclient.event.events.network.PacketReceiveEvent;
+import net.minecraft.core.Direction;
 
 import me.mioclient.event.events.player.RotationTickEvent;
 
@@ -25,18 +26,7 @@ import me.mioclient.util.world.CustomRaycastContext;
 import me.mioclient.util.world.RaycastUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.world.BlockRaycastFilter;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.world.CustomRaycastContext;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.concurrent.LockedTaskRunner;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.PlayerUtils;
-import me.mioclient.util.world.RaycastUtils;
 
 import java.awt.Color;
 import java.lang.invoke.MethodHandles;
@@ -46,55 +36,77 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import me.mioclient.mode.player.AutoCraftMode;
-import me.mioclient.mode.combat.CrystalRotationMode;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.setting.NumberSetting;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.FinishUsingEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.player.MoveSpeedEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.client.AntiCheat;
 import me.mioclient.module.combat.Offhand;
 import me.mioclient.module.exploit.ChorusControl;
 import me.mioclient.module.movement.NoSlow;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Vec3i;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/Delay.class */
 public abstract class Delay extends Module {
-    public static final AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
-    public static final ChorusControl chorusControl = (ChorusControl) ClientServices.moduleInjector.getModule(ChorusControl.class);
-    public static final NoSlow noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving refs null (NPE). */
+    private static AntiCheat antiCheat;
+    private static ChorusControl chorusControl;
+    private static NoSlow noslow;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
+
+    public static ChorusControl getChorusControl() {
+        if (chorusControl == null && ClientServices.moduleInjector != null) {
+            try {
+                chorusControl = (ChorusControl) ClientServices.moduleInjector.getModule(ChorusControl.class);
+            } catch (Exception e) {
+            }
+        }
+        return chorusControl;
+    }
+
+    public static NoSlow getNoslow() {
+        if (noslow == null && ClientServices.moduleInjector != null) {
+            try {
+                noslow = (NoSlow) ClientServices.moduleInjector.getModule(NoSlow.class);
+            } catch (Exception e) {
+            }
+        }
+        return noslow;
+    }
     public Setting<Integer> setting;
     public Setting<Integer> setting2;
     public Setting<Boolean> setting3;
@@ -116,8 +128,8 @@ public abstract class Delay extends Module {
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
     public boolean flag;
-    public Vec3d vec3d;
-    public net.minecraft.util.math.Direction direction;
+    public Vec3 vec3d;
+    public net.minecraft.core.Direction direction;
     public Entity entity;
     public int num;
     public int num2;
@@ -128,8 +140,7 @@ public abstract class Delay extends Module {
     public boolean flag5;
     public boolean flag6;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/Delay$Record.class */
+    
     public static final class Record {
         public final boolean flag;
         public final Record_2 record_2;
@@ -140,9 +151,6 @@ public abstract class Delay extends Module {
             this.record_2 = record_2;
         }
 
-
-
-
         public boolean isPlacementEnabled() {
             return this.flag;
         }
@@ -152,8 +160,7 @@ public abstract class Delay extends Module {
         }
     }
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/Delay$Record_2.class */
+    
     public static final class Record_2 {
         public final float[] floatArr;
 
@@ -166,21 +173,18 @@ public abstract class Delay extends Module {
             if (hitResult985.getType() != HitResult.Type.BLOCK) {
                 return false;
             }
-            return new Box(hitResult985.getPos().add(Double.longBitsToDouble(-4646453807550688133L), Double.longBitsToDouble(-4646453807550688133L), Double.longBitsToDouble(-4646453807550688133L)), hitResult985.getPos().add(Double.longBitsToDouble(4576918229304087675L), Double.longBitsToDouble(4576918229304087675L), Double.longBitsToDouble(4576918229304087675L))).intersects(new Box(blockPos));
+            return new AABB(hitResult985.getLocation().add(Double.longBitsToDouble(-4646453807550688133L), Double.longBitsToDouble(-4646453807550688133L), Double.longBitsToDouble(-4646453807550688133L)), hitResult985.getLocation().add(Double.longBitsToDouble(4576918229304087675L), Double.longBitsToDouble(4576918229304087675L), Double.longBitsToDouble(4576918229304087675L))).intersects(new AABB(blockPos));
         }
 
         public HitResult getHitResult985() {
             float f = this.floatArr[1] * MathConstants.val4;
             float f2 = (-this.floatArr[0]) * MathConstants.val4;
-            float cos = MathHelper.cos(f2);
-            float sin = MathHelper.sin(f2);
-            float cos2 = MathHelper.cos(f);
-            Vec3d vec3d = new Vec3d(sin * cos2, -MathHelper.sin(f), cos * cos2);
-            return RaycastUtils.performCustomBlockRaycast(new CustomRaycastContext.Inner(ClientAccessor.minecraftClient.player.getEyePos(), ClientAccessor.minecraftClient.player.getEyePos().add(vec3d.x * Double.longBitsToDouble(4617315517961601024L), vec3d.y * Double.longBitsToDouble(4617315517961601024L), vec3d.z * Double.longBitsToDouble(4617315517961601024L))).setFilter(BlockRaycastFilter.createSolidFilter(ClientServices.stashFinderHelper.getTimedBlockMap().keySet())).build());
+            float cos = Mth.cos(f2);
+            float sin = Mth.sin(f2);
+            float cos2 = Mth.cos(f);
+            Vec3 vec3d = new Vec3(sin * cos2, -Mth.sin(f), cos * cos2);
+            return RaycastUtils.performCustomBlockRaycast(new CustomRaycastContext.Inner(ClientAccessor.minecraftClient.player.getEyePosition(), ClientAccessor.minecraftClient.player.getEyePosition().add(vec3d.x * Double.longBitsToDouble(4617315517961601024L), vec3d.y * Double.longBitsToDouble(4617315517961601024L), vec3d.z * Double.longBitsToDouble(4617315517961601024L))).setFilter(BlockRaycastFilter.createSolidFilter(ClientServices.stashFinderHelper.getTimedBlockMap().keySet())).build());
         }
-
-
-
 
         public float[] getLookAngles() {
             return this.floatArr;
@@ -262,10 +266,11 @@ public abstract class Delay extends Module {
             this.flag6 = false;
             return;
         }
-        if (Offhand.is929() || SpeedMine.isSwapLocked() || minecraftClient.player.isSpectator() || !minecraftClient.player.isAlive() || minecraftClient.player.isRiding() || minecraftClient.player.isSleeping() || isPlayerFellTooFar()) {
+        if (Offhand.is929() || SpeedMine.isSwapLocked() || minecraftClient.player.isSpectator() || !minecraftClient.player.isAlive() || minecraftClient.player.isPassenger() || minecraftClient.player.isSleeping() || isPlayerFellTooFar()) {
             return;
         }
-        if (this.flag3 && noslow.shouldApply()) {
+        NoSlow noslow_lcl = getNoslow();
+        if (this.flag3 && noslow_lcl != null && noslow_lcl.shouldApply()) {
             return;
         }
         if (this.stopwatch.hasElapsedMs(this.setting.getValue().intValue()) && is1322()) {
@@ -308,7 +313,8 @@ public abstract class Delay extends Module {
 
     @Listen
     public void onFinishUsing(FinishUsingEvent finishUsingEvent) {
-        if (finishUsingEvent.getItemStack().getItem() != Items.CHORUS_FRUIT || minecraftClient.player.isSneaking() || chorusControl.isToggled()) {
+        ChorusControl chorusControl_lcl = getChorusControl();
+        if (finishUsingEvent.getItemStack().getItem() != Items.CHORUS_FRUIT || minecraftClient.player.isShiftKeyDown() || (chorusControl_lcl != null && chorusControl_lcl.isToggled())) {
             return;
         }
         if (this.setting10.getValue().booleanValue()) {
@@ -321,14 +327,14 @@ public abstract class Delay extends Module {
     @Listen
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (this.setting7.getValue().booleanValue()) {
-            EntitySpawnS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof EntitySpawnS2CPacket ? (EntitySpawnS2CPacket) (channelRead0Event.getPacket()) : null;
-            if (packet904 instanceof EntitySpawnS2CPacket) {
-                EntitySpawnS2CPacket entitySpawnS2CPacket = packet904;
-                if (entitySpawnS2CPacket.getEntityType() == EntityType.END_CRYSTAL) {
+            ClientboundAddEntityPacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundAddEntityPacket ? (ClientboundAddEntityPacket) (channelRead0Event.getPacket()) : null;
+            if (packet904 instanceof ClientboundAddEntityPacket) {
+                ClientboundAddEntityPacket entitySpawnS2CPacket = packet904;
+                if (entitySpawnS2CPacket.getType() == EntityTypes.END_CRYSTAL) {
                     if (Offhand.is929()) {
                         return;
                     }
-                    Vec3i ofFloored = BlockPos.ofFloored(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
+                    Vec3i ofFloored = BlockPos.containing(entitySpawnS2CPacket.getX(), entitySpawnS2CPacket.getY(), entitySpawnS2CPacket.getZ());
                     List<BlockPos> list876 = getPlacePositions();
                     filterPlaceablePositions(getSlotIndex(), list876);
                     Iterator<BlockPos> it = list876.iterator();
@@ -336,11 +342,11 @@ public abstract class Delay extends Module {
                         if (!it.hasNext()) {
                             break;
                         }
-                        if (it.next().isWithinDistance(ofFloored, Double.longBitsToDouble(4611686018427387904L))) {
-                            if (!ClientServices.scaffoldHelper.sendAttackPacket(entitySpawnS2CPacket.getEntityId(), true)) {
+                        if (it.next().closerThan(ofFloored, Double.longBitsToDouble(4611686018427387904L))) {
+                            if (!ClientServices.scaffoldHelper.sendAttackPacket(entitySpawnS2CPacket.getId(), true)) {
                                 return;
                             } else {
-                                PacketSender.sendHandSwing(Hand.MAIN_HAND);
+                                PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
                             }
                         }
                     }
@@ -350,25 +356,25 @@ public abstract class Delay extends Module {
                 }
             }
         }
-        PlayerPositionLookS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof PlayerPositionLookS2CPacket ? (PlayerPositionLookS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9042 instanceof PlayerPositionLookS2CPacket) {
-            PlayerPositionLookS2CPacket playerPositionLookS2CPacket = packet9042;
-            this.val = playerPositionLookS2CPacket.getY();
-            if (minecraftClient.player.getPos().squaredDistanceTo(playerPositionLookS2CPacket.getX(), playerPositionLookS2CPacket.getY(), playerPositionLookS2CPacket.getZ()) >= Double.longBitsToDouble(4607182418800017408L) && this.setting12.getValue().booleanValue()) {
+        ClientboundPlayerPositionPacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundPlayerPositionPacket ? (ClientboundPlayerPositionPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9042 instanceof ClientboundPlayerPositionPacket) {
+            ClientboundPlayerPositionPacket playerPositionLookS2CPacket = packet9042;
+            this.val = playerPositionLookS2CPacket.change().position().y;
+            if (minecraftClient.player.position().distanceToSqr(playerPositionLookS2CPacket.change().position().x, playerPositionLookS2CPacket.change().position().y, playerPositionLookS2CPacket.change().position().z) >= Double.longBitsToDouble(4607182418800017408L) && this.setting12.getValue().booleanValue()) {
                 disable();
                 return;
             }
         }
-        if ((channelRead0Event.getPacket() instanceof PlayerRespawnS2CPacket) && this.flag2) {
+        if ((channelRead0Event.getPacket() instanceof ClientboundRespawnPacket) && this.flag2) {
             disable();
         }
-        OpenScreenS2CPacket packet9043 = (channelRead0Event.getPacket()) instanceof OpenScreenS2CPacket ? (OpenScreenS2CPacket) (channelRead0Event.getPacket()) : null;
-        if (packet9043 instanceof OpenScreenS2CPacket) {
-            OpenScreenS2CPacket openScreenS2CPacket = packet9043;
+        ClientboundOpenScreenPacket packet9043 = (channelRead0Event.getPacket()) instanceof ClientboundOpenScreenPacket ? (ClientboundOpenScreenPacket) (channelRead0Event.getPacket()) : null;
+        if (packet9043 instanceof ClientboundOpenScreenPacket) {
+            ClientboundOpenScreenPacket openScreenS2CPacket = packet9043;
             if (this.stopwatch.hasElapsedMs(100L)) {
                 return;
             }
-            PacketSender.sendPacket(new CloseHandledScreenC2SPacket(openScreenS2CPacket.getSyncId()));
+            PacketSender.sendPacket(new ServerboundContainerClosePacket(openScreenS2CPacket.getContainerId()));
             channelRead0Event.cancel();
         }
     }
@@ -387,14 +393,15 @@ public abstract class Delay extends Module {
                 this.entity = BlockPlacer.findAndAttackCrystal(next, ClientServices.scaffoldHelper.get1116());
                 if (this.entity != null) {
                     if (this.setting6.getValue().booleanValue()) {
-                        ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(this.entity), antiCheat.getYawStep()), getPriority() + 1);
+                        AntiCheat antiCheat_lcl = getAntiCheat();
+                        ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(RotationManager.getRotationsTo(this.entity), antiCheat_lcl != null ? antiCheat_lcl.getYawStep() : 1.0f), getPriority() + 1);
                     }
                     this.stopwatch2.reset();
                 }
             }
         }
         int i = getSlotIndex();
-        int i2 = minecraftClient.player.getInventory().selectedSlot;
+        int i2 = minecraftClient.player.getInventory().getSelectedSlot();
         Record_2 record_2 = null;
         Iterator<BlockPos> it2 = list.iterator();
         while (true) {
@@ -404,12 +411,12 @@ public abstract class Delay extends Module {
             BlockPos next2 = it2.next();
             if (this.num2 >= 30) {
                 this.num2 = 0;
-                ChatUtils.sendPrefixedMessage(Text.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+                ChatUtils.sendPrefixedMessage(Component.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                 this.num = 1337;
                 disable();
                 break;
             }
-            if (i == -1 || minecraftClient.player.getInventory().getStack(i).isEmpty()) {
+            if (i == -1 || minecraftClient.player.getInventory().getItem(i).isEmpty()) {
                 break;
             }
             if (this.num >= this.setting2.getValue().intValue()) {
@@ -422,8 +429,8 @@ public abstract class Delay extends Module {
             if (record1326.isPlacementEnabled() && next2 != list.getLast() && is1329()) {
                 Record_2 record_2498 = record1326.getRecord_2498();
                 if (record_2 == null || !record_2.doesRaycastHitBlock(next2)) {
-                    if (next2 != list.getFirst() || !new Record_2(new float[]{minecraftClient.player.getYaw(), minecraftClient.player.getPitch()}).doesRaycastHitBlock(next2)) {
-                        PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), record_2498.getLookAngles()[0], record_2498.getLookAngles()[1], minecraftClient.player.isOnGround());
+                    if (next2 != list.getFirst() || !new Record_2(new float[]{minecraftClient.player.getYRot(), minecraftClient.player.getXRot()}).doesRaycastHitBlock(next2)) {
+                        PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), record_2498.getLookAngles()[0], record_2498.getLookAngles()[1], minecraftClient.player.onGround());
                         record_2 = record_2498;
                     }
                 }
@@ -452,10 +459,10 @@ public abstract class Delay extends Module {
         if (this.direction == null && !this.setting3.getValue().booleanValue()) {
             return Record.record_;
         }
-        float[] floatArray2485 = RotationManager.getRotationsToSide(blockPos.toCenterPos(), this.direction);
+        float[] floatArray2485 = RotationManager.getRotationsToSide(Vec3.atCenterOf(blockPos), this.direction);
         boolean booleanValue = this.setting5.getValue().booleanValue();
         if (this.direction != null) {
-            z = booleanValue & (!WorldUtils.isAnyPositionVisible(AutoCraftMode.X8.getVisibleFaceCorners(blockPos.offset(this.direction), this.direction.getOpposite())));
+            z = booleanValue & (!WorldUtils.isAnyPositionVisible(AutoCraftMode.X8.getVisibleFaceCorners(blockPos.relative(this.direction), this.direction.getOpposite())));
         } else {
             z = booleanValue & (!WorldUtils.isPositionVisible((Vec3i) blockPos));
         }
@@ -471,7 +478,8 @@ public abstract class Delay extends Module {
             this.flag4 = true;
         }
         if (!z && tryPlaceBlock(blockPos)) {
-            if (RotationManager.is724() && antiCheat.isF2b2t()) {
+            AntiCheat antiCheat_lcl2 = getAntiCheat();
+            if (RotationManager.is724() && antiCheat_lcl2 != null && antiCheat_lcl2.isF2b2t()) {
                 floatArray2485[0] = (float) (floatArray2485[0] + (Math.random() * Double.longBitsToDouble(4576918229175238656L)));
                 floatArray2485[1] = (float) (floatArray2485[1] + (Math.random() * Double.longBitsToDouble(4576918229175238656L)));
             }
@@ -479,12 +487,13 @@ public abstract class Delay extends Module {
             if (this.setting13.getValue().booleanValue()) {
                 ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, blockPos);
             }
-            this.vec3d = blockPos.toCenterPos();
+            this.vec3d = Vec3.atCenterOf(blockPos);
             if (this.direction != null) {
-                this.vec3d = this.vec3d.offset(this.direction, MathConstants.val2);
+                this.vec3d = this.vec3d.relative(this.direction, MathConstants.val2);
             }
             if (this.setting6.getValue().booleanValue()) {
-                ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(floatArray2485, antiCheat.getYawStep()), getPriority());
+                AntiCheat antiCheat_lcl3 = getAntiCheat();
+                ClientServices.RotationManager.requestRotations(RotationManager.limitYawSpeed(floatArray2485, antiCheat_lcl3 != null ? antiCheat_lcl3.getYawStep() : 1.0f), getPriority());
             }
             this.num++;
             z2 = false;
@@ -494,7 +503,7 @@ public abstract class Delay extends Module {
     }
 
     public boolean tryPlaceBlock(BlockPos blockPos) {
-        return BlockPlacer.placeBlockPacket(blockPos, this.direction, this.setting3.getValue().booleanValue(), shouldUseOffhand() ? Hand.OFF_HAND : Hand.MAIN_HAND);
+        return BlockPlacer.placeBlockPacket(blockPos, this.direction, this.setting3.getValue().booleanValue(), shouldUseOffhand() ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
     }
 
     public int getSlotIndex() {
@@ -502,7 +511,7 @@ public abstract class Delay extends Module {
             BlockItem item = (itemStack.getItem()) instanceof BlockItem ? (BlockItem) (itemStack.getItem()) : null;
             if (item instanceof BlockItem) {
                 BlockItem blockItem = item;
-                if (blockItem.getBlock() != Blocks.ANVIL && blockItem.getBlock().getBlastResistance() >= Float.intBitsToFloat(1142292480)) {
+                if (blockItem.getBlock() != Blocks.ANVIL && blockItem.getBlock().getExplosionResistance() >= Float.intBitsToFloat(1142292480)) {
                     return true;
                 }
             }
@@ -511,22 +520,24 @@ public abstract class Delay extends Module {
     }
 
     public void do1328(BlockPos blockPos) {
-        if (minecraftClient.world.getBlockState(blockPos).isReplaceable()) {
+        if (minecraftClient.level.getBlockState(blockPos).canBeReplaced()) {
             return;
         }
-        if (minecraftClient.world.getBlockState(blockPos).getHardness(minecraftClient.world, blockPos) == 0.0f) {
-            minecraftClient.player.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, blockPos, net.minecraft.util.math.Direction.DOWN));
-            minecraftClient.player.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK, blockPos, net.minecraft.util.math.Direction.DOWN));
+        if (minecraftClient.level.getBlockState(blockPos).getDestroySpeed(minecraftClient.level, blockPos) == 0.0f) {
+            minecraftClient.player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, blockPos, net.minecraft.core.Direction.DOWN));
+            minecraftClient.player.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, blockPos, net.minecraft.core.Direction.DOWN));
         }
     }
 
     public boolean is1329() {
-        return !(antiCheat.movementSync.getValue().booleanValue() && antiCheat.rotations.getValue() == CrystalRotationMode.SILENT) && this.setting6.getValue().booleanValue() && this.setting2.getValue().intValue() > 1 && minecraftClient.player.isOnGround() && ClientServices.antiPhaseHelper.getGroundTicks() > 1 && !this.flag5;
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        boolean movementSyncSilent = antiCheat_lcl != null && antiCheat_lcl.movementSync.getValue().booleanValue() && antiCheat_lcl.rotations.getValue() == CrystalRotationMode.SILENT;
+        return !movementSyncSilent && this.setting6.getValue().booleanValue() && this.setting2.getValue().intValue() > 1 && minecraftClient.player.onGround() && ClientServices.antiPhaseHelper.getGroundTicks() > 1 && !this.flag5;
     }
 
     public boolean isPlayerFellTooFar() {
         double y = minecraftClient.player.getY() - this.val;
-        if (minecraftClient.player.isOnGround()) {
+        if (minecraftClient.player.onGround()) {
             this.val = minecraftClient.player.getY();
         }
         if ((minecraftClient.player.getY() <= this.val + Double.longBitsToDouble(4591870180066957722L) || y < Double.longBitsToDouble(4600877379321698714L) || !this.setting9.getValue().booleanValue()) && !minecraftClient.player.isSleeping()) {
@@ -540,13 +551,13 @@ public abstract class Delay extends Module {
         ArrayList arrayList = new ArrayList();
         Block block = null;
         if (i != -1) {
-            BlockItem item = (minecraftClient.player.getInventory().getStack(i).getItem()) instanceof BlockItem ? (BlockItem) (minecraftClient.player.getInventory().getStack(i).getItem()) : null;
+            BlockItem item = (minecraftClient.player.getInventory().getItem(i).getItem()) instanceof BlockItem ? (BlockItem) (minecraftClient.player.getInventory().getItem(i).getItem()) : null;
             if (item instanceof BlockItem) {
                 block = item.getBlock();
             }
         }
         for (BlockPos blockPos : list) {
-            double squaredDistanceTo = minecraftClient.player.getEyePos().squaredDistanceTo(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+            double squaredDistanceTo = minecraftClient.player.getEyePosition().distanceToSqr(blockPos.getX(), blockPos.getY(), blockPos.getZ());
             if (!BlockPlacer.canPlaceAt(blockPos, block, true, this.setting7.getValue().booleanValue()) || squaredDistanceTo > Double.longBitsToDouble(4630263366890291200L)) {
                 arrayList.add(blockPos);
             } else if (BlockPlacer.findSupportSide(blockPos) == null) {
@@ -560,7 +571,8 @@ public abstract class Delay extends Module {
     }
 
     public boolean shouldUseOffhand() {
-        return antiCheat.isF2b2t() && RotationManager.is724() && this.setting3.getValue().booleanValue() && this.flag;
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        return antiCheat_lcl != null && antiCheat_lcl.isF2b2t() && RotationManager.is724() && this.setting3.getValue().booleanValue() && this.flag;
     }
 
     public BlockPos getRoundedBlockPos() {

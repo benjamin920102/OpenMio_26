@@ -2,12 +2,10 @@ package me.mioclient.event.events.world;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/VoxelShapeEvent.class */
 public class BlockCollisionShapeEvent extends Event {
     public static final BlockCollisionShapeEvent voxelShapeEvent = new BlockCollisionShapeEvent();
     public VoxelShape voxelShape;

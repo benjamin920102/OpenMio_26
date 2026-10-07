@@ -2,18 +2,16 @@ package me.mioclient.event.events.render;
 
 import me.mioclient.event.Event;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MatrixStackEvent_2.class */
 public class HudRenderEvent extends Event {
     public static final HudRenderEvent matrixStackEvent_2 = new HudRenderEvent();
-    public MatrixStack matrixStack;
-    public DrawContext drawContext;
+    public PoseStack matrixStack;
+    public GuiGraphicsExtractor drawContext;
     public float val;
 
-    public static HudRenderEvent getMatrixStackEvent_21234(MatrixStack matrixStack, DrawContext drawContext, float f) {
+    public static HudRenderEvent getMatrixStackEvent_21234(PoseStack matrixStack, GuiGraphicsExtractor drawContext, float f) {
         matrixStackEvent_2.matrixStack = matrixStack;
         matrixStackEvent_2.val = f;
         matrixStackEvent_2.drawContext = drawContext;
@@ -21,7 +19,7 @@ public class HudRenderEvent extends Event {
         return matrixStackEvent_2;
     }
 
-    public MatrixStack getMatrixStack() {
+    public PoseStack getMatrixStack() {
         return this.matrixStack;
     }
 
@@ -29,7 +27,7 @@ public class HudRenderEvent extends Event {
         return this.val;
     }
 
-    public DrawContext getDrawContext() {
+    public GuiGraphicsExtractor getDrawContext() {
         return this.drawContext;
     }
 }

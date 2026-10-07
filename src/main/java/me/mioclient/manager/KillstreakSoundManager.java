@@ -9,8 +9,6 @@ import me.mioclient.util.io.FileIO;
 import me.mioclient.util.io.HttpRequests;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.util.io.FileIO;
-import me.mioclient.util.io.HttpRequests;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.ByteArrayInputStream;
@@ -28,19 +26,11 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import net.minecraft.util.InvalidIdentifierException;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.IdentifierException;
+import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import me.mioclient.mode.client.NotificationSound;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.client.SoundPlayer;
-import me.mioclient.util.text.StringTemplate;
-import me.mioclient.util.client.SoundIdentifier;
-import me.mioclient.util.client.SoundPlayer;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KillstreakSoundManager.class */
 public final class KillstreakSoundManager implements ClientAccessor {
     public final Map<SoundIdentifier, SoundPlayer> map = Collections.synchronizedMap(new HashMap());
     public ObjectArrayList<SoundPlayer> objectArrayList = new ObjectArrayList<>();
@@ -168,7 +158,7 @@ public final class KillstreakSoundManager implements ClientAccessor {
         findSoundPlayer(searchIdentifier).play(f);
     }
 
-    public void playSoundAt(SoundIdentifier searchIdentifier, Vec3d vec3d, float f) {
+    public void playSoundAt(SoundIdentifier searchIdentifier, Vec3 vec3d, float f) {
         findSoundPlayer(searchIdentifier).playAt(vec3d, f);
     }
 
@@ -199,7 +189,7 @@ public final class KillstreakSoundManager implements ClientAccessor {
                 try {
                     this.map.put(new SoundIdentifier(str, file.getName().replace(".ogg", "")), new SoundPlayer(FileIO.readBytes(file.toPath())));
                 } catch (Exception e) {
-                    if (e instanceof InvalidIdentifierException) {
+                    if (e instanceof IdentifierException) {
                         logger.warn("Failed to load sound: %s".formatted(e.getMessage()));
                     } else {
                         logger.warn("Failed to load sound %s: %s".formatted(file.getName(), e.toString()));

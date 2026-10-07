@@ -2,14 +2,8 @@ package me.mioclient.mode.combat;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
+import net.minecraft.core.Vec3i;
 
-import me.mioclient.api.NamedValue;
-
-import net.minecraft.util.math.Vec3i;
-
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BlockerOffsetMode.class */
 public enum BlockerOffsetMode implements NamedValue {
     FULL("Full", new Vec3i(1, 0, 0), new Vec3i(0, 0, 1), new Vec3i(-1, 0, 0), new Vec3i(0, 0, -1), new Vec3i(1, 1, 0), new Vec3i(0, 1, 1), new Vec3i(-1, 1, 0), new Vec3i(0, 1, -1), new Vec3i(0, 2, 0), new Vec3i(0, 3, 0)),
     SURROUND("Surround", new Vec3i(1, 0, 0), new Vec3i(0, 0, 1), new Vec3i(-1, 0, 0), new Vec3i(0, 0, -1)),

@@ -7,8 +7,6 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ObjectSetting_2.class */
 public final class ObjectSetting_2 extends ObjectSetting<String> {
     public ObjectSetting_2(String str, String... strArr) {
         super(str, strArr);

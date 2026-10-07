@@ -6,8 +6,6 @@ import me.mioclient.api.Category;
 import me.mioclient.api.Keybind;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/KeybindModule.class */
 public abstract class KeybindModule extends Module {
     public KeybindModule(String str, String str2, Category category, String... strArr) {
         super(str, str2, category, strArr);

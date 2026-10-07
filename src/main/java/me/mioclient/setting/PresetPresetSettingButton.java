@@ -5,17 +5,11 @@ import me.mioclient.gui.widget.PanelComponent;
 import me.mioclient.gui.panel.ClickGuiPanel;
 import me.mioclient.render.font.ClientTextRenderer;
 
-import me.mioclient.gui.panel.ClickGuiPanel;
-import me.mioclient.render.font.ClientTextRenderer;
-
 import java.awt.Color;
 import java.util.function.Supplier;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import me.mioclient.gui.widget.PanelComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetPresetSettingButton.class */
 public class PresetPresetSettingButton extends PanelComponent {
     public final Supplier<String> supplier;
     public boolean flag;
@@ -33,7 +27,7 @@ public class PresetPresetSettingButton extends PanelComponent {
     }
 
     @Override // me.mioclient.gui.widget.PanelComponent, me.mioclient.gui.GuiComponent
-    public void render(DrawContext drawContext, MatrixStack matrixStack, double d, double d2) {
+    public void render(GuiGraphicsExtractor drawContext, PoseStack matrixStack, double d, double d2) {
         String[] split = this.supplier.get().split("\n");
         for (int i = 0; i < split.length; i++) {
             ClientTextRenderer.INSTANCE.drawTextShadow(drawContext, split[i], this.presetEnumSettingHelper.getX() + getUI().modulePadding.getValue().intValue(), ((((this.presetEnumSettingHelper.getY() + this.num) + getTextOffsetY()) + (i * ClientTextRenderer.INSTANCE.getFontHeight())) + Float.intBitsToFloat(1065353216)) - ((this.flag && containsPoint(d, d2)) ? Float.intBitsToFloat(1065353216) : 0.0f), Color.white);

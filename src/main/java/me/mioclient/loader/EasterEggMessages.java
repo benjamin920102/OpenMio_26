@@ -1,6 +1,5 @@
 package me.mioclient.loader;
 
-/* loaded from: mio-yarn.jar:me/mioclient/Helper_16.class */
 public class EasterEggMessages {
 
     /* renamed from: 0, reason: not valid java name */

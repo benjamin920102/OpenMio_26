@@ -2,13 +2,9 @@ package me.mioclient.network.packet;
 
 import me.mioclient.network.codec.NetworkMessage;
 
-import me.mioclient.network.codec.NetworkMessage;
-
 import java.util.ArrayList;
 import java.util.List;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PacketRegistry.class */
 public class PacketRegistry {
     public static List<NetworkMessage> list = new ArrayList();
 

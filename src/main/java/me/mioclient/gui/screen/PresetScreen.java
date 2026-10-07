@@ -5,17 +5,9 @@ import me.mioclient.gui.panel.PresetPanel;
 import me.mioclient.mode.misc.PresetHelperMode;
 import me.mioclient.util.anim.ValueAnimator;
 
-import me.mioclient.util.anim.ValueAnimator;
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.nio.file.Path;
-import me.mioclient.gui.panel.PresetListPanel;
-import me.mioclient.gui.panel.PresetPanel;
-import net.minecraft.client.gui.DrawContext;
-import me.mioclient.mode.misc.PresetHelperMode;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/PresetScreen.class */
 public class PresetScreen extends AbstractClickGuiScreen {
     public final PresetListPanel list = new PresetListPanel(this);
     public final PresetPanel preset = new PresetPanel(this);
@@ -29,15 +21,13 @@ public class PresetScreen extends AbstractClickGuiScreen {
     }
 
     @Override // me.mioclient.gui.screen.AbstractClickGuiScreen
-    public void renderCustomContent(DrawContext drawContext, int i, int i2, float f) {
-        this.zoomHelper.toggle(!minecraftClient.isWindowFocused(), 250L);
+    public void renderCustomContent(GuiGraphicsExtractor drawContext, int i, int i2, float f) {
+        this.zoomHelper.toggle(!minecraftClient.getWindow().isFocused(), 250L);
         float f2 = this.zoomHelper.getValue();
         if (f2 == 0.0f) {
             return;
         }
-        RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1061158912) * f2);
-        drawContext.drawCenteredTextWithShadow(minecraftClient.textRenderer, "Drop preset files here", drawContext.getScaledWindowWidth() / 2, drawContext.getScaledWindowHeight() / 2, -1);
-        RenderSystem.setShaderColor(Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216), Float.intBitsToFloat(1065353216));
+        drawContext.centeredText(minecraftClient.font, "Drop preset files here", drawContext.guiWidth() / 2, drawContext.guiHeight() / 2, -1);
     }
 
     public void filesDragged(java.util.List<Path> list) {

@@ -6,40 +6,35 @@ import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.math.BoxMath;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.math.BoxMath;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/EspTargetFilter.class */
 public class EspTargetFilter implements ClientAccessor {
     public final Map<String, Integer> map = new TreeMap(Comparator.comparing(obj -> {
         return (String) obj;
     }).reversed());
-    public final Box box;
-    public Box box2;
+    public final AABB box;
+    public AABB box2;
     public float val;
 
     public EspTargetFilter(ItemEntity itemEntity) {
-        float tickDelta = minecraftClient.getRenderTickCounter().getTickDelta(true);
-        this.box = Box.of(itemEntity.getLerpedPos(tickDelta), Double.longBitsToDouble(4617315517961601024L), Double.longBitsToDouble(4617315517961601024L), Double.longBitsToDouble(4617315517961601024L));
+        float tickDelta = minecraftClient.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        this.box = AABB.ofSize(itemEntity.getPosition(tickDelta), Double.longBitsToDouble(4617315517961601024L), Double.longBitsToDouble(4617315517961601024L), Double.longBitsToDouble(4617315517961601024L));
         this.box2 = BoxMath.getInterpolatedBox((Entity) itemEntity, tickDelta);
         addTrackedItem(itemEntity);
     }
 
-    public Box getClusterBox() {
+    public AABB getClusterBox() {
         return this.box;
     }
 
-    public Box getMergedBox() {
+    public AABB getMergedBox() {
         return this.box2;
     }
 
@@ -47,16 +42,16 @@ public class EspTargetFilter implements ClientAccessor {
         if (!this.box.intersects(itemEntity.getBoundingBox())) {
             return false;
         }
-        float tickDelta = minecraftClient.getRenderTickCounter().getTickDelta(true);
+        float tickDelta = minecraftClient.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         String string = itemEntity.getName().getString();
         this.map.compute(string, (str, num) -> {
-            return Integer.valueOf(itemEntity.getStack().getCount() + (num == null ? 0 : num.intValue()));
+            return Integer.valueOf(itemEntity.getItem().getCount() + (num == null ? 0 : num.intValue()));
         });
         this.val = Math.max(ClientTextRenderer.INSTANCE.getStringWidth(formatItemCountLabel(string, this.map.get(string).intValue())), this.val);
-        if (new Vec3d(itemEntity.getX() - itemEntity.prevX, itemEntity.getY() - itemEntity.prevY, itemEntity.getZ() - itemEntity.prevZ).lengthSquared() >= Double.longBitsToDouble(4547007122018943789L)) {
+        if (new Vec3(itemEntity.getX() - itemEntity.xo, itemEntity.getY() - itemEntity.yo, itemEntity.getZ() - itemEntity.zo).lengthSqr() >= Double.longBitsToDouble(4547007122018943789L)) {
             return true;
         }
-        this.box2 = this.box2.union(BoxMath.getInterpolatedBox((Entity) itemEntity, tickDelta));
+        this.box2 = this.box2.minmax(BoxMath.getInterpolatedBox((Entity) itemEntity, tickDelta));
         return true;
     }
 

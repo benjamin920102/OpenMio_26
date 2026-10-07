@@ -2,25 +2,20 @@ package me.mioclient.util.inventory;
 
 import me.mioclient.api.NamedValue;
 
-import me.mioclient.api.NamedValue;
-
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.runtime.ObjectMethods;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/InventoryKit.class */
 public final class InventoryKit implements NamedValue {
     public final Map<Integer, Record> map = new HashMap();
     public final String name;
 
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/ChestStealerEnumSettingHelper$Record.class */
+    
     public static final class Record {
         public final int num;
         public final String string;
@@ -31,11 +26,8 @@ public final class InventoryKit implements NamedValue {
         }
 
         public boolean matchesItem(ItemStack itemStack) {
-            return Item.getRawId(itemStack.getItem()) == this.num && Objects.equals(KitRegistry.buildPotionDescriptor(itemStack), this.string);
+            return BuiltInRegistries.ITEM.getId(itemStack.getItem()) == this.num && Objects.equals(KitRegistry.buildPotionDescriptor(itemStack), this.string);
         }
-
-
-
 
         public int getRawItemId() {
             return this.num;

@@ -1,92 +1,119 @@
 package me.mioclient.mixin;
 
 import me.mioclient.api.ClientServices;
-
-import me.mioclient.render.shader.ShaderPassRegistry;
-
-import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.shader.ShaderPassRegistry;
-
-import me.mioclient.event.events.render.RenderLabelEvent;
-import me.mioclient.module.render.Ambience;
+import me.mioclient.manager.RotationManager;
 import me.mioclient.module.render.NameTags;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.Text;
+import me.mioclient.module.render.Chams;
+import me.mioclient.module.render.chams.ChamsColorApplier;
+import me.mioclient.ducks.DuckChamsState;
+import me.mioclient.util.math.ColorUtils;
+import java.awt.Color;
+import me.mioclient.module.render.Shader;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.ARGB;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/* compiled from: 0.java */
+/* 26.2 port (verified via JDK25 javap): EntityRenderer.extractRenderState sets
+   EntityRenderState.outlineColor from vanilla glow (spectral/team) and vanilla's
+   LevelRenderer.doEntityOutline() composites every non-zero outlineColor through
+   its own post chain. Setting outlineColor here is the 26.2-native backend for the
+   Shader module's entity glow — no custom framebuffer pass needed. Vanilla's own
+   glow is preserved when the module does not claim the entity. */
 @Mixin({EntityRenderer.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinEntityRenderer.class */
-public abstract class MixinEntityRenderer<T extends Entity> {
-    private static NameTags nametags;
 
-    private static NameTags getNametags() {
+public abstract class MixinEntityRenderer {
+    private static Shader shader;
+    private static NameTags nameTags;
+    private static Chams chams;
 
-        if (nametags == null && ClientServices.moduleInjector != null) {
-
-            try { nametags = (NameTags) ClientServices.moduleInjector.getModule(NameTags.class); } catch (Exception e) {}
-
+    private static Chams getChams() {
+        if (chams == null && ClientServices.moduleInjector != null) {
+            try {
+                chams = (Chams) ClientServices.moduleInjector.getModule(Chams.class);
+            } catch (Exception e) {
+            }
         }
-
-        return nametags;
-
-    }
-    private static Ambience ambience;
-
-    private static Ambience getAmbience() {
-
-        if (ambience == null && ClientServices.moduleInjector != null) {
-
-            try { ambience = (Ambience) ClientServices.moduleInjector.getModule(Ambience.class); } catch (Exception e) {}
-
-        }
-
-        return ambience;
-
+        return chams;
     }
 
-    @Inject(method = {"renderLabelIfPresent"}, at = {@At("HEAD")}, cancellable = true)
-    private void onRenderLabel(T t, Text text, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, float f, CallbackInfo callbackInfo) {
-        if (ShaderPassRegistry.flag) {
-            callbackInfo.cancel();
+    private static Shader getShader() {
+        if (shader == null && ClientServices.moduleInjector != null) {
+            try {
+                shader = (Shader) ClientServices.moduleInjector.getModule(Shader.class);
+            } catch (Exception e) {
+            }
+        }
+        return shader;
+    }
+
+    private static NameTags getNameTags() {
+        if (nameTags == null && ClientServices.moduleInjector != null) {
+            try {
+                nameTags = (NameTags) ClientServices.moduleInjector.getModule(NameTags.class);
+            } catch (Exception e) {
+            }
+        }
+        return nameTags;
+    }
+
+    @Inject(method = {"extractRenderState(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;F)V"}, at = {@At("TAIL")})
+    private void mio$applyModGlow(Entity entity, EntityRenderState state, float partialTick, CallbackInfo ci) {
+        if (entity == null || state == null) {
             return;
         }
-        RenderLabelEvent renderLabelEvent = new RenderLabelEvent(matrixStack, t);
-        ClientAccessor.eventBus.fireEvent(renderLabelEvent);
-        if (renderLabelEvent.isCancelled()) {
-            callbackInfo.cancel();
+        try {
+            Shader shaderLocal = getShader();
+            if (shaderLocal != null && shaderLocal.isToggled() && shaderLocal.shouldRenderEntity(entity)) {
+                state.outlineColor = ARGB.opaque(shaderLocal.outline2.getValue().hashCode());
+            }
+            Chams chamsLocal = getChams();
+            if (chamsLocal != null && chamsLocal.isToggled() && chamsLocal.shouldRenderEntity(entity)) {
+                ChamsColorApplier mode = chamsLocal.getChamsModeForEntity(entity).getValue();
+                if (mode != null && mode.is594()) {
+                    Color[] pair = mode.getChamsColors(chamsLocal);
+                    Color fill = pair != null && pair.length > 1 ? pair[1] : null;
+                    if (fill != null) {
+                        if (chamsLocal.fade.getValue().booleanValue()) {
+                            float f = chamsLocal.get2044(entity);
+                            fill = ColorUtils.withAlpha(fill, (int) (f * fill.getAlpha()));
+                        }
+                        if (fill.getAlpha() != 0) {
+                            ((DuckChamsState) (Object) state).mio$setChamsTint(fill.hashCode());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
         }
     }
 
-    @Inject(method = {"hasLabel"}, at = {@At("HEAD")}, cancellable = true)
-    private void hasLabelHook(T t, CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
-        NameTags nametags_lcl = getNametags();
-
-        if (nametags_lcl == null) return;
-
-        if ((t instanceof PlayerEntity) && nametags_lcl.isToggled()) {
-            callbackInfoReturnable.cancel();
-            callbackInfoReturnable.setReturnValue(Boolean.valueOf(t.hasCustomName()));
-        }
-    }
-
-    @Inject(method = {"getSkyLight"}, at = {@At("RETURN")}, cancellable = true)
-    private void getSkyLightHook(CallbackInfoReturnable<Integer> callbackInfoReturnable) {
-        Ambience ambience_lcl = getAmbience();
-
-        if (ambience_lcl == null) return;
-
-        if (ambience_lcl.isToggled() && ambience_lcl.brightness.getValue() == Ambience.MixinEntityRendererMode.SKY) {
-            callbackInfoReturnable.setReturnValue(Integer.valueOf(Math.max(ambience_lcl.lightLevel.getValue().intValue(), callbackInfoReturnable.getReturnValueI())));
+    @Inject(method = {"extractNameTags(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;FDD)V"}, at = {@At("HEAD")}, cancellable = true)
+    private void mio$suppressVanillaTags(Entity entity, EntityRenderState state, float partialTick, double d1, double d2, CallbackInfo ci) {
+        /* The NameTags module replaces vanilla player labels; without this both would draw. */
+        try {
+            NameTags nt = getNameTags();
+            Minecraft mc = Minecraft.getInstance();
+            if (nt == null || !nt.isToggled() || !(entity instanceof Player) || mc.player == null || mc.level == null) {
+                return;
+            }
+            if (entity.isRemoved() || !RotationManager.isInFrustum(entity.getBoundingBox())) {
+                return;
+            }
+            if (mc.player.distanceTo(entity) > nt.range.getValue().intValue()) {
+                return;
+            }
+            state.nameTag = null;
+            state.scoreText = null;
+            ci.cancel();
+        } catch (Exception e) {
         }
     }
 }

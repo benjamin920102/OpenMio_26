@@ -26,10 +26,6 @@ import me.mioclient.util.world.BlockBreakProgressTracker;
 
 import me.mioclient.api.ClientAccessor;
 import me.mioclient.command.ClientCommandRegistry;
-import me.mioclient.gui.screen.ClickGuiScreen;
-import me.mioclient.gui.screen.HudEditorScreen;
-import me.mioclient.module.combat.autocrystal.CrystalAttackHandler;
-import me.mioclient.util.inventory.KitRegistry;
 import me.mioclient.manager.AliasManager;
 import me.mioclient.manager.ConfigManager;
 import me.mioclient.manager.HoleTracker;
@@ -44,32 +40,14 @@ import me.mioclient.manager.WaypointRegistry;
 import me.mioclient.manager.WorldStateTracker;
 import me.mioclient.module.misc.chatfilter.ChatFilterRegistry;
 import me.mioclient.module.misc.discordnotifs.WebhookSender;
-import me.mioclient.network.irc.IrcClient;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.baritone.BaritonePathingController;
-import me.mioclient.util.world.BlockBreakProgressTracker;
-import me.mioclient.util.time.FrameRateTracker;
-import me.mioclient.util.baritone.NoopPathingController;
-import me.mioclient.util.baritone.PathingController;
-import me.mioclient.util.player.PlayerSpeedTracker;
-import me.mioclient.util.player.SentMovementTracker;
-import me.mioclient.util.client.SessionRankState;
-import me.mioclient.util.time.TickScheduler;
 
 import java.util.Locale;
-import me.mioclient.manager.ItemListConfig;
-import me.mioclient.event.events.client.ClientInitEvent;
-import me.mioclient.manager.AsyncTaskTracker;
 import me.mioclient.api.Category;
-import me.mioclient.manager.HudManager;
 import me.mioclient.manager.KillstreakSoundManager;
 import me.mioclient.manager.MacroManager;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.manager.SocialManager;
-import me.mioclient.module.misc.stashfinder.StashRegistry;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/ClientServices.class */
 public class ClientServices {
     public static ModuleFieldInjector moduleInjector = new ModuleFieldInjector();
     public static TickRateManager holeSnapHelper;

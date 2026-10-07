@@ -4,8 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import me.mioclient.api.Setting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BooleanSetting.class */
 public final class BooleanSetting extends Setting<Boolean> {
     public BooleanSetting(String str, Boolean bool, java.util.function.Predicate<Boolean> predicate) {
         super(str, bool, predicate);

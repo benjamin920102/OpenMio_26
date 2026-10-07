@@ -6,30 +6,35 @@ import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.player.PlayerUtils;
 
-import me.mioclient.mode.combat.KeyPearlMode;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MotionEvent;
 import me.mioclient.module.Module;
 import me.mioclient.module.movement.ElytraFly;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import me.mioclient.setting.BooleanSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/KeyPearl.class */
 public class KeyPearl extends Module {
-    public static final ElytraFly elytrafly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class);
+    /* Resolved lazily — static init ran before module registry was ready, leaving field null. */
+    private static ElytraFly elytrafly;
+
+    public static ElytraFly getElytrafly() {
+        if (elytrafly == null && ClientServices.moduleInjector != null) {
+            try {
+                elytrafly = (ElytraFly) ClientServices.moduleInjector.getModule(ElytraFly.class);
+            } catch (Exception e) {
+            }
+        }
+        return elytrafly;
+    }
     public Setting<Boolean> noEntityTrace = add(new BooleanSetting("NoEntityTrace", true));
     public Setting<Boolean> solid = add(new BooleanSetting("Solid", true));
     public Setting<Boolean> disableOnElytra = add(new BooleanSetting("DisableOnElytra", false));
@@ -46,8 +51,9 @@ public class KeyPearl extends Module {
             disable();
             return;
         }
-        boolean z = elytrafly.isToggled() && this.disableOnElytra.getValue().booleanValue() && !minecraftClient.player.isOnGround() && PlayerUtils.hasElytraEquipped(minecraftClient.player);
-        if (minecraftClient.player.hasVehicle() && this.disableOnRiding.getValue().booleanValue()) {
+        ElytraFly elytrafly_lcl = getElytrafly();
+        boolean z = elytrafly_lcl != null && elytrafly_lcl.isToggled() && this.disableOnElytra.getValue().booleanValue() && !minecraftClient.player.onGround() && PlayerUtils.hasElytraEquipped(minecraftClient.player);
+        if (minecraftClient.player.getVehicle() != null && this.disableOnRiding.getValue().booleanValue()) {
             z = true;
         }
         if (z) {
@@ -62,16 +68,17 @@ public class KeyPearl extends Module {
         }
         int i = InventoryUtils.findInHotbar(Items.ENDER_PEARL);
         int i2 = InventoryUtils.findSlot(Items.ENDER_PEARL);
-        int i3 = minecraftClient.player.getInventory().selectedSlot;
-        boolean z = (minecraftClient.crosshairTarget instanceof EntityHitResult) && this.noEntityTrace.getValue().booleanValue();
-        if (i2 == -1 || z || minecraftClient.player.isFallFlying() || elytrafly.shouldSwapElytra() || minecraftClient.player.hasVehicle()) {
+        int i3 = minecraftClient.player.getInventory().getSelectedSlot();
+        boolean z = (minecraftClient.hitResult instanceof EntityHitResult) && this.noEntityTrace.getValue().booleanValue();
+        ElytraFly elytrafly_lcl = getElytrafly();
+        if (i2 == -1 || z || minecraftClient.player.isFallFlying() || (elytrafly_lcl != null && elytrafly_lcl.shouldSwapElytra()) || minecraftClient.player.getVehicle() != null) {
             disable();
             return;
         }
-        BlockHitResult blockHitResult = (minecraftClient.crosshairTarget) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.crosshairTarget) : null;
+        BlockHitResult blockHitResult = (minecraftClient.hitResult) instanceof BlockHitResult ? (BlockHitResult) (minecraftClient.hitResult) : null;
         if (blockHitResult instanceof BlockHitResult) {
             BlockHitResult blockHitResult2 = blockHitResult;
-            if (!minecraftClient.world.getBlockState(blockHitResult2.getBlockPos()).isReplaceable() && blockHitResult2.getType() != HitResult.Type.MISS && !this.solid.getValue().booleanValue()) {
+            if (!minecraftClient.level.getBlockState(blockHitResult2.getBlockPos()).canBeReplaced() && blockHitResult2.getType() != HitResult.Type.MISS && !this.solid.getValue().booleanValue()) {
                 disable();
                 return;
             }
@@ -81,9 +88,9 @@ public class KeyPearl extends Module {
         }
         boolean z2 = i == -1;
         equipSlot(z2 ? i2 : i, z2);
-        minecraftClient.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYaw(), minecraftClient.player.getPitch(), minecraftClient.player.isOnGround()));
-        PacketSender.sendInteractItem(Hand.MAIN_HAND);
-        PacketSender.sendHandSwing(Hand.MAIN_HAND);
+        minecraftClient.player.connection.send(new ServerboundMovePlayerPacket.PosRot(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), minecraftClient.player.getYRot(), minecraftClient.player.getXRot(), minecraftClient.player.onGround(), minecraftClient.player.horizontalCollision));
+        PacketSender.sendInteractItem(InteractionHand.MAIN_HAND);
+        PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
         equipSlot(z2 ? i2 : i3, z2);
         ClientServices.moduleRegistry.getDelayModules().stream().filter(delay -> {
             return delay.setting11.getValue().booleanValue();

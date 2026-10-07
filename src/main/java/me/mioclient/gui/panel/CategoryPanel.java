@@ -8,15 +8,11 @@ import me.mioclient.gui.widget.ModuleButton;
 import me.mioclient.render.font.ClientTextRenderer;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
 
 import java.util.Iterator;
 import me.mioclient.api.Category;
 import me.mioclient.module.Module;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/CategoryPanel.class */
 public class CategoryPanel extends ClickGuiPanel implements ClientAccessor {
     public Category category;
 
@@ -36,11 +32,11 @@ public class CategoryPanel extends ClickGuiPanel implements ClientAccessor {
             return true;
         }
         ModuleButton arrayListPresetHelper2 = (ModuleButton) presetHelper_5;
-        if (ClientServices.getClickGui().getSearchField().getText().isEmpty()) {
+        if (ClientServices.getClickGui().getSearchField().getValue().isEmpty()) {
             return true;
         }
         for (String str : arrayListPresetHelper2.getModule().getAliases()) {
-            if (str.toLowerCase().contains(ClientServices.getClickGui().getSearchField().getText().toLowerCase())) {
+            if (str.toLowerCase().contains(ClientServices.getClickGui().getSearchField().getValue().toLowerCase())) {
                 return true;
             }
         }

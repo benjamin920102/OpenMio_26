@@ -4,18 +4,16 @@ import me.mioclient.mode.world.ReachMode;
 
 import java.util.Collections;
 import java.util.Iterator;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import me.mioclient.mode.world.ReachMode;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/BlockRaycastFilter.class */
 public interface BlockRaycastFilter {
     public static final BlockRaycastFilter holeSnapHelper = (blockPos, blockState) -> {
         return ReachMode.NONE;
     };
     public static final BlockRaycastFilter holeSnapHelper2 = (blockPos, blockState) -> {
-        return blockState.getBlock().getBlastResistance() < 600.0f ? ReachMode.IGNORE : ReachMode.NONE;
+        // 26.2 port: Block.getBlastResistance() (no-arg) replaces Yarn getBlastResistance().
+        return blockState.getBlock().getExplosionResistance() < 600.0f ? ReachMode.IGNORE : ReachMode.NONE;
     };
 
     ReachMode test(BlockPos blockPos, BlockState blockState);

@@ -8,22 +8,15 @@ import me.mioclient.util.player.MovementUtils;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.MovementUtils;
 
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.MoveEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
 import me.mioclient.event.events.client.TickPostEvent;
 import me.mioclient.event.events.player.RotationEvent;
 import me.mioclient.event.events.player.MotionEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.movement.ElytraFly;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.Direction;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/GlideElytraFlight.class */
 public class GlideElytraFlight extends ElytraFlyModeBase {
     public long num;
     public float val;
@@ -57,15 +50,15 @@ public class GlideElytraFlight extends ElytraFlyModeBase {
             }
             double[] doubleArray2507 = MovementUtils.applyVelocity(moveEvent, this.val);
             float f = -this.elytraFly.glide.getValue().floatValue();
-            minecraftClient.player.setVelocity(doubleArray2507[0], f, doubleArray2507[1]);
+            minecraftClient.player.setDeltaMovement(doubleArray2507[0], f, doubleArray2507[1]);
             moveEvent.setY(f);
-            if (minecraftClient.player.input.sneaking) {
+            if (minecraftClient.player.input.keyPresses.shift()) {
                 moveEvent.setY(Double.longBitsToDouble(-4620693217682128896L));
-                minecraftClient.player.setVelocity(minecraftClient.player.getVelocity().withAxis(Direction.Axis.Y, Double.longBitsToDouble(-4620693217682128896L)));
+                minecraftClient.player.setDeltaMovement(minecraftClient.player.getDeltaMovement().with(Direction.Axis.Y, Double.longBitsToDouble(-4620693217682128896L)));
             }
             PacketSender.sendStartFallFlying();
             if (this.elytraFly.antiAfk.getValue().booleanValue() && moveEvent.getX() == 0.0d && moveEvent.getZ() == 0.0d && this.stopwatch.hasElapsedMs(2500L)) {
-                moveEvent.setHorizontal(Math.sin(Math.toRadians(minecraftClient.player.age % MathConstants.num3)) * Double.longBitsToDouble(4584304132692975288L), Math.cos(Math.toRadians(minecraftClient.player.age % MathConstants.num3)) * Double.longBitsToDouble(4584304132692975288L));
+                moveEvent.setHorizontal(Math.sin(Math.toRadians(minecraftClient.player.tickCount % MathConstants.num3)) * Double.longBitsToDouble(4584304132692975288L), Math.cos(Math.toRadians(minecraftClient.player.tickCount % MathConstants.num3)) * Double.longBitsToDouble(4584304132692975288L));
             } else if (MovementUtils.is2181()) {
                 this.stopwatch.reset();
             }

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 
-/* loaded from: mio-yarn.jar:me/mioclient/StringFormatter.class */
 public final class StringTemplate {
     public static final char ch2 = 2;
     public final List<String> list = new ArrayList();

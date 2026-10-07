@@ -9,30 +9,26 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.client.ChatUtils;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.client.ChatUtils;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import me.mioclient.event.events.network.PacketReceiveEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
-import me.mioclient.event.events.network.PacketSendPostEvent;
 import me.mioclient.module.misc.NoPacketKick;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.NetworkSide;
-import net.minecraft.network.PacketCallbacks;
-import net.minecraft.network.packet.Packet;
-import org.spongepowered.asm.mixin.Final;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/* compiled from: 0.java */
-@Mixin({ClientConnection.class})
-/* loaded from: mio-yarn.jar:me/mioclient/mixin/MixinClientConnection.class */
-public class MixinClientConnection {
+/* 26.2 port (verified): channel field survives; protocol side check is now
+   getReceiving() vs PacketFlow.CLIENTBOUND; sendImmediately/sendInternal and
+   PacketCallbacks are gone — send hooks moved to send(Packet, ChannelFutureListener,
+   boolean); channelRead0(ChannelHandlerContext, Packet) survives. */
+@Mixin({Connection.class})
+public abstract class MixinClientConnection {
     private static NoPacketKick nopacketkick;
 
     private static NoPacketKick getNopacketkick() {
@@ -48,15 +44,11 @@ public class MixinClientConnection {
     }
 
     @Shadow
-    private Channel field_11651;
-
-    @Shadow
-    @Final
-    private NetworkSide field_11643;
+    private Channel channel;
 
     @Inject(method = {"channelRead0*"}, at = {@At("HEAD")}, cancellable = true)
     public void channelRead0(ChannelHandlerContext channelHandlerContext, Packet<?> packet, CallbackInfo callbackInfo) {
-        if (!this.field_11651.isOpen() || packet == null) {
+        if (!this.channel.isOpen() || packet == null) {
             return;
         }
         try {
@@ -69,11 +61,23 @@ public class MixinClientConnection {
         }
     }
 
-    @Inject(method = {"sendImmediately"}, at = {@At("HEAD")}, cancellable = true)
-    private void sendImmediately(Packet<?> packet, PacketCallbacks packetCallbacks, boolean z, CallbackInfo callbackInfo) {
-        if (this.field_11643 != NetworkSide.CLIENTBOUND) {
+    /* 26.2 port: Connection.send has 3 overloads now — pin the 3-arg one
+       (Packet, ChannelFutureListener, boolean) matching these handlers. */
+    private static final ThreadLocal<Boolean> firingPacketSend = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    @Inject(method = {"send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V"}, at = {@At("HEAD")}, cancellable = true)
+    private void sendImmediately(Packet<?> packet, ChannelFutureListener packetCallbacks, boolean z, CallbackInfo callbackInfo) {
+        if (this.getReceiving() != PacketFlow.CLIENTBOUND) {
             return;
         }
+        /* Re-entrant sends (a PacketSendEvent handler sending another packet) bypass
+           the event: the inner packet is already final. Without this the handlers
+           recurse until StackOverflowError. Thread-local because sends happen on
+           several threads. */
+        if (firingPacketSend.get().booleanValue()) {
+            return;
+        }
+        firingPacketSend.set(Boolean.TRUE);
         try {
             PacketSendEvent sendImmediatelyEvent = new PacketSendEvent(packet);
             ClientAccessor.eventBus.fireEvent(sendImmediatelyEvent);
@@ -81,12 +85,14 @@ public class MixinClientConnection {
                 callbackInfo.cancel();
             }
         } catch (Exception e) {
+        } finally {
+            firingPacketSend.set(Boolean.FALSE);
         }
     }
 
-    @Inject(method = {"sendInternal"}, at = {@At("TAIL")})
-    private void sendInternal(Packet<?> packet, PacketCallbacks packetCallbacks, boolean z, CallbackInfo callbackInfo) {
-        if (this.field_11643 != NetworkSide.CLIENTBOUND) {
+    @Inject(method = {"send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V"}, at = {@At("TAIL")})
+    private void sendInternal(Packet<?> packet, ChannelFutureListener packetCallbacks, boolean z, CallbackInfo callbackInfo) {
+        if (this.getReceiving() != PacketFlow.CLIENTBOUND) {
             return;
         }
         try {
@@ -94,6 +100,9 @@ public class MixinClientConnection {
         } catch (Exception e) {
         }
     }
+
+    @Shadow
+    public abstract PacketFlow getReceiving();
 
     @Inject(method = {"exceptionCaught"}, at = {@At("HEAD")}, cancellable = true)
     private void exceptionCaught(ChannelHandlerContext channelHandlerContext, Throwable th, CallbackInfo callbackInfo) {

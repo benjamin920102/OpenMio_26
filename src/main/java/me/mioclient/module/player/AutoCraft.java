@@ -1,22 +1,17 @@
 package me.mioclient.module.player;
+import net.minecraft.world.phys.Vec3;
 
 import me.mioclient.api.ClientServices;
 import me.mioclient.api.NamedValue;
 import me.mioclient.util.world.WorldUtils;
 
-import me.mioclient.api.NamedValue;
 import me.mioclient.mode.player.AutoCraftMode;
 import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.math.Tuple;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.api.NamedValue;
 import me.mioclient.network.PacketSender;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.math.Tuple;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -25,53 +20,50 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import me.mioclient.render.RenderConstants;
-import me.mioclient.util.world.WorldUtils;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.screen.SetScreenHookPreEvent;
 import me.mioclient.event.events.client.TickPostEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.gui.screen.ingame.CraftingScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FireworksComponent;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.SmithingTemplateItem;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.screen.CraftingScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import me.mioclient.mode.player.AutoCraftMode;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.client.gui.screens.inventory.CraftingScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SmithingTemplateItem;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoCraft.class */
 public class AutoCraft extends Module {
-    public static final RecipeEntry<?> recipeEntry = new RecipeEntry<>(Identifier.of("minecraft:firework_rocket_simple"), (Recipe) null);
-    public static final List<Ingredient> list = List.of(Ingredient.ofItems(new ItemConvertible[]{Items.PAPER}), Ingredient.ofItems(new ItemConvertible[]{Items.GUNPOWDER}));
-    public Setting<Set<Item>> items = add(new EntityListObjectSetting<>("Items", Registries.ITEM));
-    public Setting<Set<Item>> recipeBlackList = add(new EntityListObjectSetting<>("RecipeBlackList", Registries.ITEM));
+    public static final RecipeHolder<?> recipeEntry = new RecipeHolder<>(net.minecraft.resources.ResourceKey.create(Registries.RECIPE, Identifier.parse("minecraft:firework_rocket_simple")), (Recipe) null);
+    public static final List<Ingredient> list = List.of(Ingredient.of(Items.PAPER), Ingredient.of(Items.GUNPOWDER));
+    public Setting<Set<Item>> items = add(new EntityListObjectSetting<>("Items", BuiltInRegistries.ITEM));
+    public Setting<Set<Item>> recipeBlackList = add(new EntityListObjectSetting<>("RecipeBlackList", BuiltInRegistries.ITEM));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 150, 75, 1500).setSuffix("ms"));
     public Setting<Integer> frequency = add(new NumberSetting<>("Frequency", 1, 1, 6));
     public Setting<AutoCraftMode> drop = add(new EnumSetting<>("Drop", AutoCraftMode.None));
@@ -88,18 +80,17 @@ public class AutoCraft extends Module {
     public final Stopwatch stopwatch;
     public final Stopwatch stopwatch2;
 
-    /* JADX INFO: Access modifiers changed from: private */
-    /* compiled from: 0.java */
-    /* loaded from: mio-yarn.jar:me/mioclient/module/player/AutoCraft$AutoCraftMode.class */
+    
+    
     public enum AutoCraftMode implements NamedValue {
-        None("None", SlotActionType.QUICK_MOVE),
-        Throw("Throw", SlotActionType.THROW),
-        Pickup("Pickup", SlotActionType.PICKUP);
+        None("None", ContainerInput.QUICK_MOVE),
+        Throw("Throw", ContainerInput.THROW),
+        Pickup("Pickup", ContainerInput.PICKUP);
 
         public final String name;
-        public final SlotActionType slotActionType;
+        public final ContainerInput slotActionType;
 
-        AutoCraftMode(String str, SlotActionType slotActionType) {
+        AutoCraftMode(String str, ContainerInput slotActionType) {
             this.name = str;
             this.slotActionType = slotActionType;
         }
@@ -109,7 +100,7 @@ public class AutoCraft extends Module {
             return this.name;
         }
 
-        public SlotActionType getSlotActionType2107() {
+        public ContainerInput getSlotActionType2107() {
             return this.slotActionType;
         }
     }
@@ -123,34 +114,35 @@ public class AutoCraft extends Module {
     @Listen
     public void onTickPost(TickPostEvent tickPostEvent) {
         Tuple<BlockPos, Direction> holeSnapData_2838;
-        RecipeEntry<?> recipeEntry834 = findMatchingRecipe();
+        net.minecraft.world.item.crafting.display.RecipeDisplayEntry recipeEntry834 = findMatchingRecipe();
         if (recipeEntry834 == null) {
             return;
         }
-        if (this.autoOpen.getValue().booleanValue() && this.stopwatch2.hasElapsedMs(500L) && !(minecraftClient.currentScreen instanceof HandledScreen) && (holeSnapData_2838 = getHoleSnapData_2838()) != null) {
+        if (this.autoOpen.getValue().booleanValue() && this.stopwatch2.hasElapsedMs(500L) && !(minecraftClient.gui.screen() instanceof AbstractContainerScreen) && (holeSnapData_2838 = getHoleSnapData_2838()) != null) {
             if (this.rotate.getValue().booleanValue()) {
-                PacketSender.sendLook(RotationManager.getRotationsTo(holeSnapData_2838.getLeft().toCenterPos()), minecraftClient.player.isOnGround());
+                float[] _rot = RotationManager.getRotationsTo(Vec3.atCenterOf(holeSnapData_2838.getLeft()));
+                PacketSender.sendLook(_rot, minecraftClient.player.onGround());
             }
-            PacketSender.sendInteractBlock(Hand.MAIN_HAND, new BlockHitResult(holeSnapData_2838.getLeft().toCenterPos(), holeSnapData_2838.getRight(), holeSnapData_2838.getLeft(), false));
-            PacketSender.sendHandSwing(Hand.MAIN_HAND);
+            PacketSender.sendInteractBlock(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(holeSnapData_2838.getLeft()), holeSnapData_2838.getRight(), holeSnapData_2838.getLeft(), false));
+            PacketSender.sendHandSwing(InteractionHand.MAIN_HAND);
             this.stopwatch2.reset();
         }
-        if ((minecraftClient.player.currentScreenHandler instanceof CraftingScreenHandler) && !this.items.getValue().isEmpty() && this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
-            CraftingScreenHandler craftingScreenHandler = (CraftingScreenHandler)(minecraftClient.player.currentScreenHandler);
-            ItemStack result = recipeEntry834.value().getResult(minecraftClient.world.getRegistryManager());
-            if (result.isOf(Items.FIREWORK_ROCKET)) {
+        if ((minecraftClient.player.containerMenu instanceof CraftingMenu) && !this.items.getValue().isEmpty() && this.stopwatch.hasElapsedMs(this.delay.getValue().intValue())) {
+            CraftingMenu craftingScreenHandler = (CraftingMenu)(minecraftClient.player.containerMenu);
+            ItemStack result = getDisplayResult(recipeEntry834);
+            if (result.is(Items.FIREWORK_ROCKET)) {
                 int i = -1;
                 int i2 = -1;
                 for (int i3 = 10; i3 < 46; i3++) {
-                    ItemStack stack = craftingScreenHandler.getSlot(i3).getStack();
-                    if (stack.isOf(Items.GUNPOWDER) && i == -1) {
+                    ItemStack stack = craftingScreenHandler.getSlot(i3).getItem();
+                    if (stack.is(Items.GUNPOWDER) && i == -1) {
                         i = i3;
                     }
-                    if (stack.isOf(Items.PAPER) && i2 == -1) {
+                    if (stack.is(Items.PAPER) && i2 == -1) {
                         i2 = i3;
                     }
                 }
-                if (i2 != -1 && craftingScreenHandler.getSlot(1).getStack().isEmpty()) {
+                if (i2 != -1 && craftingScreenHandler.getSlot(1).getItem().isEmpty()) {
                     this.stopwatch.reset();
                     InventoryUtils.swapStacks(i2, 1);
                     return;
@@ -158,12 +150,12 @@ public class AutoCraft extends Module {
                 int[] iArr = {2, 4, 5};
                 boolean z = true;
                 for (int i4 : iArr) {
-                    if (!craftingScreenHandler.getSlot(i4).getStack().isOf(Items.GUNPOWDER)) {
+                    if (!craftingScreenHandler.getSlot(i4).getItem().is(Items.GUNPOWDER)) {
                         z = false;
                     }
                 }
                 if (i != -1 && !z) {
-                    minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, i, 0, SlotActionType.PICKUP, minecraftClient.player);
+                    minecraftClient.gameMode.handleContainerInput(craftingScreenHandler.containerId, i, 0, ContainerInput.PICKUP, minecraftClient.player);
                     int length = iArr.length;
                     int i5 = 0;
                     while (true) {
@@ -171,34 +163,34 @@ public class AutoCraft extends Module {
                             break;
                         }
                         int i6 = iArr[i5];
-                        if (craftingScreenHandler.getSlot(i6).getStack().isOf(Items.GUNPOWDER)) {
+                        if (craftingScreenHandler.getSlot(i6).getItem().is(Items.GUNPOWDER)) {
                             i5++;
-                        } else if (!craftingScreenHandler.getCursorStack().isEmpty()) {
-                            minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, i6, 1, SlotActionType.PICKUP, minecraftClient.player);
+                        } else if (!craftingScreenHandler.getCarried().isEmpty()) {
+                            minecraftClient.gameMode.handleContainerInput(craftingScreenHandler.containerId, i6, 1, ContainerInput.PICKUP, minecraftClient.player);
                         }
                     }
-                    minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, i, 0, SlotActionType.PICKUP, minecraftClient.player);
+                    minecraftClient.gameMode.handleContainerInput(craftingScreenHandler.containerId, i, 0, ContainerInput.PICKUP, minecraftClient.player);
                     this.stopwatch.reset();
                     return;
                 }
-                ItemStack stack2 = craftingScreenHandler.getSlot(0).getStack();
-                FireworksComponent fireworksComponent = (FireworksComponent) stack2.getOrDefault(DataComponentTypes.FIREWORKS, new FireworksComponent(0, Collections.emptyList()));
-                if (!stack2.isOf(Items.FIREWORK_ROCKET) || fireworksComponent.flightDuration() != 3 || !z || !this.stopwatch.hasElapsedMs(Math.max(RenderConstants.num, this.delay.getValue().intValue()))) {
+                ItemStack stack2 = craftingScreenHandler.getSlot(0).getItem();
+                Fireworks fireworksComponent = (Fireworks) stack2.getOrDefault(DataComponents.FIREWORKS, new Fireworks(0, Collections.emptyList()));
+                if (!stack2.is(Items.FIREWORK_ROCKET) || fireworksComponent.flightDuration() != 3 || !z || !this.stopwatch.hasElapsedMs(Math.max(RenderConstants.num, this.delay.getValue().intValue()))) {
                     return;
                 }
             } else {
                 for (int i7 = 0; i7 < get836(result.getItem()); i7++) {
-                    minecraftClient.interactionManager.clickRecipe(craftingScreenHandler.syncId, recipeEntry834, this.craftAll.getValue().booleanValue());
+                    placeRecipeCompat(craftingScreenHandler.containerId, recipeEntry834.id(), this.craftAll.getValue().booleanValue());
                 }
             }
-            minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, 0, 1, this.drop.getValue().getSlotActionType2107(), minecraftClient.player);
-            if (this.drop.getValue() == AutoCraftMode.Pickup && result.getCount() + craftingScreenHandler.getCursorStack().getCount() > craftingScreenHandler.getCursorStack().getMaxCount()) {
-                minecraftClient.interactionManager.clickSlot(craftingScreenHandler.syncId, -999, 0, SlotActionType.PICKUP, minecraftClient.player);
+            minecraftClient.gameMode.handleContainerInput(craftingScreenHandler.containerId, 0, 1, this.drop.getValue().getSlotActionType2107(), minecraftClient.player);
+            if (this.drop.getValue() == AutoCraftMode.Pickup && result.getCount() + craftingScreenHandler.getCarried().getCount() > craftingScreenHandler.getCarried().getMaxStackSize()) {
+                minecraftClient.gameMode.handleContainerInput(craftingScreenHandler.containerId, -999, 0, ContainerInput.PICKUP, minecraftClient.player);
             }
             if (this.fastClose.getValue().booleanValue()) {
                 ClientServices.tooltipsHelper.schedule(() -> {
-                    PacketSender.sendPacket(new CloseHandledScreenC2SPacket(minecraftClient.player.currentScreenHandler.syncId));
-                    minecraftClient.player.currentScreenHandler = minecraftClient.player.playerScreenHandler;
+                    PacketSender.sendPacket(new ServerboundContainerClosePacket(minecraftClient.player.containerMenu.containerId));
+                    minecraftClient.player.containerMenu = minecraftClient.player.inventoryMenu;
                 }, 1);
             }
             this.stopwatch.reset();
@@ -208,27 +200,40 @@ public class AutoCraft extends Module {
     @Listen
     public void onSetScreenHookPre(SetScreenHookPreEvent setScreenHookPreEvent) {
         if ((setScreenHookPreEvent.getScreen() instanceof CraftingScreen) && this.fastClose.getValue().booleanValue()) {
-            setScreenHookPreEvent.getScreen().init(minecraftClient, 0, 0);
+            setScreenHookPreEvent.getScreen().init(0, 0);
             setScreenHookPreEvent.cancel();
         }
     }
 
-    public RecipeEntry<?> findMatchingRecipe() {
-        if (this.items.getValue().isEmpty()) {
+    public net.minecraft.world.item.crafting.display.RecipeDisplayEntry findMatchingRecipe() {
+        if (this.items.getValue().isEmpty() || minecraftClient.level == null || minecraftClient.player == null) {
             return null;
         }
-        for (RecipeEntry<?> recipeEntry2 : minecraftClient.world.getRecipeManager().values()) {
-            if (recipeEntry2.value().getType() == RecipeType.CRAFTING) {
-                ItemStack result = recipeEntry2.value().getResult(minecraftClient.world.getRegistryManager());
-                if (result != null && result.getItem() != null && !(result.getItem() instanceof SmithingTemplateItem)) {
-                    List<Ingredient> ingredients = recipeEntry2.value().getIngredients();
-                    if (result.isOf(Items.FIREWORK_ROCKET)) {
-                        ingredients = list;
-                    }
-                    if (this.items.getValue().contains(result.getItem()) && is837(ingredients)) {
-                        if (is835(result.getItem())) {
-                            return recipeEntry2;
-                        }
+        net.minecraft.util.context.ContextMap ctx;
+        try {
+            ctx = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(minecraftClient.level);
+        } catch (Exception e) {
+            return null;
+        }
+        for (net.minecraft.world.item.crafting.display.RecipeDisplayEntry entry : getClientDisplays()) {
+            java.util.List<ItemStack> results;
+            try {
+                results = entry.resultItems(ctx);
+            } catch (Exception e) {
+                continue;
+            }
+            if (results == null || results.isEmpty()) {
+                continue;
+            }
+            ItemStack result = results.getFirst();
+            if (result != null && result.getItem() != null && !(result.getItem() instanceof SmithingTemplateItem)) {
+                java.util.List<Ingredient> ingredients = entry.craftingRequirements().orElse(java.util.List.of());
+                if (result.is(Items.FIREWORK_ROCKET)) {
+                    ingredients = list;
+                }
+                if (this.items.getValue().contains(result.getItem()) && is837(ingredients)) {
+                    if (is835(result.getItem())) {
+                        return entry;
                     }
                 }
             }
@@ -243,12 +248,12 @@ public class AutoCraft extends Module {
         int i = 0;
         int intValue = this.max.getValue().intValue();
         if (this.stackLimit.getValue().booleanValue()) {
-            intValue *= item.getMaxCount();
+            intValue *= item.getDefaultMaxStackSize();
         }
-        Iterator it = minecraftClient.player.getInventory().main.iterator();
+        Iterator it = minecraftClient.player.getInventory().getNonEquipmentItems().iterator();
         while (it.hasNext()) {
             ItemStack itemStack = (ItemStack) it.next();
-            if (itemStack.isOf(item)) {
+            if (itemStack.is(item)) {
                 i += itemStack.getCount();
             }
         }
@@ -262,31 +267,32 @@ public class AutoCraft extends Module {
         int i = 0;
         int intValue = this.max.getValue().intValue();
         if (this.stackLimit.getValue().booleanValue()) {
-            intValue *= item.getMaxCount();
+            intValue *= item.getDefaultMaxStackSize();
         }
-        Iterator it = minecraftClient.player.getInventory().main.iterator();
+        Iterator it = minecraftClient.player.getInventory().getNonEquipmentItems().iterator();
         while (it.hasNext()) {
             ItemStack itemStack = (ItemStack) it.next();
-            if (itemStack.isOf(item)) {
+            if (itemStack.is(item)) {
                 i += itemStack.getCount();
             }
         }
-        return MathHelper.clamp(intValue - i, 0, this.frequency.getValue().intValue());
+        return Mth.clamp(intValue - i, 0, this.frequency.getValue().intValue());
     }
 
     public boolean is837(Collection<Ingredient> collection) {
         HashMap<Item, Integer> hashMap = new HashMap<>();
-        Iterator it = minecraftClient.player.currentScreenHandler.slots.iterator();
+        Iterator it = minecraftClient.player.containerMenu.slots.iterator();
         while (it.hasNext()) {
             Slot slot = (Slot) it.next();
-            hashMap.compute(slot.getStack().getItem(), (item, num) -> {
-                return (item == null || num == null) ? Integer.valueOf(slot.getStack().getCount()) : Integer.valueOf(slot.getStack().getCount() + num.intValue());
+            hashMap.compute(slot.getItem().getItem(), (item, num) -> {
+                return (item == null || num == null) ? Integer.valueOf(slot.getItem().getCount()) : Integer.valueOf(slot.getItem().getCount() + num.intValue());
             });
         }
         for (Ingredient ingredient : collection) {
             if (!ingredient.isEmpty()) {
                 boolean z = false;
-                ItemStack[] matchingStacks = ingredient.getMatchingStacks();
+                java.util.List<ItemStack> _ms = ingredient.items().map(h -> new ItemStack(h.value())).toList();
+                ItemStack[] matchingStacks = _ms.toArray(new ItemStack[0]);
                 int length = matchingStacks.length;
                 int i = 0;
                 while (true) {
@@ -316,8 +322,8 @@ public class AutoCraft extends Module {
     }
 
     public Tuple<BlockPos, Direction> getHoleSnapData_2838() {
-        for (BlockPos blockPos : WorldUtils.getBlocksInRadius(minecraftClient.player.getEyePos(), this.range.getValue().floatValue(), true)) {
-            if (minecraftClient.world.getBlockState(blockPos).isOf(Blocks.CRAFTING_TABLE) && (WorldUtils.isAnyPositionVisible(me.mioclient.mode.player.AutoCraftMode.X8.getWorldCorners(blockPos)) || !this.raytrace.getValue().booleanValue())) {
+        for (BlockPos blockPos : WorldUtils.getBlocksInRadius(minecraftClient.player.getEyePosition(), this.range.getValue().floatValue(), true)) {
+            if (minecraftClient.level.getBlockState(blockPos).is(Blocks.CRAFTING_TABLE) && (WorldUtils.isAnyPositionVisible(me.mioclient.mode.player.AutoCraftMode.X8.getWorldCorners(blockPos)) || !this.raytrace.getValue().booleanValue())) {
                 List<Direction> list3031 = BlockPlacer.getInteractableSides(blockPos);
                 if (!list3031.isEmpty() || !this.strictDirection.getValue().booleanValue()) {
                     return new Tuple<>(blockPos, list3031.isEmpty() ? Direction.UP : list3031.get(0));
@@ -326,4 +332,64 @@ public class AutoCraft extends Module {
         }
         return null;
     }
+
+    public static ItemStack getDisplayResult(net.minecraft.world.item.crafting.display.RecipeDisplayEntry entry) {
+        // 26.2: results resolve via SlotDisplayContext.fromLevel(level).
+        try {
+            if (minecraftClient.level == null) {
+                return ItemStack.EMPTY;
+            }
+            java.util.List<ItemStack> results = entry.resultItems(
+                    net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(minecraftClient.level));
+            return (results == null || results.isEmpty()) ? ItemStack.EMPTY : results.getFirst();
+        } catch (Exception ignored) {
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public static ItemStack getRecipeResult(RecipeHolder<?> holder) {
+        // 26.2 port: Recipe#getResult(registry) removed; assemble with EMPTY input returns result for crafting recipes.
+        try {
+            if (holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe crafting) {
+                return crafting.assemble(CraftingInput.EMPTY);
+            }
+        } catch (Exception ignored) {
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public static java.util.List<net.minecraft.world.item.crafting.display.RecipeDisplayEntry> getClientDisplays() {
+        // 26.2: ClientRecipeBook holds RecipeDisplayEntry collections (replaces RecipeManager#values).
+        try {
+            if (minecraftClient.player == null) {
+                return java.util.List.of();
+            }
+            java.util.List<net.minecraft.client.gui.screens.recipebook.RecipeCollection> collections =
+                    minecraftClient.player.getRecipeBook().getCollections();
+            java.util.List<net.minecraft.world.item.crafting.display.RecipeDisplayEntry> out = new java.util.ArrayList<>();
+            for (net.minecraft.client.gui.screens.recipebook.RecipeCollection c : collections) {
+                out.addAll(c.getRecipes());
+            }
+            return out;
+        } catch (Exception e) {
+            return java.util.List.of();
+        }
+    }
+
+    public static java.util.List<RecipeHolder<?>> getClientRecipes() {
+        // 26.2: RecipeHolder flow replaced by RecipeDisplayEntry flow; kept for compat, returns empty.
+        return java.util.List.of();
+    }
+
+    public static void placeRecipeCompat(int containerId, net.minecraft.world.item.crafting.display.RecipeDisplayId displayId, boolean craftAll) {
+        // 26.2: MultiPlayerGameMode#handlePlaceRecipe(int, RecipeDisplayId, boolean) replaces clickRecipe.
+        try {
+            if (minecraftClient.gameMode == null) {
+                return;
+            }
+            minecraftClient.gameMode.handlePlaceRecipe(containerId, displayId, craftAll);
+        } catch (Exception ignored) {
+        }
+    }
+
 }

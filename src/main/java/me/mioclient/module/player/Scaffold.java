@@ -19,67 +19,61 @@ import me.mioclient.util.world.BlockPlacer;
 import me.mioclient.util.world.CustomRaycastContext;
 import me.mioclient.util.world.RaycastUtils;
 
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.player.scaffold.PlacementCandidate;
 import me.mioclient.module.player.scaffold.PlacementTarget;
 import me.mioclient.network.PacketSender;
-import me.mioclient.render.shape.BlockHighlightRenderer;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.math.BoxMath;
-import me.mioclient.util.world.CustomRaycastContext;
-import me.mioclient.util.math.MathConstants;
-import me.mioclient.util.player.MovementUtils;
-import me.mioclient.util.player.PlayerUtils;
-import me.mioclient.util.world.RaycastUtils;
 
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import me.mioclient.event.events.player.RotationTickEvent;
-import me.mioclient.module.player.scaffold.ScaffoldMode;
-import me.mioclient.mode.player.ScaffoldMode_2;
-import me.mioclient.module.player.scaffold.ScaffoldMode_3;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.player.ClipAtLedgeEvent;
 import me.mioclient.event.Listen;
 import me.mioclient.event.events.player.MoveEvent;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.mixin.ducks.DuckAbstractBlock;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
 import me.mioclient.module.client.AntiCheat;
-import net.minecraft.block.Block;
-import net.minecraft.block.FallingBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.ColorSetting;
 import me.mioclient.setting.EntityListObjectSetting;
 import me.mioclient.setting.EnumSetting;
 import me.mioclient.setting.NumberSetting;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/player/Scaffold.class */
 public class Scaffold extends Module {
-    public static AntiCheat antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving antiCheat null. */
+    private static AntiCheat antiCheat;
+
+    public static AntiCheat getAntiCheat() {
+        if (antiCheat == null && ClientServices.moduleInjector != null) {
+            try {
+                antiCheat = (AntiCheat) ClientServices.moduleInjector.getModule(AntiCheat.class);
+            } catch (Exception e) {
+            }
+        }
+        return antiCheat;
+    }
     public Setting<ScaffoldMode_2> selection = add(new EnumSetting<>("Selection", ScaffoldMode_2.ANY));
-    public Setting<Set<Block>> blocks = add(new EntityListObjectSetting<>("Blocks", Registries.BLOCK));
+    public Setting<Set<Block>> blocks = add(new EntityListObjectSetting<>("Blocks", BuiltInRegistries.BLOCK));
     public Setting<ScaffoldMode_3> swap = add(new EnumSetting<>("Swap", ScaffoldMode_3.NONE));
     public Setting<Integer> delay = add(new NumberSetting<>("Delay", 180, 0, 300).setSuffix("ms"));
     public Setting<Integer> offset = add(new NumberSetting<>("Offset", 0, 0, 3));
@@ -141,12 +135,9 @@ public class Scaffold extends Module {
         this.val = minecraftClient.player.getY();
     }
 
-    /* JADX WARN: Removed duplicated region for block: B:31:0x0125  */
-    /* JADX WARN: Removed duplicated region for block: B:33:0x012b  */
+    
     @Listen
-    /*
-        Code decompiled incorrectly, please refer to instructions dump.
-    */
+    
     public void onEvent2(RotationTickEvent holeSnapEvent) {
         boolean z;
         boolean z2;
@@ -154,10 +145,11 @@ public class Scaffold extends Module {
             setJumpStrength(this.val2);
             this.val2 = Float.intBitsToFloat(-1082130432);
         }
-        if (minecraftClient.player.isRiding()) {
+        if (minecraftClient.player.isPassenger()) {
             return;
         }
-        if (!this.stopwatch4.hasElapsedMs(50L) && minecraftClient.player.isOnGround() && antiCheat.movementSync.getValue().booleanValue()) {
+        AntiCheat antiCheat_lcl = getAntiCheat();
+        if (!this.stopwatch4.hasElapsedMs(50L) && minecraftClient.player.onGround() && antiCheat_lcl != null && antiCheat_lcl.movementSync.getValue().booleanValue()) {
             return;
         }
         if (!MovementUtils.is2181() || minecraftClient.player.horizontalCollision) {
@@ -166,10 +158,10 @@ public class Scaffold extends Module {
         do503();
         this.scaffoldData_2 = findPlacementCandidate();
         if (this.num2 != -1) {
-            if (!minecraftClient.player.getInventory().getStack(this.num2).isEmpty()) {
+            if (!minecraftClient.player.getInventory().getItem(this.num2).isEmpty()) {
                 z = false;
                 z2 = z;
-                if (this.swap.getValue() == ScaffoldMode_3.NONE && getPlacementScore(minecraftClient.player.getMainHandStack()) == 0) {
+                if (this.swap.getValue() == ScaffoldMode_3.NONE && getPlacementScore(minecraftClient.player.getMainHandItem()) == 0) {
                     z2 = true;
                 }
                 if (!z2) {
@@ -193,22 +185,22 @@ public class Scaffold extends Module {
                             return;
                         }
                         this.swap.getValue().selectSlotAndRun(this.num2, () -> {
-                            Vec3d add;
+                            Vec3 add;
                             if (this.render.getValue().booleanValue()) {
                                 ClientServices.antiPhaseBlockHelper.addBlockHighlight(this, this.scaffoldData_2.getBlockPos());
                             }
                             PlacementTarget scaffoldData1460 = PlacementTarget.fromCandidate(this.scaffoldData_2, true);
-                            Vec3d vec3d843 = scaffoldData1460.getPlacementTarget();
+                            Vec3 vec3d843 = scaffoldData1460.getPlacementTarget();
                             if (scaffoldData1460.getDirection() == Direction.DOWN) {
-                                add = vec3d843.withAxis(Direction.Axis.Y, this.scaffoldData_2.getBlockPos().getY());
+                                add = vec3d843.with(Direction.Axis.Y, this.scaffoldData_2.getBlockPos().getY());
                             } else {
-                                add = vec3d843.add(0.0d, scaffoldData1460.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldData1460.getCollisionShape().getBoundingBox().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d);
+                                add = vec3d843.add(0.0d, scaffoldData1460.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldData1460.getCollisionShape().bounds().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d);
                             }
                             boolean isSneaking = ClientServices.holeSnapRenderHelper.isSneaking();
-                            PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY, 0);
-                            BlockPlacer.placeBlock(this.scaffoldData_2.getBlockPos(), add, scaffoldData1460.getDirection(), this.airPlace.getValue().booleanValue(), Hand.MAIN_HAND);
+                            { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; PacketSender.sendPacket(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), true, _cur.sprint()))); };
+                            BlockPlacer.placeBlock(this.scaffoldData_2.getBlockPos(), add, scaffoldData1460.getDirection(), this.airPlace.getValue().booleanValue(), InteractionHand.MAIN_HAND);
                             if (!isSneaking) {
-                                PacketSender.sendClientCommand(minecraftClient.player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY, 0);
+                                { net.minecraft.world.entity.player.Input _cur = minecraftClient.player.input.keyPresses; PacketSender.sendPacket(new net.minecraft.network.protocol.game.ServerboundPlayerInputPacket(new net.minecraft.world.entity.player.Input(_cur.forward(), _cur.backward(), _cur.left(), _cur.right(), _cur.jump(), false, _cur.sprint()))); };
                             }
                             if (RotationManager.is1144()) {
                                 applyScaffoldRotations(getPlacementRotations(ScaffoldMode.POST.getScaffoldMode874(scaffoldData1460, add)));
@@ -238,7 +230,7 @@ public class Scaffold extends Module {
 
     @Listen
     public void onClipAtLedge(ClipAtLedgeEvent clipAtLedgeEvent) {
-        if (!this.safeWalk.getValue().booleanValue() || minecraftClient.player.isRiding()) {
+        if (!this.safeWalk.getValue().booleanValue() || minecraftClient.player.isPassenger()) {
             return;
         }
         clipAtLedgeEvent.cancel();
@@ -246,26 +238,26 @@ public class Scaffold extends Module {
 
     @Listen
     public void onMove(MoveEvent moveEvent) {
-        if (this.safeWalk.getValue().booleanValue() && RotationManager.is724() && minecraftClient.player.isOnGround() && !minecraftClient.player.isRiding()) {
-            Box offset = minecraftClient.player.getBoundingBox().offset(moveEvent.getX(), 0.0d, moveEvent.getZ());
-            boolean isSneaking = minecraftClient.player.isSneaking();
-            if (minecraftClient.world.isSpaceEmpty(offset.stretch(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d))) {
+        if (this.safeWalk.getValue().booleanValue() && RotationManager.is724() && minecraftClient.player.onGround() && !minecraftClient.player.isPassenger()) {
+            AABB offset = minecraftClient.player.getBoundingBox().move(moveEvent.getX(), 0.0d, moveEvent.getZ());
+            boolean isSneaking = minecraftClient.player.isShiftKeyDown();
+            if (minecraftClient.level.noCollision(offset.expandTowards(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d))) {
                 if (!isSneaking) {
-                    minecraftClient.player.setSneaking(true);
+                    minecraftClient.player.setShiftKeyDown(true);
                 }
                 moveEvent.setHorizontal(0.0d, 0.0d);
             } else {
                 if (isSneaking) {
                     return;
                 }
-                minecraftClient.player.setSneaking(false);
+                minecraftClient.player.setShiftKeyDown(false);
             }
         }
     }
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if (!sendImmediatelyEvent.isCancelled() && (sendImmediatelyEvent.getPacket() instanceof ClickSlotC2SPacket)) {
+        if (!sendImmediatelyEvent.isCancelled() && (sendImmediatelyEvent.getPacket() instanceof ServerboundContainerClickPacket)) {
             this.stopwatch4.reset();
         }
     }
@@ -274,9 +266,9 @@ public class Scaffold extends Module {
         int floor = (int) Math.floor(minecraftClient.player.getY());
         if (this.num != floor || RotationManager.is724()) {
             this.num = floor;
-            if (this.tower.getValue().booleanValue() && minecraftClient.player.input.jumping && minecraftClient.player.forwardSpeed == 0.0f && minecraftClient.player.sidewaysSpeed == 0.0f) {
+            if (this.tower.getValue().booleanValue() && minecraftClient.player.input.keyPresses.jump() && ((minecraftClient.player.input.keyPresses.forward() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.backward() ? 1.0f : 0.0f)) == 0.0f && ((minecraftClient.player.input.keyPresses.left() ? 1.0f : 0.0f) - (minecraftClient.player.input.keyPresses.right() ? 1.0f : 0.0f)) == 0.0f) {
                 if (RotationManager.is724()) {
-                    if (minecraftClient.player.isOnGround()) {
+                    if (minecraftClient.player.onGround()) {
                         this.val2 = get510();
                         setJumpStrength(Float.intBitsToFloat(1052539785));
                         return;
@@ -284,7 +276,7 @@ public class Scaffold extends Module {
                     return;
                 }
                 if (this.scaffoldData_2 != null) {
-                    minecraftClient.player.setVelocity(0.0d, Double.longBitsToDouble(4601237667055665185L), 0.0d);
+                    minecraftClient.player.setDeltaMovement(0.0d, Double.longBitsToDouble(4601237667055665185L), 0.0d);
                 }
             }
         }
@@ -308,20 +300,20 @@ public class Scaffold extends Module {
                 this.floatArr = fArr;
             } else {
                 ClientServices.RotationManager.applyRotations(fArr, 10);
-                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), fArr[0], fArr[1], minecraftClient.player.isOnGround());
+                PacketSender.sendFullMove(minecraftClient.player.getX(), minecraftClient.player.getY(), minecraftClient.player.getZ(), fArr[0], fArr[1], minecraftClient.player.onGround());
             }
         }
     }
 
     public void do503() {
-        if (getPlacementScore(minecraftClient.player.getMainHandStack()) > 0) {
-            this.num2 = minecraftClient.player.getInventory().selectedSlot;
+        if (getPlacementScore(minecraftClient.player.getMainHandItem()) > 0) {
+            this.num2 = minecraftClient.player.getInventory().getSelectedSlot();
             return;
         }
-        int i = minecraftClient.player.getInventory().selectedSlot;
-        int i2 = getPlacementScore(minecraftClient.player.getInventory().getStack(i));
+        int i = minecraftClient.player.getInventory().getSelectedSlot();
+        int i2 = getPlacementScore(minecraftClient.player.getInventory().getItem(i));
         for (int i3 = 0; i3 < 9; i3++) {
-            int i4 = getPlacementScore(minecraftClient.player.getInventory().getStack(i3));
+            int i4 = getPlacementScore(minecraftClient.player.getInventory().getItem(i3));
             if (i4 > i2) {
                 i = i3;
                 i2 = i4;
@@ -336,13 +328,13 @@ public class Scaffold extends Module {
 
     public int getPlacementScore(ItemStack itemStack) {
         // è½¬åž‹å¿…é¡»åœ¨ instanceof æ£€æŸ¥ä¹‹åŽâ€”â€”æ‰‹æŒéžæ–¹å—ç‰©å“(æœ«å½±æ°´æ™¶/ç©ºæ°”ç­‰)å¦åˆ™å´©æºƒã€‚
-        net.minecraft.item.Item rawItem = itemStack.getItem();
+        net.minecraft.world.item.Item rawItem = itemStack.getItem();
         if (!(rawItem instanceof BlockItem)) {
             return 0;
         }
         BlockItem blockItem = (BlockItem) rawItem;
         if (this.selection.getValue().isAllowed(blockItem.getBlock(), this.blocks.getValue()) && ((DuckAbstractBlock)(Object) blockItem.getBlock()).isCollidable() && is505(blockItem)) {
-            return BoxMath.isFullBlockShape(blockItem.getBlock().getDefaultState().getCollisionShape(minecraftClient.world, BlockPos.ORIGIN)) ? 2 : 1;
+            return BoxMath.isFullBlockShape(blockItem.getBlock().defaultBlockState().getCollisionShape(minecraftClient.level, BlockPos.ZERO)) ? 2 : 1;
         }
         return 0;
     }
@@ -353,14 +345,14 @@ public class Scaffold extends Module {
 
     public float[] getPlacementRotations(ScaffoldMode scaffoldMode) {
         if (scaffoldMode != ScaffoldMode.PRE) {
-            return RotationManager.getRotationsTo(scaffoldMode.vec3d.add(0.0d, scaffoldMode.scaffoldData.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldMode.scaffoldData.getCollisionShape().getBoundingBox().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d));
+            return RotationManager.getRotationsTo(scaffoldMode.vec3d.add(0.0d, scaffoldMode.scaffoldData.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldMode.scaffoldData.getCollisionShape().bounds().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d));
         }
         PlacementTarget scaffoldData1460 = PlacementTarget.fromCandidate(this.scaffoldData_2, false);
-        float[] floatArray2484 = RotationManager.getRotationsTo(scaffoldData1460.getPlacementTarget().add(0.0d, scaffoldData1460.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldData1460.getCollisionShape().getBoundingBox().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d));
+        float[] floatArray2484 = RotationManager.getRotationsTo(scaffoldData1460.getPlacementTarget().add(0.0d, scaffoldData1460.getCollisionShape().isEmpty() ? MathConstants.val2 : scaffoldData1460.getCollisionShape().bounds().maxY - Double.longBitsToDouble(4576918229304087675L), 0.0d));
         if (MovementUtils.is2181()) {
-            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYaw(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
+            double[] doubleArray2508 = MovementUtils.computeVelocity(minecraftClient.player.getYRot(), minecraftClient.player.input, Double.longBitsToDouble(4607182418800017408L));
             float degrees = (float) (Math.toDegrees(Math.atan2(doubleArray2508[1], doubleArray2508[0])) - Double.longBitsToDouble(4643457506423603200L));
-            if (MathHelper.angleBetween(degrees, floatArray2484[0]) < Float.intBitsToFloat(1114636288)) {
+            if (Mth.degreesDifferenceAbs(degrees, floatArray2484[0]) < Float.intBitsToFloat(1114636288)) {
                 floatArray2484[0] = degrees;
             }
         }
@@ -370,19 +362,19 @@ public class Scaffold extends Module {
 
     public PlacementCandidate findPlacementCandidate() {
         BlockPos blockPos = null;
-        Vec3d vec3d222 = BoxMath.getBottomCenter(minecraftClient.player.getBoundingBox());
+        Vec3 vec3d222 = BoxMath.getBottomCenter(minecraftClient.player.getBoundingBox());
         if (this.telly.getValue().booleanValue()) {
-            vec3d222 = vec3d222.withAxis(Direction.Axis.Y, this.val);
+            vec3d222 = vec3d222.with(Direction.Axis.Y, this.val);
         }
-        boolean z = minecraftClient.player.hasVehicle() ? minecraftClient.player.getVehicle().groundCollision : minecraftClient.player.groundCollision;
-        if (minecraftClient.player.hasVehicle()) {
+        boolean z = minecraftClient.player.isPassenger() ? minecraftClient.player.getVehicle().onGround() : minecraftClient.player.onGround();
+        if (minecraftClient.player.isPassenger()) {
             vec3d222 = BoxMath.getBottomCenter(minecraftClient.player.getVehicle().getBoundingBox());
         }
-        double d = get508((float) vec3d222.getY());
-        for (int i = 0; i < this.offset.getValue().intValue() + 1 && ((MovementUtils.is2181() && minecraftClient.player.isOnGround()) || i <= 0); i++) {
-            blockPos = BlockPos.ofFloored(vec3d222.withAxis(Direction.Axis.Y, d)).offset(PlayerUtils.getMovementDirection(), i);
-            if (!z && !this.telly.getValue().booleanValue() && !minecraftClient.world.getBlockState(blockPos).isReplaceable()) {
-                blockPos = blockPos.up();
+        double d = get508((float) vec3d222.y());
+        for (int i = 0; i < this.offset.getValue().intValue() + 1 && ((MovementUtils.is2181() && minecraftClient.player.onGround()) || i <= 0); i++) {
+            blockPos = BlockPos.containing(vec3d222.with(Direction.Axis.Y, d)).relative(PlayerUtils.getMovementDirection(), i);
+            if (!z && !this.telly.getValue().booleanValue() && !minecraftClient.level.getBlockState(blockPos).canBeReplaced()) {
+                blockPos = blockPos.above();
             }
             if (canPlaceAt(blockPos, this.num2)) {
                 break;
@@ -399,9 +391,9 @@ public class Scaffold extends Module {
         for (int i2 = 1; i2 < 3; i2++) {
             for (Direction direction : Direction.values()) {
                 if (direction != Direction.UP) {
-                    Direction direction30292 = BlockPlacer.findSupportSide(blockPos.offset(direction, i2), this.strictDirection.getValue().booleanValue());
+                    Direction direction30292 = BlockPlacer.findSupportSide(blockPos.relative(direction, i2), this.strictDirection.getValue().booleanValue());
                     if (direction30292 != null) {
-                        return new PlacementCandidate(blockPos.offset(direction), direction30292);
+                        return new PlacementCandidate(blockPos.relative(direction), direction30292);
                     }
                 }
             }
@@ -412,29 +404,29 @@ public class Scaffold extends Module {
     public double get508(float f) {
         double y;
         double longBitsToDouble;
-        Box boundingBox = minecraftClient.player.getBoundingBox();
-        boolean isOnGround = minecraftClient.player.isOnGround();
-        if (minecraftClient.player.hasVehicle()) {
+        AABB boundingBox = minecraftClient.player.getBoundingBox();
+        boolean isOnGround = minecraftClient.player.onGround();
+        if (minecraftClient.player.isPassenger()) {
             boundingBox = minecraftClient.player.getVehicle().getBoundingBox();
-            isOnGround = minecraftClient.player.getVehicle().isOnGround();
+            isOnGround = minecraftClient.player.getVehicle().onGround();
         }
         double d = boundingBox.minX;
         double d2 = boundingBox.minZ;
         double d3 = boundingBox.maxX;
         double d4 = boundingBox.maxZ;
-        ArrayList<Vec3d> arrayList = new ArrayList();
-        arrayList.add(BoxMath.getBottomCenter(boundingBox).withAxis(Direction.Axis.Y, f));
+        ArrayList<Vec3> arrayList = new ArrayList();
+        arrayList.add(BoxMath.getBottomCenter(boundingBox).with(Direction.Axis.Y, f));
         if (isOnGround) {
-            arrayList.addAll(List.of(new Vec3d(d, f, d2), new Vec3d(d3, f, d2), new Vec3d(d, f, d4), new Vec3d(d3, f, d4)));
+            arrayList.addAll(List.of(new Vec3(d, f, d2), new Vec3(d3, f, d2), new Vec3(d, f, d4), new Vec3(d3, f, d4)));
         }
         double longBitsToDouble2 = Double.longBitsToDouble(-4571373524106608640L);
-        for (Vec3d vec3d : arrayList) {
-            BlockHitResult blockHitResult2784 = RaycastUtils.performCustomBlockRaycast(new CustomRaycastContext.Inner(vec3d, vec3d.add(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d)).setEntity(minecraftClient.player.hasVehicle() ? minecraftClient.player.getVehicle() : minecraftClient.player).build());
+        for (Vec3 vec3d : arrayList) {
+            BlockHitResult blockHitResult2784 = RaycastUtils.performCustomBlockRaycast(new CustomRaycastContext.Inner(vec3d, vec3d.add(0.0d, Double.longBitsToDouble(-4616189618054758400L), 0.0d)).setEntity(minecraftClient.player.isPassenger() ? minecraftClient.player.getVehicle() : minecraftClient.player).build());
             if (blockHitResult2784.getType() == HitResult.Type.MISS) {
-                y = vec3d.getY();
+                y = vec3d.y();
                 longBitsToDouble = Double.longBitsToDouble(4607182418800017408L);
             } else {
-                y = blockHitResult2784.getPos().getY();
+                y = blockHitResult2784.getLocation().y();
                 longBitsToDouble = Double.longBitsToDouble(4576918229175238656L);
             }
             longBitsToDouble2 = Math.max(longBitsToDouble2, y - longBitsToDouble);
@@ -443,7 +435,7 @@ public class Scaffold extends Module {
     }
 
     public boolean canPlaceAt(BlockPos blockPos, int i) {
-        BlockItem item = (minecraftClient.player.getInventory().getStack(i == -1 ? minecraftClient.player.getInventory().selectedSlot : i).getItem()) instanceof BlockItem ? (BlockItem) (minecraftClient.player.getInventory().getStack(i == -1 ? minecraftClient.player.getInventory().selectedSlot : i).getItem()) : null;
+        BlockItem item = (minecraftClient.player.getInventory().getItem(i == -1 ? minecraftClient.player.getInventory().getSelectedSlot() : i).getItem()) instanceof BlockItem ? (BlockItem) (minecraftClient.player.getInventory().getItem(i == -1 ? minecraftClient.player.getInventory().getSelectedSlot() : i).getItem()) : null;
         if (!(item instanceof BlockItem)) {
             return BlockPlacer.isSpaceFree(blockPos, true, this.attack.getValue().booleanValue());
         }
@@ -451,10 +443,10 @@ public class Scaffold extends Module {
     }
 
     public float get510() {
-        return (float) minecraftClient.player.getAttributeInstance(EntityAttributes.GENERIC_JUMP_STRENGTH).getBaseValue();
+        return (float) minecraftClient.player.getAttribute(Attributes.JUMP_STRENGTH).getBaseValue();
     }
 
     public void setJumpStrength(float f) {
-        minecraftClient.player.getAttributeInstance(EntityAttributes.GENERIC_JUMP_STRENGTH).setBaseValue(f);
+        minecraftClient.player.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(f);
     }
 }

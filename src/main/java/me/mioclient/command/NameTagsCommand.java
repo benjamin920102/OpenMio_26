@@ -7,10 +7,6 @@ import me.mioclient.mode.render.NameTagsHelperMode;
 import me.mioclient.render.font.ClientTextRenderer;
 import me.mioclient.util.client.ChatUtils;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.render.font.ClientTextRenderer;
-import me.mioclient.util.client.ChatUtils;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -19,15 +15,12 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import me.mioclient.command.EnumArgumentType;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
-import net.minecraft.util.Formatting;
-import me.mioclient.mode.misc.FriendImporterMode;
-import me.mioclient.mode.render.NameTagsHelperMode;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/Feature_10.class */
 public final class NameTagsCommand extends CommandFeature {
     public final NameTagsHelperMode nameTagsHelperMode;
 
@@ -37,7 +30,7 @@ public final class NameTagsCommand extends CommandFeature {
     }
 
     @Override // me.mioclient.command.CommandFeature
-    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> literalArgumentBuilder) {
+    public void exec(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literalArgumentBuilder) {
         literalArgumentBuilder.then(CommandFeature.literal("add").then(CommandFeature.argument("name", new ExamplesArgumentType_3()).executes(commandContext -> {
             String str = (String) commandContext.getArgument("name", String.class);
             if (ClientServices.socialManager.getRole(str) == this.nameTagsHelperMode) {
@@ -66,9 +59,9 @@ public final class NameTagsCommand extends CommandFeature {
             List list = ClientServices.socialManager.getRegistry().stream().filter(mixinPlayerEntityData -> {
                 return mixinPlayerEntityData.getHelperMode() == this.nameTagsHelperMode;
             }).map(mixinPlayerEntityData2 -> {
-                return Text.of(mixinPlayerEntityData2.getName());
+                return Component.literal(mixinPlayerEntityData2.getName());
             }).toList();
-            ChatUtils.sendMessage(Text.literal(formatWithRole("%S list: ")).append(Texts.join(list, Text.of(", "))), ChatUtils.createSignature(-1));
+            ChatUtils.sendMessage(Component.literal(formatWithRole("%S list: ")).append(ComponentUtils.formatList(list, Component.literal(", "))), ChatUtils.createSignature(-1));
             return 1;
         }));
         literalArgumentBuilder.then(CommandFeature.literal("sync").then(CommandFeature.argument("importer", new EnumArgumentType(FriendImporterMode.class, "importer")).executes(commandContext4 -> {
@@ -81,26 +74,26 @@ public final class NameTagsCommand extends CommandFeature {
                         i++;
                     }
                 }
-                ChatUtils.sendMessage(Text.literal(String.format("Added %d new friends from %s", Integer.valueOf(i), mode.getImporterName())), ChatUtils.createSignature(-1));
+                ChatUtils.sendMessage(Component.literal(String.format("Added %d new friends from %s", Integer.valueOf(i), mode.getImporterName())), ChatUtils.createSignature(-1));
                 return 1;
             } catch (Exception e) {
                 if (e instanceof FileNotFoundException) {
-                    ChatUtils.sendPrefixedMessage(Text.literal(String.format("Couldn't find %s friends file", mode.getImporterName())).styled(style -> {
-                        return style.withColor(Formatting.RED);
+                    ChatUtils.sendPrefixedMessage(Component.literal(String.format("Couldn't find %s friends file", mode.getImporterName())).withStyle(style -> {
+                        return style.withColor(ChatFormatting.RED);
                     }), ChatUtils.createSignature(-1), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
                     return 1;
                 }
                 e.printStackTrace();
-                ChatUtils.sendPrefixedMessage(Text.literal(String.format("Couldn't import friends from %s due to an unknown error, check your log file", mode.getImporterName())).styled(style2 -> {
-                    return style2.withColor(Formatting.RED);
+                ChatUtils.sendPrefixedMessage(Component.literal(String.format("Couldn't import friends from %s due to an unknown error, check your log file", mode.getImporterName())).withStyle(style2 -> {
+                    return style2.withColor(ChatFormatting.RED);
                 }), ChatUtils.createSignature(-1), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode3);
                 return 1;
             }
         })));
     }
 
-    public CompletableFuture<Suggestions> suggestMatchingPlayers(CommandContext<CommandSource> commandContext, SuggestionsBuilder suggestionsBuilder) {
-        return CommandSource.suggestMatching(ClientServices.socialManager.getRegistry().stream().filter(mixinPlayerEntityData -> {
+    public CompletableFuture<Suggestions> suggestMatchingPlayers(CommandContext<CommandSourceStack> commandContext, SuggestionsBuilder suggestionsBuilder) {
+        return SharedSuggestionProvider.suggest(ClientServices.socialManager.getRegistry().stream().filter(mixinPlayerEntityData -> {
             return mixinPlayerEntityData.getHelperMode() == this.nameTagsHelperMode;
         }).map((v0) -> {
             return v0.getName();

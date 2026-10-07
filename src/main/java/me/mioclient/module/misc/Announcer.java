@@ -11,39 +11,28 @@ import me.mioclient.util.math.MathUtils;
 import me.mioclient.util.time.Stopwatch;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.math.MathUtils;
-
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import me.mioclient.util.text.StringTemplate;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.events.interaction.BreakBlockEvent;
-import me.mioclient.event.events.network.PacketReceiveEvent;
 import me.mioclient.event.events.player.FinishUsingEvent;
 import me.mioclient.event.Listen;
-import me.mioclient.event.events.network.PacketSendEvent;
 import me.mioclient.event.events.client.TickEvent;
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.Module;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket;
-import net.minecraft.text.Text;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
+import net.minecraft.network.chat.Component;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/misc/Announcer.class */
 public class Announcer extends Module {
     public Setting<Boolean> clientSide = add(new BooleanSetting("ClientSide", false).setVisible());
     public Setting<Boolean> compact = add(new BooleanSetting("Compact", false).requiresSettings(this.clientSide));
@@ -75,7 +64,7 @@ public class Announcer extends Module {
 
     @Listen
     public void onPacketSend(PacketSendEvent sendImmediatelyEvent) {
-        if (sendImmediatelyEvent.getPacket() instanceof ChatMessageC2SPacket) {
+        if (sendImmediatelyEvent.getPacket() instanceof ServerboundChatPacket) {
             this.stopwatch.reset();
         }
     }
@@ -84,11 +73,14 @@ public class Announcer extends Module {
     public void onPacketReceive(PacketReceiveEvent channelRead0Event) {
         if (this.joins.getValue().booleanValue()) {
             if (this.stopwatch.hasElapsed(this.delay.getValue().doubleValue(), TimeUnit.SECONDS)) {
-                PlayerListS2CPacket packet904 = (channelRead0Event.getPacket()) instanceof PlayerListS2CPacket ? (PlayerListS2CPacket) (channelRead0Event.getPacket()) : null;
-                if (packet904 instanceof PlayerListS2CPacket) {
-                    for (PlayerListS2CPacket.Entry entry : packet904.getPlayerAdditionEntries()) {
+                ClientboundPlayerInfoUpdatePacket packet904 = (channelRead0Event.getPacket()) instanceof ClientboundPlayerInfoUpdatePacket ? (ClientboundPlayerInfoUpdatePacket) (channelRead0Event.getPacket()) : null;
+                if (packet904 instanceof ClientboundPlayerInfoUpdatePacket) {
+                    for (ClientboundPlayerInfoUpdatePacket.Entry entry : packet904.entries()) {
+                        if (entry.profile() == null) {
+                            continue;
+                        }
                         if (entry.listed()) {
-                            String name = entry.profile().getName();
+                            String name = entry.profile().name();
                             if (!name.equals(minecraftClient.player.getName().getString())) {
                                 boolean isFriend = ClientServices.socialManager.isFriend(name);
                                 boolean isEnemy = ClientServices.socialManager.isEnemy(name);
@@ -103,7 +95,7 @@ public class Announcer extends Module {
                                                     string2921 = new StringTemplate().arg(string2921).format("\u0001 [enemy]");
                                                 }
                                                 String str = string2921;
-                                                minecraftClient.executeSync(() -> {
+                                                minecraftClient.execute(() -> {
                                                     sendChatMessage(str, ChatUtils.createSignature(-254721));
                                                 });
                                             } else {
@@ -111,7 +103,7 @@ public class Announcer extends Module {
                                                     name = new StringTemplate().arg(name).format("My friend \u0001");
                                                 }
                                                 String str2 = name;
-                                                minecraftClient.executeSync(() -> {
+                                                minecraftClient.execute(() -> {
                                                     sendChatMessage(new StringTemplate().arg(str2).format("\u0001 has joined the game!"), ChatUtils.createSignature(-254721));
                                                 });
                                             }
@@ -123,12 +115,12 @@ public class Announcer extends Module {
                         }
                     }
                 }
-                PlayerRemoveS2CPacket packet9042 = (channelRead0Event.getPacket()) instanceof PlayerRemoveS2CPacket ? (PlayerRemoveS2CPacket) (channelRead0Event.getPacket()) : null;
-                if (packet9042 instanceof PlayerRemoveS2CPacket) {
+                ClientboundPlayerInfoRemovePacket packet9042 = (channelRead0Event.getPacket()) instanceof ClientboundPlayerInfoRemovePacket ? (ClientboundPlayerInfoRemovePacket) (channelRead0Event.getPacket()) : null;
+                if (packet9042 instanceof ClientboundPlayerInfoRemovePacket) {
                     for (UUID uuid : packet9042.profileIds()) {
-                        for (PlayerListEntry playerListEntry : minecraftClient.player.networkHandler.getListedPlayerListEntries()) {
-                            if (playerListEntry.getProfile().getId().equals(uuid)) {
-                                String name2 = playerListEntry.getProfile().getName();
+                        for (PlayerInfo playerListEntry : minecraftClient.player.connection.getListedOnlinePlayers()) {
+                            if (playerListEntry.getProfile().id().equals(uuid)) {
+                                String name2 = playerListEntry.getProfile().name();
                                 if (this.clientSide.getValue().booleanValue() && this.compact.getValue().booleanValue()) {
                                     String string29212 = new StringTemplate().arg(name2).format("\u0001 left");
                                     if (ClientServices.socialManager.isFriend(string29212)) {
@@ -137,7 +129,7 @@ public class Announcer extends Module {
                                         string29212 = new StringTemplate().arg(string29212).format("\u0001 [enemy]");
                                     }
                                     String str3 = string29212;
-                                    minecraftClient.executeSync(() -> {
+                                    minecraftClient.execute(() -> {
                                         sendChatMessage(str3, ChatUtils.createSignature(-254722));
                                     });
                                 } else {
@@ -145,7 +137,7 @@ public class Announcer extends Module {
                                         name2 = new StringTemplate().arg(name2).format("My friend \u0001");
                                     }
                                     String str4 = name2;
-                                    minecraftClient.executeSync(() -> {
+                                    minecraftClient.execute(() -> {
                                         sendChatMessage(new StringTemplate().arg(str4).format("\u0001 has left the game!"), ChatUtils.createSignature(-254722));
                                     });
                                 }
@@ -184,11 +176,12 @@ public class Announcer extends Module {
         }
         int i = MathUtils.randomInt(1, 6);
         if (this.eat.getValue().booleanValue()) {
-            if (finishUsingEvent.getItemStack().contains(DataComponentTypes.FOOD)) {
+            if (finishUsingEvent.getItemStack().has(DataComponents.FOOD)) {
                 this.num++;
                 if (this.num >= i) {
                     if (this.stopwatch.hasElapsedMs((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
-                        sendModuleMessage(getRandomEatMessage().replace("{amount}", new StringTemplate().arg(this.num).format("\u0001")).replace("{name}", new StringTemplate().arg(finishUsingEvent.getItemStack().getItem().getName().getString()).format("\u0001")));
+                        String itemName = finishUsingEvent.getItemStack().getItem().toString();
+                        sendModuleMessage(getRandomEatMessage().replace("{amount}", String.valueOf(this.num)).replace("{name}", itemName));
                         this.num = 0;
                         this.stopwatch.reset();
                     }
@@ -205,8 +198,8 @@ public class Announcer extends Module {
         int i = MathUtils.randomInt(1, 6);
         this.num2++;
         if (this.break_.getValue().booleanValue() && this.num2 >= i && this.stopwatch.hasElapsedMs((long) (Double.longBitsToDouble(4652007308841189376L) * this.delay.getValue().doubleValue()))) {
-            String[] strArr = {new StringTemplate().arg(BlockPlacer.getBlockAt(breakBlockEvent.getBlockPos()).getName().getString()).format("\u0001"), "Air", "Bedrock", "Barrier"};
-            sendModuleMessage(getRandomBreakMessage().replace("{amount}", new StringTemplate().arg(this.num2).format("\u0001")).replace("{name}", strArr[new Random().nextInt(strArr.length)]));
+            String[] strArr = {BlockPlacer.getBlockAt(breakBlockEvent.getBlockPos()).toString(), "Air", "Bedrock", "Barrier"};
+            sendModuleMessage(getRandomBreakMessage().replace("{amount}", String.valueOf(this.num2)).replace("{name}", strArr[new Random().nextInt(strArr.length)]));
             this.num2 = 0;
             this.stopwatch.reset();
         }
@@ -231,13 +224,12 @@ public class Announcer extends Module {
         sendChatMessage(str, ChatUtils.signatureOfModule(this));
     }
 
-    public void sendChatMessage(String str, MessageSignatureData messageSignatureData) {
+    public void sendChatMessage(String str, MessageSignature messageSignature) {
         if (!this.clientSide.getValue().booleanValue()) {
-            minecraftClient.player.networkHandler.sendChatMessage(str);
+            minecraftClient.player.connection.sendChat(str);
         } else {
-            ChatUtils.sendMessage(Text.literal(str).styled(style -> {
-                return style.withColor(new Color(161, 161, 161).hashCode());
-            }), messageSignatureData);
+            // 26.2: Style#withColor(int) still available; keep client-side echo plain (matches chat HUD path).
+            ChatUtils.sendMessage(Component.literal(str), messageSignature);
         }
     }
 }

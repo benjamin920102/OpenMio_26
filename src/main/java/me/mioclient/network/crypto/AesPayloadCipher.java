@@ -2,8 +2,6 @@ package me.mioclient.network.crypto;
 
 import javax.crypto.Cipher;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/AesPayloadCipher.class */
 public class AesPayloadCipher {
     public static byte[] encrypt(byte[] bArr) {
         try {

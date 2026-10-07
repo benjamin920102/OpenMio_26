@@ -5,18 +5,25 @@ import me.mioclient.api.ClientServices;
 import me.mioclient.util.time.Stopwatch;
 
 import me.mioclient.api.ClientAccessor;
-import me.mioclient.api.ClientServices;
 import me.mioclient.module.player.speedmine.SpeedMineTarget;
 
-import me.mioclient.util.time.Stopwatch;
 import me.mioclient.module.combat.AutoMine;
 import me.mioclient.module.player.SpeedMine;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/MineTargetTracker.class */
 public final class MineTargetTracker implements ClientAccessor {
-    public static SpeedMine speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+    /* 26.2 port: resolved lazily — eager static init ran before the module registry was ready, leaving speedmine null. */
+    private static SpeedMine speedmine;
+
+    public static SpeedMine getSpeedmine() {
+        if (speedmine == null && ClientServices.moduleInjector != null) {
+            try {
+                speedmine = (SpeedMine) ClientServices.moduleInjector.getModule(SpeedMine.class);
+            } catch (Exception e) {
+            }
+        }
+        return speedmine;
+    }
     public final Stopwatch stopwatch = new Stopwatch();
     public final AutoMine autoMine;
     public BlockPos blockPos;
@@ -27,11 +34,16 @@ public final class MineTargetTracker implements ClientAccessor {
 
     public boolean hasActiveMiningTarget() {
         BlockPos blockPos1226 = getRecentBlockPos();
-        return ((blockPos1226 == null || minecraftClient.world.isAir(blockPos1226)) && speedmine.getSearchTarget() == null) ? false : true;
+        SpeedMine speedmine_lcl = getSpeedmine();
+        return ((blockPos1226 == null || minecraftClient.level.isEmptyBlock(blockPos1226)) && (speedmine_lcl == null || speedmine_lcl.getSearchTarget() == null)) ? false : true;
     }
 
     public BlockPos getBlockPos() {
-        SpeedMineTarget speedMineSearchHelper41059 = speedmine.getSearchTarget();
+        SpeedMine speedmine_lcl = getSpeedmine();
+        if (speedmine_lcl == null) {
+            return null;
+        }
+        SpeedMineTarget speedMineSearchHelper41059 = speedmine_lcl.getSearchTarget();
         if (speedMineSearchHelper41059 == null) {
             return null;
         }

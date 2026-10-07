@@ -9,37 +9,28 @@ import me.mioclient.util.inventory.InventoryUtils;
 import me.mioclient.util.math.MathConstants;
 import me.mioclient.util.world.BlockPlacer;
 
-import me.mioclient.api.ClientServices;
-import me.mioclient.util.world.BlockPlacer;
-import me.mioclient.util.client.ChatUtils;
-import me.mioclient.util.inventory.InventoryUtils;
-import me.mioclient.util.math.MathConstants;
-
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import me.mioclient.event.events.player.RotationTickEvent;
 import me.mioclient.api.Category;
 import me.mioclient.api.Setting;
 import me.mioclient.event.Listen;
 import me.mioclient.module.Module;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
 import me.mioclient.manager.RotationManager;
 import me.mioclient.setting.BooleanSetting;
 import me.mioclient.setting.NumberSetting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/module/combat/SelfWeb.class */
 public class SelfWeb extends Module {
     public Setting<Boolean> rotate = add(new BooleanSetting("Rotate", true));
     public Setting<Boolean> autoDisable = add(new BooleanSetting("AutoDisable", true));
@@ -63,17 +54,17 @@ public class SelfWeb extends Module {
     }
 
     public void placeSelfWeb(RotationTickEvent holeSnapEvent) {
-        if (minecraftClient.player.hasVehicle()) {
+        if (minecraftClient.player.getVehicle() != null) {
             return;
         }
         if (ClientServices.holeSnapOverlayHelper.isInHole() || !this.onlyHole.getValue().booleanValue()) {
-            BlockPos ofFloored = BlockPos.ofFloored(minecraftClient.player.getPos());
-            BlockState blockState = minecraftClient.world.getBlockState(ofFloored);
-            if (blockState.isReplaceable() && !blockState.isLiquid() && minecraftClient.player.isOnGround()) {
+            BlockPos ofFloored = BlockPos.containing(minecraftClient.player.position());
+            BlockState blockState = minecraftClient.level.getBlockState(ofFloored);
+            if (blockState.canBeReplaced() && blockState.getFluidState().isEmpty() && minecraftClient.player.onGround()) {
                 int i = InventoryUtils.findInHotbar(Items.COBWEB);
-                int i2 = minecraftClient.player.getInventory().selectedSlot;
+                int i2 = minecraftClient.player.getInventory().getSelectedSlot();
                 if (i == -1) {
-                    ChatUtils.sendPrefixedMessage(Text.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
+                    ChatUtils.sendPrefixedMessage(Component.literal(getName()).append(" is out of blocks!"), ChatUtils.createSignature(-2), ChatUtils.MixinClientConnectionMode.mixinClientConnectionMode);
                     disable();
                     return;
                 }
@@ -82,9 +73,9 @@ public class SelfWeb extends Module {
                     return;
                 }
                 InventoryUtils.selectSlot(i);
-                Box boundingBox = minecraftClient.player.getBoundingBox();
-                minecraftClient.player.setBoundingBox(new Box(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
-                BlockPlacer.placeBlockPacket(ofFloored, direction3028, false, Hand.MAIN_HAND);
+                AABB boundingBox = minecraftClient.player.getBoundingBox();
+                minecraftClient.player.setBoundingBox(new AABB(0.0d, 0.0d, 0.0d, 0.0d, 0.0d, 0.0d));
+                BlockPlacer.placeBlockPacket(ofFloored, direction3028, false, InteractionHand.MAIN_HAND);
                 minecraftClient.player.setBoundingBox(boundingBox);
                 InventoryUtils.selectSlot(i2);
                 if (this.rotate.getValue().booleanValue()) {
@@ -98,17 +89,16 @@ public class SelfWeb extends Module {
     }
 
     public Entity getNearestEnemyPlayer(Setting<Float> setting) {
-        Stream<Entity> filter = StreamSupport.stream(minecraftClient.world.getEntities().spliterator(), false).filter(entity -> {
-            if (entity != minecraftClient.player && minecraftClient.player.distanceTo(entity) <= ((Float) setting.getValue()).floatValue() && isAbovePlayer(entity) && (entity instanceof PlayerEntity)) {
+        LocalPlayer clientPlayerEntity = minecraftClient.player;
+        Objects.requireNonNull(clientPlayerEntity);
+        return minecraftClient.level.players().stream().filter(entity -> {
+            if (entity != clientPlayerEntity && clientPlayerEntity.distanceTo(entity) <= setting.getValue() && isAbovePlayer(entity) && (entity instanceof Player)) {
                 if (!ClientServices.socialManager.isFriend(entity.getName().getString()) && entity.isAlive()) {
                     return true;
                 }
             }
             return false;
-        });
-        ClientPlayerEntity clientPlayerEntity = minecraftClient.player;
-        Objects.requireNonNull(clientPlayerEntity);
-        return (Entity) filter.min(Comparator.comparing(clientPlayerEntity::squaredDistanceTo)).orElse(null);
+        }).min(Comparator.comparing(clientPlayerEntity::distanceToSqr)).orElse(null);
     }
 
     public boolean isAbovePlayer(Entity entity) {

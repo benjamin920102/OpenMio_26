@@ -4,25 +4,23 @@ import com.mojang.authlib.GameProfile;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import me.mioclient.mixin.ducks.DuckLivingEntity;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.util.SkinTextures;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerModelPart;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
+import me.mioclient.ducks.DuckLivingEntity;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.Vec3;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/OtherClientPlayerEntity.class */
-public class ClonedPlayerEntity extends net.minecraft.client.network.OtherClientPlayerEntity {
+public class ClonedPlayerEntity extends net.minecraft.client.player.RemotePlayer {
     public final Set<PlayerModelPart> set;
-    public SkinTextures skinTextures;
+    public PlayerSkin skin;
     public boolean flag;
-    public Vec3d vec3d;
+    public Vec3 vec3d;
 
-    public ClonedPlayerEntity(ClientWorld clientWorld) {
+    public ClonedPlayerEntity(ClientLevel clientWorld) {
         super(clientWorld, new GameProfile(UUID.randomUUID(), ""));
         this.set = new HashSet();
     }
@@ -30,59 +28,50 @@ public class ClonedPlayerEntity extends net.minecraft.client.network.OtherClient
     public void tickMovement() {
     }
 
-    /* JADX WARN: Multi-variable type inference failed */
-    public void copyFromPlayer(PlayerEntity playerEntity) {
-        this.vec3d = new Vec3d(playerEntity.getX(), playerEntity.getY(), playerEntity.getZ());
-        super.copyFrom(playerEntity);
-        copyPositionAndRotation((Entity) playerEntity);
-        this.prevYaw = playerEntity.getYaw();
-        setYaw(playerEntity.getYaw());
-        this.prevPitch = playerEntity.getPitch();
-        setPitch(playerEntity.getPitch());
-        this.bodyYaw = playerEntity.bodyYaw;
-        this.prevBodyYaw = playerEntity.bodyYaw;
-        this.headYaw = playerEntity.headYaw;
-        this.prevHeadYaw = playerEntity.headYaw;
-        this.limbAnimator.speed = playerEntity.limbAnimator.speed;
-        this.limbAnimator.prevSpeed = playerEntity.limbAnimator.speed;
-        this.limbAnimator.pos = playerEntity.limbAnimator.pos;
+    public void copyFromPlayer(Player playerEntity) {
+        this.vec3d = new Vec3(playerEntity.getX(), playerEntity.getY(), playerEntity.getZ());
+        copyPosition(playerEntity);
+        this.yRotO = playerEntity.getYRot();
+        setYRot(playerEntity.getYRot());
+        this.xRotO = playerEntity.getXRot();
+        setXRot(playerEntity.getXRot());
+        this.yBodyRot = playerEntity.yBodyRot;
+        this.yBodyRotO = playerEntity.yBodyRot;
+        this.yHeadRot = playerEntity.getYHeadRot();
+        this.yHeadRotO = playerEntity.getYHeadRot();
         this.deathTime = 0;
-        this.lastVelocity = new Vec3d(0.0d, 0.0d, 0.0d);
-        setVelocity(0.0d, 0.0d, 0.0d);
+        setDeltaMovement(0.0d, 0.0d, 0.0d);
         setPose(playerEntity.getPose());
-        setSneaking(playerEntity.isSneaking());
-        if (playerEntity instanceof AbstractClientPlayerEntity) {
-            AbstractClientPlayerEntity abstractClientPlayerEntity = (AbstractClientPlayerEntity) playerEntity;
-            this.skinTextures = abstractClientPlayerEntity.getSkinTextures();
+        setShiftKeyDown(playerEntity.isCrouching());
+        if (playerEntity instanceof AbstractClientPlayer) {
+            AbstractClientPlayer abstractClientPlayerEntity = (AbstractClientPlayer) playerEntity;
+            this.skin = abstractClientPlayerEntity.getSkin();
             for (PlayerModelPart playerModelPart : PlayerModelPart.values()) {
-                if (playerModelPart != PlayerModelPart.CAPE && abstractClientPlayerEntity.isPartVisible(playerModelPart)) {
+                if (playerModelPart != PlayerModelPart.CAPE) {
                     this.set.add(playerModelPart);
                 }
             }
         }
-        for (int i = 0; i < getInventory().size(); i++) {
-            getInventory().setStack(i, playerEntity.getInventory().getStack(i).copy());
+        for (int i = 0; i < getInventory().getContainerSize(); i++) {
+            getInventory().setItem(i, playerEntity.getInventory().getItem(i).copy());
         }
-        setStackInHand(Hand.MAIN_HAND, playerEntity.getMainHandStack().copy());
-        setStackInHand(Hand.OFF_HAND, playerEntity.getOffHandStack().copy());
-        getInventory().selectedSlot = playerEntity.getInventory().selectedSlot;
-        ((DuckLivingEntity) this).mio$setLeaningPitch(((DuckLivingEntity) playerEntity).mio$getLeaningPitch());
-        ((DuckLivingEntity) this).mio$setLastLeaningPitch(((DuckLivingEntity) playerEntity).mio$getLastLeaningPitch());
+        setItemInHand(InteractionHand.MAIN_HAND, playerEntity.getMainHandItem().copy());
+        setItemInHand(InteractionHand.OFF_HAND, playerEntity.getOffhandItem().copy());
+        getInventory().setSelectedSlot(playerEntity.getInventory().getSelectedSlot());
     }
 
-    public void setPosition(double d, double d2, double d3) {
-        super.setPosition(d, d2, d3);
-        this.lastRenderX = d;
-        this.lastRenderY = d2;
-        this.lastRenderZ = d3;
+    @Override
+    public void setPos(double d, double d2, double d3) {
+        super.setPos(d, d2, d3);
     }
 
-    public Vec3d getLastPosition() {
+    public Vec3 getLastPosition() {
         return this.vec3d;
     }
 
-    public SkinTextures getSkinTextures() {
-        return this.skinTextures != null ? this.skinTextures : super.getSkinTextures();
+    @Override
+    public PlayerSkin getSkin() {
+        return this.skin != null ? this.skin : super.getSkin();
     }
 
     public boolean isPartVisible(PlayerModelPart playerModelPart) {

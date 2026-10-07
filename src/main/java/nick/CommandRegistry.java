@@ -1,6 +1,4 @@
-/*
- * Decompiled with CFR 0.2.2 (FabricMC 7c48b8c4).
- */
+
 package nick;
 
 import me.mioclient.command.PanicCommand;
@@ -36,13 +34,11 @@ import me.mioclient.command.IrcCommand;
 import me.mioclient.command.KitCommand;
 import me.mioclient.command.MacroCommand;
 import me.mioclient.command.NameTagsCommand;
-import me.mioclient.mode.render.NameTagsHelperMode;
 import me.mioclient.command.NbtCommand;
 import me.mioclient.command.OpenFolderCommand;
 import me.mioclient.command.PitchCommand;
 import me.mioclient.command.PrefixCommand;
 import me.mioclient.command.PresetCommand;
-import me.mioclient.command.PanicCommand;
 import me.mioclient.command.PrintCommand;
 import me.mioclient.command.SayCommand;
 import me.mioclient.command.SessionCommand;

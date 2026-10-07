@@ -1,43 +1,47 @@
-/*
- * Decompiled with CFR 0.2.2 (FabricMC 7c48b8c4).
- */
+
 package nick;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import sun.misc.Unsafe;
 
+// 26.2 / Java 25: sun.misc.Unsafe string construction (allocateInstance +
+// putByteVolatile/putObjectVolatile/objectFieldOffset on String.coder+value)
+// is deprecated for removal. Replaced with pure-JDK charset decoding:
+// coder 0 = LATIN_1, coder 1 = UTF_16BE. encode() was unused; implemented via
+// getBytes so no Unsafe/VarHandle or --add-opens is needed.
 public final class StringLookupTable {
-    private static Unsafe UNSAFE;
-    private static long O1;
-    private static long O2;
     private static Map<Integer, String> STRINGS;
 
     public static String decode(byte[] data) {
         try {
-            String str = (String)UNSAFE.allocateInstance(String.class);
             byte coder = data[0];
             byte[] v = new byte[data.length - 1];
             System.arraycopy(data, 1, v, 0, v.length);
-            UNSAFE.putByteVolatile(str, O1, coder);
-            UNSAFE.putObjectVolatile(str, O2, v);
-            int __ = str.hashCode();
-            return str;
-        } catch (Throwable _t) {
-            _t.printStackTrace(System.err);
+            if (coder == 0) {
+                return new String(v, StandardCharsets.ISO_8859_1);
+            }
+            return new String(v, StandardCharsets.UTF_16BE);
+        } catch (Throwable t) {
+            t.printStackTrace(System.err);
             return null;
         }
     }
 
     public static byte[] encode(String str) {
-        byte[] v = (byte[])UNSAFE.getObjectVolatile(str, O2);
-        byte coder = UNSAFE.getByteVolatile(str, O1);
+        byte[] v;
+        byte coder;
+        if (str.chars().allMatch(c -> c <= 0xFF)) {
+            v = str.getBytes(StandardCharsets.ISO_8859_1);
+            coder = 0;
+        } else {
+            v = str.getBytes(StandardCharsets.UTF_16BE);
+            coder = 1;
+        }
         byte[] r = new byte[v.length + 1];
         r[0] = coder;
         System.arraycopy(v, 0, r, 1, v.length);
@@ -48,7 +52,7 @@ public final class StringLookupTable {
         try {
             DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
             int size = dis.readInt();
-            HashMap<Integer, String> m = new HashMap<Integer, String>(size);
+            HashMap<Integer, String> m = new HashMap<>(size);
             for (int i = 0; i < size; ++i) {
                 int type = dis.read();
                 int key = dis.readInt();
@@ -70,8 +74,8 @@ public final class StringLookupTable {
             }
             dis.close();
             return m;
-        } catch (Throwable _t) {
-            _t.printStackTrace(System.err);
+        } catch (Throwable t) {
+            t.printStackTrace(System.err);
             return null;
         }
     }
@@ -81,17 +85,10 @@ public final class StringLookupTable {
     }
 
     static {
-        try {
-            Field f = Unsafe.class.getDeclaredField("theUnsafe");
-            f.setAccessible(true);
-            UNSAFE = (Unsafe)f.get(null);
-            O1 = UNSAFE.objectFieldOffset(String.class.getDeclaredField("coder"));
-            O2 = UNSAFE.objectFieldOffset(String.class.getDeclaredField("value"));
-            try (InputStream is = StringLookupTable.class.getClassLoader().getResourceAsStream("strings.bin");){
-                STRINGS = StringLookupTable.parse(Objects.requireNonNull(is).readAllBytes());
-            }
-        } catch (Throwable _t) {
-            _t.printStackTrace(System.err);
+        try (InputStream is = StringLookupTable.class.getClassLoader().getResourceAsStream("strings.bin")) {
+            STRINGS = StringLookupTable.parse(Objects.requireNonNull(is).readAllBytes());
+        } catch (Throwable t) {
+            t.printStackTrace(System.err);
         }
     }
 }

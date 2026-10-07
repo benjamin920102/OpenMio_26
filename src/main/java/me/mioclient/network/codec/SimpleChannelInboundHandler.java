@@ -8,10 +8,8 @@ import me.mioclient.network.crypto.AesKeyStore;
 import me.mioclient.util.client.ChatUtils;
 
 import me.mioclient.command.ClientCommandRegistry;
-import me.mioclient.api.ClientServices;
 import me.mioclient.network.packet.HandshakePacket;
 import me.mioclient.network.packet.SelfDestructPacket;
-import me.mioclient.util.client.ChatUtils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,14 +18,10 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import me.mioclient.module.client.IRC;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import me.mioclient.network.FriendListSync;
-import me.mioclient.util.text.StringTemplate;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
-/* compiled from: 0.java */
-/* loaded from: mio-yarn.jar:me/mioclient/SimpleChannelInboundHandler.class */
 public class SimpleChannelInboundHandler extends io.netty.channel.SimpleChannelInboundHandler<ByteBuf> {
     public static IRC iRC = (IRC) ClientServices.moduleInjector.getModule(IRC.class);
 
@@ -60,13 +54,13 @@ public class SimpleChannelInboundHandler extends io.netty.channel.SimpleChannelI
         }
         HandshakePacket byteToMessageDecoderHelper_13 = new HandshakePacket();
         byteToMessageDecoderHelper_13.setRank(ClientServices.welcomerHelper.getRank());
-        byteToMessageDecoderHelper_13.setUsername(MinecraftClient.getInstance().getSession().getUsername());
+        byteToMessageDecoderHelper_13.setUsername(Minecraft.getInstance().getUser().getName());
         byteToMessageDecoderHelper_13.setSecret(byteArray432);
         byteToMessageDecoderHelper_13.setChannel(iRC.getCapeTexture());
         channelHandlerContext.channel().writeAndFlush(byteToMessageDecoderHelper_13);
         ClientServices.tooltipsHelper.schedule(() -> {
             try {
-                ChatUtils.sendMessage(Text.literal(new StringTemplate().arg(ClientCommandRegistry.getPrefix()).arg(String.valueOf(Formatting.GREEN)).format("\u0001Connected to the chat server. Type \u0001irc help to view all commands.")), ChatUtils.createSignature(-836156));
+                ChatUtils.sendMessage(Component.literal(new StringTemplate().arg(ClientCommandRegistry.getPrefix()).arg(String.valueOf(ChatFormatting.GREEN)).format("\u0001Connected to the chat server. Type \u0001irc help to view all commands.")), ChatUtils.createSignature(-836156));
             } catch (Exception e) {
             }
         }, 0);

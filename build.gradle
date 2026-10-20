@@ -8,10 +8,6 @@ group = project.maven_group
 
 base { archivesName = project.archives_base_name }
 
-loom {
-    accessWidenerPath = file("src/main/resources/mio.accesswidener")
-}
-
 repositories {
     maven { url = 'https://maven.fabricmc.net/' }
     maven { url = 'https://api.modrinth.com/maven' }
